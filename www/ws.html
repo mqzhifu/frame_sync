@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WS-DEMO</title>
+</head>
+<body>
+
+<style>
+    .div_block{
+        border:1px solid #000;
+        width:30px;
+        height:30px;
+    }
+</style>
+
+<script src="jquery.min.js" type="text/javascript"></script>
+
+<table width="100%">
+    <div>SeqId：<span id="sid" ></span> </div>
+    <div>roomId：<span id="rid" ></span> </div>
+    <div>绿色：自己</div>
+    <div>红色：对方</div>
+    <tr>
+        <td width="50%">
+            <div>
+                player1
+            </div>
+            <table id="map1"></table>
+
+            <div>
+                <div id="opt_bnt1">
+                    <a href="javascript:player1Link()">连接</a>
+                </div>
+
+            </div>
+        </td>
+
+        <td width="50%">
+            <div>
+                player2
+            </div>
+
+            <table id="map2"></table>
+            <div>
+                <table>
+                    <tr><td></td><td><a href="#" onclick="move(2,'up')">上</a></td><td></td></tr>
+                    <tr><td><a href="#" onclick="move(2,'left')">左</a></td><td></td><td><a href="#" onclick="move(2,'right')">右</a></td></tr>
+                    <tr><td></td><td><a href="#" onclick="move(2,'down')">下</a></td><td></td></tr>
+                </table>
+            </div>
+            <div>
+                <div id="opt_bnt2">
+                    <a href="javascript:player2Link()">连接</a>
+                </div>
+            </div>
+        </td>
+
+
+
+    </tr>
+</table>
+
+</body>
+
+
+<script type="text/javascript">
+    var host = "ws://127.0.0.1:2222";
+    var hostUri = host +"/ws";
+    var playerLocation_1 = {1:"empty",2:"empty"}
+    var playerLocation_2 = {1:"empty",2:"empty"}
+    var roomId = "";
+    var SequenceNumber = 0;
+    if ("WebSocket" in window) {
+        console.log("browser has websocket lib.");
+    }else {
+        // 浏览器不支持 WebSocket
+        alert("您的浏览器不支持 WebSocket!");
+    }
+    function ws (id,token){
+        var pre = "player_"+id;
+        // this.id = id;
+        this.token = token;
+        this.create  = function(){
+            var wsObj = new WebSocket(hostUri);
+
+            wsObj.onopen = function(){  //发送请求
+                console.log("onOpen")
+                var data = '{"action":"login","content":"'+token+'"}';
+                console.log("send:"+data);
+                wsObj.send(data);
+            };
+
+            function closeFD(){
+                console.log("closeFD");
+                wsObj.close();
+            }
+
+            wsObj.onclose = function(ev){
+                alert("receive server close:" +ev.code);
+            };
+
+            wsObj.onerror = function(ev){
+                //如果出现连接、处理、接收、发送数据失败的时候触发onerror事件
+                console.log("error:"+ev);
+                alert();
+            }
+
+            wsObj.onmessage = function(ev){  //获取后端响应
+                console.log("onmessage:"+ pre +" "+ev.data)
+                var msg = eval("("+ev.data+")");
+                console.log(pre +" action:"+msg.action);
+                console.log(pre +" content:"+msg.content);
+                var logicFrame =  eval("("+msg.content+")");
+
+                var Commands = logicFrame.Commands;
+                var RandSeek = logicFrame.RandSeek;
+                SequenceNumber  = logicFrame.SequenceNumber;
+                $("#sid").html(SequenceNumber);
+                roomId = logicFrame.RoomId;
+                $("#rid").html(roomId);
+                // var FirstLocation = logicFrame.FirstLocation;
+                var str =  pre+", RandSeek:"+    RandSeek +" , SequenceNumber"+    SequenceNumber  ;
+                console.log(str);
+                // pre+" , Commands action:"+Commands.Action+" , Commands value:"+Commands.Value+ "
+
+                if ( msg.action == 'start_init' || "logicFrame" == msg.action){
+                    for(var i=0;i<Commands.length;i++){
+                        str = pre + " , "+Commands[i].Action + " , "+ Commands[i].Value + " , " + Commands[i].PlayerId;
+                        console.log(str);
+                        if (Commands[i].Action == "move"){
+                            LocationArr = Commands[i].Value.split(",");
+                            LocationStart = LocationArr[0];
+                            LocationEnd = LocationArr[1];
+
+                            var lightTd = "map"+id +"_"+LocationStart + "_"+LocationEnd;
+                            console.log(pre+"  "+lightTd);
+                            var tdObj = $("#"+lightTd);
+                            if(Commands[i].PlayerId == id){
+                                tdObj.css("background", "green");
+                            }else{
+                                tdObj.css("background", "red");
+                            }
+
+
+                            var playerLocation = getPlayerLocation(id)
+                            playerLocation[Commands[i].PlayerId] = LocationStart + "_"+LocationEnd;
+
+                        }
+                    }
+                    sendPlayerLogicFrameAck(id,SequenceNumber)
+                }else{
+                    return alert("action error.");
+                }
+
+
+
+
+            };
+
+            return wsObj;
+        }
+    };
+
+    function sendPlayerLogicFrameAck(playerId,SequenceNumber){
+        var wsObj = getPlayerWsObj(playerId);
+
+        logicFrame ={"RoomId":roomId,"SequenceNumber":SequenceNumber};
+        var msg = {"action":"playerLogicFrameAck","content":JSON.stringify(logicFrame)}
+
+        var jsonStr = JSON.stringify(msg)
+        wsObj.send(jsonStr);
+    }
+
+    function getMap(tableId) {
+        var tableObj = $("#" + tableId);
+        var matrix = new Array();
+        var matrixSize = 5;
+        var inc = 0;
+        for (var i = 0; i < matrixSize; i++) {
+            matrix[i] = new Array();
+            var trTemp = $("<tr></tr>");
+            for (var j = 0; j < matrixSize; j++) {
+                var tdId = tableId + "_" + i +"_" + j;
+                matrix[i][j] = inc;
+                trTemp.append("<td id='"+tdId+"'>"+ i +","+j +"</td>");
+                inc++;
+            }
+            // alert(trTemp);
+            trTemp.appendTo(tableObj);
+        }
+
+
+    }
+
+    function getPlayerLocation(id){
+        if(id == 1){
+            return playerLocation_1;
+        }else if(id == 2){
+            return playerLocation_2;
+        }else{
+            return alert("getPlayerLocation id error.");
+        }
+    }
+
+    function getPlayerWsObj(id){
+        if(id == 1){
+            return wsObj1;
+        }else if(id == 2){
+            return wsObj2;
+        }else{
+            return alert("getPlayerLocation id error.");
+        }
+    }
+
+    function move(id , dir){
+        alert(dir);
+        if (id == 1){
+        }else if(id == 2){
+        }else{
+            return alert("id error.");
+        }
+
+
+        var playerLocation = getPlayerLocation(id)
+        var nowLocationStr = playerLocation[id]
+        var nowLocationArr = nowLocationStr.split("_");
+        var nowLocationLine = nowLocationArr[0];
+        var nowLocationColumn = nowLocationArr[1];
+
+        var newLocation = "";
+        if(dir == "up"){
+            if(nowLocationLine == 0 ){
+                return alert("nowLocationLine == 0");
+            }
+            var newLocationLine =  nowLocationLine - 1;
+            newLocation = newLocationLine + "," + nowLocationColumn;
+        }else if(dir == "down"){
+            if(nowLocationLine == 4 ){
+                return alert("nowLocationLine == 4");
+            }
+            var newLocationLine =  nowLocationLine + 1;
+            newLocation = newLocationLine + "," + nowLocationColumn;
+        }else if(dir == "left"){
+            if(nowLocationColumn == 0 ){
+                return alert("nowLocationColumn == 0");
+            }
+            var newLocationColumn =  nowLocationColumn - 1;
+            newLocation = nowLocationLine + "," + newLocationColumn;
+        }else if(dir == "right"){
+            if(nowLocationColumn == 4 ){
+                return alert("nowLocationColumn == 4");
+            }
+            var newLocationColumn =  nowLocationColumn + 1;
+            newLocation = nowLocationLine + "," + newLocationColumn;
+        }else {
+            return alert("move dir error.");
+        }
+
+        console.log("oldLocation"+nowLocationStr+" , newLocation:"+newLocation);
+
+        commands ={"RoomId":roomId,"SequenceNumber":SequenceNumber,"Commands": [{"Action":"move","Value":newLocation,"PlayerId":id}]};
+        var msg = {"action":"playerCommandPush","content":JSON.stringify(commands)}
+
+        playerLocation = getPlayerLocation(id);
+        var lightTd = "map"+id +"_"+playerLocation[id];
+        var tdObj = $("#"+lightTd);
+        tdObj.css("background", "");
+
+        var jsonStr = JSON.stringify(msg)
+        wsObj = getPlayerWsObj(id);
+        wsObj1.send(jsonStr);
+    }
+    var wsObj1 =null;
+    var wsObj2 =null;
+    function player1Link(){
+        var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVaWQiOjEsIkV4cGlyZSI6MTYxNzMyOTk2MywiQVRpbWUiOjE2MTcyNDM1NjMsIkFwcElkIjoxfQ.XxbHWdSZx4WvXklXHfCWjSpJAIZo2aVv4aUuD3SNsIE";
+        var p1_ws_obj = new ws(1,token);
+        wsObj1 = p1_ws_obj.create();
+        $("#opt_bnt1").html("等待中...");
+    }
+
+    function player2Link(){
+        var token ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVaWQiOjIsIkV4cGlyZSI6MTYxNzc5NzUyMSwiQVRpbWUiOjE2MTc3MTExMjEsIkFwcElkIjoxfQ.vKWg0rKfanCZEWBoR4WfuHBAPj5-cH_AxY21YO_RUlk";
+        var p2_ws_obj = new ws(2,token);
+        wsObj2 = p2_ws_obj.create();
+        $("#opt_bnt2").html("等待中...");
+    }
+
+    getMap("map1");
+    getMap("map2");
+
+</script>
+
+
+</html>
