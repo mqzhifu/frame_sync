@@ -1,11 +1,20 @@
 package main
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 )
+
+type MyServer struct {
+	Host 		string
+	Port 		string
+	MapSize 	int
+	RoomPeople 	int
+	Uri			string
+}
 
 func  wwwHandler(w http.ResponseWriter, r *http.Request){
 	//parameter := r.URL.Query()//GET 方式URL 中的参数 转 结构体
@@ -13,6 +22,22 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 	mylog.Info("uri:",uri)
 	if uri == "" || uri == "/" {
 		ResponseStatusCode(w,500,"RequestURI is null or uir is :  '/'")
+		return
+	}
+
+	if uri == "/www/getServer"{
+		myServer := MyServer{
+			Host: mynetWay.Option.Host,
+			Port: mynetWay.Option.Port,
+			MapSize: mynetWay.Option.MapSize,
+			RoomPeople: mynetWay.Option.RoomPeople,
+			Uri: mynetWay.Option.WsUri,
+		}
+		jsonStr,_ := json.Marshal(&myServer)
+
+		w.Header().Set("Content-Length",strconv.Itoa( len(jsonStr) ) )
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Write(jsonStr)
 		return
 	}
 
@@ -46,7 +71,7 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string){
 	//if uriSplit[0] == "/apireq.html" {
 	//	uri = uriSplit[0]
 	//}
-	if uri == "/www/ws.html" ||  uri == "/www/jquery.min.js"{ //静态文件
+	if uri == "/www/ws.html" ||  uri == "/www/jquery.min.js"||  uri == "/www/sync.js"{ //静态文件
 		fileContent, err := getStaticFileContent(uri)
 		if err != nil {
 			ResponseStatusCode(w, 404, err.Error())

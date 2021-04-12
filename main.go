@@ -33,6 +33,7 @@ func main(){
 
 	newNetWayOption := NetWayOption{
 		Mylog 				:mylog,
+		//Host 				:"192.168.192.125",
 		Host 				:"127.0.0.1",
 		Port 				:"2222",
 		ContentType			:CONTENT_TYPE_JSON,
@@ -45,6 +46,8 @@ func main(){
 		WsUri: "/ws",
 		MaxClientConnNum	:65535,
 		MainChan			:mainChan,
+		RoomPeople			:2,
+		MapSize				:10,
 
 	}
 	newNetWay := NewNetWay(newNetWayOption)
@@ -53,11 +56,11 @@ func main(){
 
 	for{
 		select {
-		case a := <-mainChan:
-			mylog.Warning("mainChan",a)
+		case   <-mainChan:
+			mylog.Warning("mainChan")
 			goto eee
 		default:
-			time.Sleep(time.Second * 1000)
+			time.Sleep(time.Second * 1)
 			//mySleepSecond(1, "main")
 		}
 	}
@@ -73,30 +76,3 @@ func main(){
 	//}
 }
 
-////信号 处理
-//func  DemonSignal(newNetWay *NetWay){
-//	mylog.Warning("SIGNAL init : ")
-//	c := make(chan os.Signal)
-//	//syscall.SIGHUP :ssh 挂断会造成这个信号被捕获，先注释掉吧
-//	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGUSR1, syscall.SIGUSR2)
-//	prefix := "SIGNAL-DEMON :"
-//	for{
-//		sign := <- c
-//		mylog.Warning(prefix,sign)
-//		switch sign {
-//		case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-//			mylog.Warning(prefix+" exit!!!")
-//			netWay.Quit()
-//			goto end
-//		case syscall.SIGUSR1:
-//			mylog.Warning(prefix+" usr1!!!")
-//		case syscall.SIGUSR2:
-//			mylog.Warning(prefix+" usr2!!!")
-//		default:
-//			mylog.Warning(prefix+" unknow!!!")
-//		}
-//		mySleepSecond(1,prefix)
-//	}
-//end :
-//	netWay.Option.Mylog.Warning("DemonSignal end")
-//}

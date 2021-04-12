@@ -14,7 +14,8 @@ type Room struct {
 }
 
 type Player struct {
-	Id int
+	Id 			int
+	Nickname	string
 }
 
 func NewRoom()*Room{

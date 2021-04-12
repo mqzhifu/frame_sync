@@ -38,10 +38,14 @@ const (
 	ROOM_STATUS_WAIT = 1
 	ROOM_STATUS_WAIT_EXECING = 2
 	ROOM_STATUS_WAIT_END = 3
-
+	//一个副本的整体状态
 	SYNC_ELEMENT_STATUS_WAIT = 1
 	SYNC_ELEMENT_STATUS_EXECING = 2
 	SYNC_ELEMENT_STATUS_END = 3
+	//一个副本的，一条消息的，同步状态
+	PLAYERS_ACK_STATUS_INIT = 1
+	PLAYERS_ACK_STATUS_WAIT = 2
+	PLAYERS_ACK_STATUS_OK = 3
 )
 
 type NetWay struct {
@@ -67,6 +71,8 @@ type NetWayOption struct {
 	WsUri				string
 	Protocol 			int
 	MainChan			chan int
+	MapSize				int
+	RoomPeople			int
 }
 
 type WsConn struct {
@@ -99,6 +105,7 @@ var ConnPool 	map[int]*WsConn
 //var wsLog		*zlib.Log
 var mynetWay	*NetWay
 var mySync 		*Sync
+var myMatch		*Match
 func NewNetWay(option NetWayOption)*NetWay{
 	option.Mylog.Info("NewNetWay")
 	zlib.PrintStruct(option," : ")
@@ -107,6 +114,12 @@ func NewNetWay(option NetWayOption)*NetWay{
 	netWay := new(NetWay)
 	netWay.Option = option
 
+
+	matchOption := MatchOption{
+		RoomPeople: option.RoomPeople,
+	}
+
+	myMatch = NewMatch(matchOption)
 	mynetWay = netWay
 	//wsLog = option.Mylog
 	mySync = NewSync()
@@ -143,8 +156,13 @@ func (netWay *NetWay)Startup(){
 	}()
 	go netWay.DemonSignal()
 
-	go netWay.matchingPlayerCreateRoom(startupCtx)
-	//go netWay.checkConnPoolTimeout(startupCtx)
+	go myMatch.matchingPlayerCreateRoom  (startupCtx)
+	go netWay.checkConnPoolTimeout(startupCtx)
+
+
+	//myMatch.addOnePlayer(1)
+	//myMatch.addOnePlayer(2)
+	//myMatch.addOnePlayer(3)
 
 	err := httpServer.ListenAndServe()
 	//err := http.ListenAndServe(netWay.Option.Host+":"+netWay.Option.Port, nil)
@@ -194,6 +212,7 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 	NewWsConn.PlayerId = jwtData.Payload.Uid
 	netWay.addConnPoll( NewWsConn)
 
+	myMatch.addOnePlayer(NewWsConn.PlayerId)
 	go NewWsConn.IOLoop()
 	//NewWsConn.Write("aaaa")
 
@@ -257,11 +276,15 @@ func  (wsConn *WsConn)CloseHandler(code int, text string) error{
 }
 
 
-func(netWay *NetWay)SendMsgByUid(uid int,msg Msg){
+func(netWay *NetWay)SendMsgByUid(uid int,action string , content string){
+	msg :=  Msg{
+		Action: action,
+		Content: content,
+	}
 	netWay.Option.Mylog.Info("SendMsgByUid :",uid)
-	content,_ := json.Marshal(msg)
+	jsonContent,_ := json.Marshal(msg)
 	wsConn := ConnPool[uid]
-	wsConn.Conn.WriteMessage(websocket.TextMessage,content)
+	wsConn.Conn.WriteMessage(websocket.TextMessage,jsonContent)
 }
 
 func(netWay *NetWay)login(msg Msg)(JwtData zlib.JwtData,err error){
@@ -388,34 +411,7 @@ func   (wsConn *WsConn)WsConnRead()(msg Msg,empty bool,err error){
 		return msg,true,nil
 	}
 }
-func (netWay *NetWay)matchingPlayerCreateRoom(ctx context.Context){
-	netWay.Option.Mylog.Info("matchingPlayerCreateRoom:start")
-	for{
-		select {
-		case   <-ctx.Done():
-			//netWay.Option.Mylog.Warning("matchingPlayerCreateRoom close")
-			goto end
-		default:
-			if len(ConnPool) >= 2{
-				netWay.Option.Mylog.Info("have a game ")
-				newRoom := NewRoom()
-				player1 := Player{Id:ConnPool[1].PlayerId }
-				player2 := Player{Id:ConnPool[2].PlayerId }
-				newRoom.AddPlayer(player1)
-				newRoom.AddPlayer(player2)
 
-				netWay.Option.Mylog.Info("create a room :",newRoom)
-
-				mySync.addPoolElement(newRoom)
-				mySync.start(newRoom.Id)
-				goto end
-			}
-			mySleepSecond(1,"matching player")
-		}
-	}
-	end:
-		zlib.MyPrint("matchingPlayerCreateRoom close")
-}
 func(netWay *NetWay) Router(msg Msg,wsConn *WsConn){
 	switch msg.Action {
 		case "playerCommandPush":
@@ -426,6 +422,7 @@ func(netWay *NetWay) Router(msg Msg,wsConn *WsConn){
 		//case "playerAddRoom"://玩家进入房间
 		case "playerReady"://玩家进入状态状态
 		case "gameOver"://游戏结束
+			mySync.gameOver(msg.Content,wsConn)
 		case "gameStart"://所有-玩家均进入准备状态，点击'开始按钮'，触发游戏开始事件
 
 		case "heartbeat":
@@ -443,6 +440,7 @@ func(netWay *NetWay)heartbeat(msg Msg,wsConn *WsConn){
 }
 
 func(netWay *NetWay)checkConnPoolTimeout(ctx context.Context){
+	netWay.Option.Mylog.Info("checkConnPoolTimeout start:")
 	for{
 		select {
 		case   <-ctx.Done():
@@ -454,7 +452,8 @@ func(netWay *NetWay)checkConnPoolTimeout(ctx context.Context){
 					netWay.CloseOneConn(v,CLOSE_SOURCE_TIMEOUT)
 				}
 			}
-			mySleepSecond(1,"checkConnPoolTimeout")
+			time.Sleep(time.Second * 1)
+			//mySleepSecond(1,"checkConnPoolTimeout")
 		}
 	}
 	end:
