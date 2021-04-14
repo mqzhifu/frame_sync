@@ -214,6 +214,15 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 
 	myMatch.addOnePlayer(NewWsConn.PlayerId)
 	go NewWsConn.IOLoop()
+
+	type LoginRes struct {
+		Code int		`json:"code"`
+		Content string `json:"content"`
+	}
+
+	loginRes := LoginRes{Code: 200,Content: "ok" }
+	loginResJsonStr,_ := json.Marshal(loginRes)
+	netWay.SendMsgByUid(jwtData.Payload.Uid,"loginRes",string(loginResJsonStr))
 	//NewWsConn.Write("aaaa")
 
 }
@@ -242,7 +251,10 @@ func (netWay *NetWay)addConnPoll( NewWsConn *WsConn){
 }
 func  (netWay *NetWay)delConnPoll(uid int  ){
 	netWay.Option.Mylog.Warning("delConnPoll uid :",uid)
+	//zlib.MyPrint(len(ConnPool))
 	delete(ConnPool,uid)
+	//zlib.MyPrint(len(ConnPool))
+	//zlib.ExitPrint(111)
 }
 func (netWay *NetWay)CreateOneConnContainer(conn *websocket.Conn)(myWsConn *WsConn,err error ){
 	netWay.Option.Mylog.Info("Create one WsConn  client struct")
@@ -349,11 +361,15 @@ func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 	netWay.Option.Mylog.Info("wsConn close ,source : ",source)
 	if wsConn.Status == CONN_STATUS_EXECING{
 		wsConn.CloseChan <- 1
+	}else{
+		netWay.Option.Mylog.Error("wsConn.Status error")
+		return
 	}
 	err := wsConn.Conn.Close()
 	netWay.Option.Mylog.Info("wsConn.Conn.Close err:",err)
 
 	netWay.delConnPoll(wsConn.PlayerId)
+	myMatch.delOnePlayer(wsConn.PlayerId)
 	//mySleepSecond(2,"CloseOneConn")
 }
 

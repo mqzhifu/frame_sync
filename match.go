@@ -31,6 +31,19 @@ func (match *Match) addOnePlayer(playerId int){
 	signPlayerPool = append(signPlayerPool,playerSign)
 }
 
+func (match *Match) delOnePlayer(playerId int){
+
+	for k,v:=range signPlayerPool{
+		if v.PlayerId == playerId{
+			if len(signPlayerPool ) == 1{
+				signPlayerPool = []PlayerSign{}
+			}else{
+				signPlayerPool = append(signPlayerPool[:k], signPlayerPool[k+1:]...)
+			}
+		}
+	}
+}
+
 func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 	mylog.Info("matchingPlayerCreateRoom:start")
 	for{
@@ -40,7 +53,7 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 			goto end
 		default:
 			//zlib.MyPrint(len(signPlayerPool))
-			//mylog.Info("matching:",len(signPlayerPool),match.Option.RoomPeople)
+			mylog.Info("matching:",len(signPlayerPool),match.Option.RoomPeople)
 			if len(signPlayerPool) >= match.Option.RoomPeople{
 				newRoom := NewRoom()
 				for i:=0;i < len(signPlayerPool);i++{

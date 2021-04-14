@@ -34,7 +34,8 @@ func main(){
 	newNetWayOption := NetWayOption{
 		Mylog 				:mylog,
 		//Host 				:"192.168.192.125",
-		Host 				:"127.0.0.1",
+		Host 				:"192.168.192.91",
+		//Host 				:"127.0.0.1",
 		Port 				:"2222",
 		ContentType			:CONTENT_TYPE_JSON,
 		LoginAuthType		:"jwt",
@@ -46,7 +47,7 @@ func main(){
 		WsUri: "/ws",
 		MaxClientConnNum	:65535,
 		MainChan			:mainChan,
-		RoomPeople			:2,
+		RoomPeople			:4,
 		MapSize				:10,
 
 	}

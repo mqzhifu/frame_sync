@@ -45,6 +45,10 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
             alert(ev);
         }
     };
+    this.heartbeat = function(){
+        var msg = {"action":"heartbeat","content":""}
+        self.sendById(JSON.stringify(msg));
+    };
     this.create  = function(){
         self.wsObj = new WebSocket(self.hostUri);
         self.wsOpen();
@@ -62,12 +66,18 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
             console.log(pre +" content:"+msg.content);
 
             var logicFrame =  eval("("+msg.content+")");
-
-            if ( msg.action == 'start_init' ){
+            if ( msg.action == 'loginRes' ){
+                if (logicFrame.code != 200){
+                    return alert("loginRes failed!!!");
+                }
+                $("#"+self.domIdObj.optBntId).html("连接成功，等待中...");
+                setInterval(self.heartbeat,5000)
+            }else if ( msg.action == 'start_init' ){
                 for(var i=0;i<logicFrame.PlayerList.length;i++){
                     self.playerLocation[""+logicFrame.PlayerList[i].Id+""] = "empty"
                     // alert(logicFrame.PlayerList[i].Id);
                 }
+
                 // return 1;
                 self.randSeek  = logicFrame.RandSeek;
                 // $("#randseek").html(self.randSeek);
@@ -176,9 +186,10 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
         }
     };
 
-    this.move = function ( dir ){
-        var playerLocation = this.playerLocation;
-        var nowLocationStr = playerLocation[this.playerId]
+    this.move = function ( dirObj ){
+        var dir = dirObj.data;
+        var playerLocation = self.playerLocation;
+        var nowLocationStr = playerLocation[self.playerId]
         var nowLocationArr = nowLocationStr.split("_");
         var nowLocationLine =  nowLocationArr[0];
         var nowLocationColumn = nowLocationArr[1];
@@ -193,8 +204,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
             var newLocationLine =  nowLocationLine - 1;
             newLocation = newLocationLine + "," + nowLocationColumn;
         }else if(dir == "down"){
-            if(nowLocationLine == this.tableMax - 1 ){
-                return alert("nowLocationLine == "+ this.tableMax);
+            if(nowLocationLine == self.tableMax - 1 ){
+                return alert("nowLocationLine == "+ self.tableMax);
             }
             var newLocationLine =  nowLocationLine + 1;
             newLocation = newLocationLine + "," + nowLocationColumn;
@@ -205,50 +216,50 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
             var newLocationColumn =  nowLocationColumn - 1;
             newLocation = nowLocationLine + "," + newLocationColumn;
         }else if(dir == "right"){
-            if(nowLocationColumn ==  this.tableMax - 1 ){
-                return alert("nowLocationColumn == "+ this.tableMax);
+            if(nowLocationColumn ==  self.tableMax - 1 ){
+                return alert("nowLocationColumn == "+ self.tableMax);
             }
             var newLocationColumn =  nowLocationColumn + 1;
             newLocation = nowLocationLine + "," + newLocationColumn;
         }else {
-            return alert("move dir error.");
+            return alert("move dir error."+dir);
         }
 
         var localNewLocation = newLocation.replace(',','_');
 
-        var vsPlayerId = 0;
-        if (this.playerId == 1){
-            vsPlayerId = 2;
-        }else if(this.playerId == 2){
-            vsPlayerId = 1;
-        }else{
-            return alert("id error.");
-        }
-
-        if(playerLocation[vsPlayerId] == localNewLocation){
-            commands ={"RoomId":this.roomId,"SequenceNumber":this.sequenceNumber,"Commands": []};
-            var msg = {"action":"gameOver","content":JSON.stringify(commands)}
-            // var msg = {"action":"gameOver","content":""}
-            var jsonStr = JSON.stringify(msg)
-            this.sendById(jsonStr);
-            return alert("撞车了不能动了...");
-        }
+        // var vsPlayerId = 0;
+        // if (self.playerId == 1){
+        //     vsPlayerId = 2;
+        // }else if(self.playerId == 2){
+        //     vsPlayerId = 1;
+        // }else{
+        //     return alert("id error.");
+        // }
+        //
+        // if(playerLocation[vsPlayerId] == localNewLocation){
+        //     commands ={"RoomId":self.roomId,"SequenceNumber":self.sequenceNumber,"Commands": []};
+        //     var msg = {"action":"gameOver","content":JSON.stringify(commands)}
+        //     // var msg = {"action":"gameOver","content":""}
+        //     var jsonStr = JSON.stringify(msg)
+        //     this.sendById(jsonStr);
+        //     return alert("撞车了不能动了...");
+        // }
 
         console.log("dir:"+dir+"oldLocation"+nowLocationStr+" , newLocation:"+newLocation);
 
-        commands ={"RoomId":this.roomId,"SequenceNumber":this.sequenceNumber,"Commands": [{"Action":"move","Value":newLocation,"PlayerId":this.playerId}]};
+        commands ={"RoomId":self.roomId,"SequenceNumber":self.sequenceNumber,"Commands": [{"Action":"move","Value":newLocation,"PlayerId":self.playerId}]};
         var msg = {"action":"playerCommandPush","content":JSON.stringify(commands)}
 
         // var playerLocation = getPlayerLocation(id);
-        var playerLocationArr = playerLocation[this.playerId].split("_");
+        var playerLocationArr = playerLocation[self.playerId].split("_");
         // var lightTd = "map"+id +"_"+playerLocation[id];
-        var lightTd = this.getMapTdId(self.tableId,playerLocationArr[0],playerLocationArr[1]);
+        var lightTd = self.getMapTdId(self.tableId,playerLocationArr[0],playerLocationArr[1]);
         var tdObj = $("#"+lightTd);
         tdObj.css("background", "");
 
         var jsonStr = JSON.stringify(msg)
         // wsObj = getPlayerWsObj(id);
-        this.sendById(jsonStr);
+        self.sendById(jsonStr);
     }
 
     this.descPre = this.getPlayerDescById(playerId);
