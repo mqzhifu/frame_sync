@@ -153,7 +153,7 @@ func (sync *Sync) playerLogicFrameAck(content string,wsConn *WsConn ){
 	//	return
 	//}
 	if syncRoomPoolElement.PlayersAckStatus != PLAYERS_ACK_STATUS_WAIT{
-		mynetWay.Option.Mylog.Error("该帧号的状态!=待确认 状态")
+		mynetWay.Option.Mylog.Error("该帧号的状态!=待确认 状态,当前状态为：",syncRoomPoolElement.PlayersAckStatus)
 		return
 	}
 
@@ -183,7 +183,9 @@ func (sync *Sync) playerLogicFrameAck(content string,wsConn *WsConn ){
 		//更新 帧号 变更状态
 		syncRoomPoolElement.SequenceNumber++
 		syncRoomPoolElement.PlayersAckList = make(map[int]int)
-		syncRoomPoolElement.PlayersAckStatus = PLAYERS_ACK_STATUS_INIT
+		sync.upSyncRoomPoolElementPlayersAckStatus(logicFrame.RoomId,PLAYERS_ACK_STATUS_INIT)
+		//syncRoomPoolElement.PlayersAckStatus = PLAYERS_ACK_STATUS_INIT
+		mylog.Notice("have a new SequenceNumber")
 		//这里有个特殊处理，首帧其实是初始化的一些数据，当完成后，第一帧的动作按说应该是玩家操作
 		//但这里，先模拟一下，将玩家随机散落到一地图上的一些点
 		if syncRoomPoolElement.SequenceNumber == 1{
@@ -198,24 +200,13 @@ func (sync *Sync) playerLogicFrameAck(content string,wsConn *WsConn ){
 					PlayerId: player.Id,
 				}
 				commands = append(commands,command)
-				//LogicFramePlayerAck[player.Id] = 0
-				//sync.upLogicFramePlayerAck()
 			}
-			//syncRoomPoolElement.LogicFramePlayerAck = LogicFramePlayerAck
-			//for _,player:= range syncRoomPoolElement.Room.PlayerList{
-			//
-				logicFrameMsg := LogicFrame{
-					RoomId: logicFrame.RoomId,
-					SequenceNumber :syncRoomPoolElement.SequenceNumber,
-					Commands 		:commands,
-				}
-				logicFrameMsgJson ,_ := json.Marshal(logicFrameMsg)
-			//	msg := Msg{
-			//		Action: "start_init",
-			//		Content: string(logicFrameMsgJson),
-			//	}
-			//}
-			//mynetWay.SendMsgByUid(player.Id,msg)
+			logicFrameMsg := LogicFrame{
+				RoomId: logicFrame.RoomId,
+				SequenceNumber :syncRoomPoolElement.SequenceNumber,
+				Commands 		:commands,
+			}
+			logicFrameMsgJson ,_ := json.Marshal(logicFrameMsg)
 			sync.boardCastFrameInRoom(logicFrame.RoomId,"pushLogicFrame",string(logicFrameMsgJson))
 		}
 	}
@@ -238,16 +229,22 @@ func  (sync *Sync)gameOver(content string,wsConn *WsConn){
 		mynetWay.Option.Mylog.Error("getPoolElementById is empty",logicFrame.RoomId)
 	}
 
+	sync.boardCastFrameInRoom(logicFrame.RoomId,"over","1")
+
 	syncRoomPoolElement.Status = SYNC_ELEMENT_STATUS_END
 	//syncRoomPoolElement.Room.Status = ROOM_STATUS_WAIT_END
-
-	sync.boardCastFrameInRoom(logicFrame.RoomId,"over","1")
+}
+func (sync *Sync)upSyncRoomPoolElementPlayersAckStatus(roomId string,status int){
+	syncRoomPoolElement,_  := sync.getPoolElementById(roomId)
+	mylog.Notice("upSyncRoomPoolElementPlayersAckStatus ,old :",syncRoomPoolElement.PlayersAckStatus,"new",status)
+	syncRoomPoolElement.PlayersAckStatus = status
 }
 //给一个副本里的所有玩家广播数据，且该数据必须得有C端ACK
 func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,content string){
+	mylog.Notice("boardCastFrameInRoom:",roomId,action)
 	syncRoomPoolElement,_  := sync.getPoolElementById(roomId)
 	if syncRoomPoolElement.PlayersAckStatus == PLAYERS_ACK_STATUS_WAIT{
-		mylog.Error("syncRoomPoolElement PlayersAckStatus = ",PLAYERS_ACK_STATUS_WAIT)
+		mylog.Error("syncRoomPoolElement PlayersAckStatus = ",PLAYERS_ACK_STATUS_WAIT,syncRoomPoolElement.PlayersAckList)
 		zlib.ExitPrint(11111)
 	}
 	PlayersAckList := make(map[int]int)
@@ -256,7 +253,8 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,content stri
 		PlayersAckList[player.Id] = 0
 	}
 	syncRoomPoolElement.PlayersAckList = PlayersAckList
-	syncRoomPoolElement.PlayersAckStatus = PLAYERS_ACK_STATUS_WAIT
+	sync.upSyncRoomPoolElementPlayersAckStatus(roomId,PLAYERS_ACK_STATUS_WAIT)
+	//syncRoomPoolElement.PlayersAckStatus = PLAYERS_ACK_STATUS_WAIT
 
 	logicFrameHistory := LogicFrameHistory{
 		Action: action,

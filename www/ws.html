@@ -17,11 +17,13 @@
 <script src="jquery.min.js" type="text/javascript"></script>
 <script src="sync.js" type="text/javascript"></script>
 
-<div id="p1" style="float: left"></div>
-<div id="p2" style="float: right" ></div>
+<div id="p1" style="float: left;border:1px solid #cad9ea;"></div>
+<div id="p2" style="border:1px solid #cad9ea" ></div>
 
-<div id="p3" style="float: left"></div>
-<div id="p4"></div>
+<br/><br/>
+
+<div id="p3" style="float: left;border:1px solid #cad9ea"></div>
+<div id="p4" style="border:1px solid #cad9ea"></div>
 
 </body>
 
@@ -116,26 +118,6 @@
         initPlayer(player3,"p3",data);
         initPlayer(player4,"p4",data);
     }
-
-
-
-    // function player1Link(){
-    //     wsObj1.create();
-    //     $("#opt_bnt1").html("等待中...");
-    // }
-    //
-    // function player2Link(){
-    //     wsObj2.create();
-    //     $("#opt_bnt2").html("等待中...");
-    // }
-
-    // function move(playerId,dir){
-    //     if(playerId == 1){
-    //         wsObj1.move(dir);
-    //     }else{
-    //         wsObj2.move(dir);
-    //     }
-    // }
 
     function ReplaceTemplateHtml(html,DomIdPreObj){
         for(let key  in DomIdPreObj){

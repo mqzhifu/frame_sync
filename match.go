@@ -53,7 +53,7 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 			goto end
 		default:
 			//zlib.MyPrint(len(signPlayerPool))
-			mylog.Info("matching:",len(signPlayerPool),match.Option.RoomPeople)
+			//mylog.Info("matching:",len(signPlayerPool),match.Option.RoomPeople)
 			if len(signPlayerPool) >= match.Option.RoomPeople{
 				newRoom := NewRoom()
 				for i:=0;i < len(signPlayerPool);i++{

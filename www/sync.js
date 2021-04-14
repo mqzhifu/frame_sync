@@ -9,12 +9,22 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
     this.wsObj = null;
     this.roomId = "";
     this.sequenceNumber = 0;
+    this.heartbeatLoopFunc = null;
     this.randSeek = 0;
     this.domIdObj =DomIdObj ;
     // this.playerLocation = {1:"empty",2:"empty"}
     this.playerLocation = new Object();
     this.getPlayerDescById = function (id){
         return "player_"+ id;
+    };
+    this.gameOverAndClear = function(){
+        commands ={"RoomId":self.roomId,"SequenceNumber":self.sequenceNumber,"Commands": []};
+        var msg = {"action":"gameOver","content":JSON.stringify(commands)}
+        var jsonStr = JSON.stringify(msg)
+        self.sendById(jsonStr);
+        // $("#"+self.domIdObj.optBntId).html("游戏结束1");
+        self.upOptBnt("游戏结束1",1)
+        return alert("完犊子了，撞车了...这游戏得结束了....");
     };
     // this.sendById =  function (id ,msg){
     this.sendById =  function ( msg ){
@@ -25,7 +35,12 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
         // wsObj.send(msg);
         self.wsObj.send(msg);
     };
-
+    this.upOptBnt = function(content,clearClick){
+        $("#"+self.domIdObj.optBntId).html(content);
+        if(clearClick == 1){
+            $("#"+self.domIdObj.optBntId).unbind("click");
+        }
+    };
     this.closeFD = function (){
         console.log("closeFD");
         this.wsObj.close();
@@ -58,6 +73,9 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
         var pre = self.descPre;
         self.wsObj.onclose = function(ev){
             alert("receive server close:" +ev.code);
+            window.clearInterval(self.heartbeatLoopFunc);
+            // $("#"+self.domIdObj.optBntId).html("服务端关闭，游戏结束，连接断开");
+            self.upOptBnt("服务端关闭，游戏结束，连接断开",1)
         };
         self.wsObj.onmessage = function(ev){  //获取后端响应
             console.log("onmessage:"+ pre +" "+ev.data);
@@ -70,8 +88,11 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
                 if (logicFrame.code != 200){
                     return alert("loginRes failed!!!");
                 }
-                $("#"+self.domIdObj.optBntId).html("连接成功，等待中...");
-                setInterval(self.heartbeat,5000)
+                var bntContent = "连接成功，等待中...<a href='javascript:void(0);' onclick=''>取消</a>";
+                self.upOptBnt(bntContent,1);
+                // $("#"+self.domIdObj.optBntId).html("连接成功，等待中...");
+                self.heartbeatLoopFunc = setInterval(self.heartbeat,5000);
+
             }else if ( msg.action == 'start_init' ){
                 for(var i=0;i<logicFrame.PlayerList.length;i++){
                     self.playerLocation[""+logicFrame.PlayerList[i].Id+""] = "empty"
@@ -95,11 +116,9 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
                 var str =  pre+", RandSeek:"+    self.randSeek +" , SequenceNumber"+    self.sequenceNumber ;
                 console.log(str);
 
-
-                // $("#opt_bnt1").html("游戏中...");
-                // $("#opt_bnt2").html("游戏中...");
-                $("#"+self.domIdObj.optBntId).html("游戏中...");
-                $("#"+self.domIdObj.optBntId).html("游戏中...");
+                self.upOptBnt("游戏中...<a href='javascript:void(0);' onclick=''>异常掉线</a>",1)
+                // $("#"+self.domIdObj.optBntId).html("游戏中...");
+                // $("#"+self.domIdObj.optBntId).html("游戏中...");
 
                 self.sendPlayerLogicFrameAck( self.sequenceNumber)
             }else if( "pushLogicFrame" == msg.action){
@@ -143,7 +162,9 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
 
 
             }else if( "over" == msg.action){
-                return alert("游戏结束");
+                self.upOptBnt("游戏结束2",1)
+                // $("#"+self.domIdObj.optBntId).html("游戏结束2");
+                // return alert("游戏结束");
             }else{
                 return alert("action error.");
             }
@@ -226,6 +247,13 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj){
         }
 
         var localNewLocation = newLocation.replace(',','_');
+        for(let key  in playerLocation){
+            // alert(playerLocation[key]);
+            if(playerLocation[key] == localNewLocation){
+                 return self.gameOverAndClear()
+            }
+        }
+
 
         // var vsPlayerId = 0;
         // if (self.playerId == 1){
