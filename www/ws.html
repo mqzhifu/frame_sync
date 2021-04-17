@@ -85,6 +85,7 @@
         var hostUri = data.Uri;
         var matchGroupPeople = data.RoomPeople;
         var tableMax = data.MapSize;
+        var OffLineWaitTime = data.OffLineWaitTime;
         //
         // var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVaWQiOjEsIkV4cGlyZSI6MTYxNzMyOTk2MywiQVRpbWUiOjE2MTcyNDM1NjMsIkFwcElkIjoxfQ.XxbHWdSZx4WvXklXHfCWjSpJAIZo2aVv4aUuD3SNsIE";
 
@@ -97,7 +98,7 @@
 
         var DomIdPreObj = getPlayerDomIdPreObj(player.id);
         DomIdPreObj.playerId = player.id;
-        var wsObj = new ws(player.id,player.token,host,hostUri,matchGroupPeople,tableMax,DomIdPreObj);
+        var wsObj = new ws(player.id,player.token,host,hostUri,matchGroupPeople,tableMax,DomIdPreObj,OffLineWaitTime,data.ActionMap);
         var html = getTemplateHtml();
         html = ReplaceTemplateHtml(html,DomIdPreObj);
         $("#"+divId).html(html);
@@ -110,7 +111,6 @@
 
         wsObj.getMap("mapId_"+player.id);
     }
-
 
     function init(data){
         initPlayer(player1,"p1",data);

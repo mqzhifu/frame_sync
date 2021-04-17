@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>server - config</title>
+</head>
+<body>
+
+服务端接收
+<div id="client">
+
+</div>
+<br/>
+客户端接收
+<div id="server">
+
+</div>
+
+ws
+<div id="ws">
+
+</div>
+
+
+other
+<div id="other">
+
+</div>
+
+<script src="jquery.min.js" type="text/javascript"></script>
+<script>
+
+    // var domain = window.location.host;
+    var serverHostUri = "/www/getServer";
+    $.ajax({
+        // data: {username:$("#username").val(), content:$("#content").val()},
+        // dataType: "json",
+        type: "GET",
+        // url: "http://192.168.192.91:2222/www/getServer",
+        // url: "http://127.0.0.1:2222/www/getServer",
+        url:serverHostUri,
+        success: function(data){
+            init(data);
+        }
+    });
+
+    function init(data){
+        var clientHtml = initActionMap(data.ActionMap.client)
+        $("#client").html(clientHtml);
+
+        var serverHtml = initActionMap(data.ActionMap.server)
+        $("#server").html(serverHtml);
+
+
+        var html = "<table>" +
+            "<tr><td>ip</td><td>"+data.Host+"</td></tr>" +
+            "<tr><td>uri</td><td>"+data.Uri+"</td></tr>" +
+            "<tr><td>port</td><td>"+data.Port+"</td></tr>"
+        ;
+        html += "</table>";
+        $("#ws").html(html);
+
+
+
+        var html = "<table>" +
+            "<tr><td>OffLineWaitTime</td><td>"+data.OffLineWaitTime+"</td></tr>" +
+            "<tr><td>MapSize</td><td>"+data.MapSize+"</td></tr>" +
+            "<tr><td>contentType</td><td>"+data.ContentType+"</td></tr>" +
+            "<tr><td>LoginAuthType</td><td>"+data.LoginAuthType+"</td></tr>" +
+            "<tr><td>RoomPeople</td><td>"+data.RoomPeople+"</td></tr>"
+        ;
+        html += "</table>";
+        $("#other").html(html);
+    }
+
+    function initActionMap(data){
+        var html = "<table border='1'><tr><td>id</td><td>action</td><td>描述</td></tr>";
+        for(let key  in data){
+            html += "<tr><td>"+data[key].Id+"</td><td>"+data[key].Action+"</td><td>"+data[key].Desc+"</td><td>"+data[key].Demo+"</td></tr>"
+        }
+        html += "</table>";
+        return html;
+    }
+
+</script>
+
+</body>
+</html>

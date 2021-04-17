@@ -10,12 +10,7 @@ type Room struct {
 	Id			string
 	AddTime 	int
 	Status 		int
-	PlayerList	[]Player
-}
-
-type Player struct {
-	Id 			int
-	Nickname	string
+	PlayerList	[]*Player
 }
 
 func NewRoom()*Room{
@@ -32,6 +27,6 @@ func CreateRoomId()string{
 	return string
 }
 
-func(room *Room) AddPlayer(player Player){
+func(room *Room) AddPlayer(player *Player){
 	room.PlayerList = append(room.PlayerList,player)
 }

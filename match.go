@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"time"
 	"zlib"
 )
@@ -26,13 +27,27 @@ func NewMatch(matchOption MatchOption)*Match{
 	return match
 }
 
-func (match *Match) addOnePlayer(playerId int){
-	playerSign := PlayerSign{PlayerId: playerId,AddTime: zlib.GetNowTimeSecondToInt()}
-	signPlayerPool = append(signPlayerPool,playerSign)
+func (match *Match)getOneSignPlayerById(playerId int ) (playerSign PlayerSign,empty bool){
+	for _,v := range signPlayerPool{
+		if v.PlayerId == playerId {
+			return v,false
+		}
+	}
+	return playerSign,true
+}
+
+func (match *Match) addOnePlayer(playerId int)error{
+	_,empty := match.getOneSignPlayerById(playerId)
+	if !empty{
+		return errors.New("match sign addOnePlayer : player has exist")
+	}
+	newPlayerSign := PlayerSign{PlayerId: playerId,AddTime: zlib.GetNowTimeSecondToInt()}
+	signPlayerPool = append(signPlayerPool,newPlayerSign)
+	return nil
 }
 
 func (match *Match) delOnePlayer(playerId int){
-
+	mylog.Info("cancel : delOnePlayer ",playerId)
 	for k,v:=range signPlayerPool{
 		if v.PlayerId == playerId{
 			if len(signPlayerPool ) == 1{
@@ -40,8 +55,10 @@ func (match *Match) delOnePlayer(playerId int){
 			}else{
 				signPlayerPool = append(signPlayerPool[:k], signPlayerPool[k+1:]...)
 			}
+			return
 		}
 	}
+	mylog.Error("no match playerId",playerId)
 }
 
 func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
@@ -57,9 +74,8 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 			if len(signPlayerPool) >= match.Option.RoomPeople{
 				newRoom := NewRoom()
 				for i:=0;i < len(signPlayerPool);i++{
-					player := Player{
-						Id: signPlayerPool[i].PlayerId,
-					}
+					player := PlayerPool[signPlayerPool[i].PlayerId]
+					player.RoomId = newRoom.Id
 					newRoom.AddPlayer(player)
 				}
 				//zlib.MyPrint(newRoom)

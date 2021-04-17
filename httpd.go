@@ -9,11 +9,15 @@ import (
 )
 
 type MyServer struct {
-	Host 		string
-	Port 		string
-	MapSize 	int
-	RoomPeople 	int
-	Uri			string
+	Host 			string
+	Port 			string
+	MapSize 		int
+	RoomPeople 		int
+	Uri				string
+	OffLineWaitTime int
+	ActionMap		map[string]map[int]ActionMap
+	ContentType		int
+	LoginAuthType	string
 }
 
 func  wwwHandler(w http.ResponseWriter, r *http.Request){
@@ -32,25 +36,21 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 			MapSize: mynetWay.Option.MapSize,
 			RoomPeople: mynetWay.Option.RoomPeople,
 			Uri: mynetWay.Option.WsUri,
+			OffLineWaitTime:mynetWay.Option.OffLineWaitTime,
+			ActionMap : mynetWay.getActionMap(),
+			ContentType: mynetWay.Option.ContentType,
+			LoginAuthType:mynetWay.Option.LoginAuthType,
 		}
 		jsonStr,_ := json.Marshal(&myServer)
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")             //允许访问所有域
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type") //header的类型
 
 		w.Header().Set("Content-Length",strconv.Itoa( len(jsonStr) ) )
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Write(jsonStr)
 		return
 	}
-
-	////去掉 URI 中最后一个 /
-	//uriLen := len(uri)
-	//if string([]byte(uri)[uriLen-1:uriLen]) == "/"{
-	//	uri = string([]byte(uri)[0:uriLen - 1])
-	//}
-	//mylog.Info("final uri : ",uri , " start routing ...")
-	////*********: 还没有加  v1  v2 版本号
-	//code := 200
-	//var msg interface{}
-	//先匹配下静态资源
 	routeStatic(w,r,uri)
 }
 
@@ -71,7 +71,7 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string){
 	//if uriSplit[0] == "/apireq.html" {
 	//	uri = uriSplit[0]
 	//}
-	if uri == "/www/ws.html" ||  uri == "/www/jquery.min.js"||  uri == "/www/sync.js"{ //静态文件
+	if uri == "/www/ws.html" ||  uri == "/www/jquery.min.js"||  uri == "/www/sync.js"||  uri == "/www/config.html"{ //静态文件
 		fileContent, err := getStaticFileContent(uri)
 		if err != nil {
 			ResponseStatusCode(w, 404, err.Error())

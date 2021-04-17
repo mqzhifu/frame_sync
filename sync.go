@@ -35,7 +35,7 @@ type ClientInitData struct {
 	RandSeek		int
 	RoomId			string
 	SequenceNumber	int
-	PlayerList		[]Player
+	PlayerList		[]*Player
 }
 //玩家操作指令集
 type Command struct {
@@ -45,8 +45,10 @@ type Command struct {
 }
 //集合 ：每个副本
 var mySyncRoomPool map[string]*SyncRoomPoolElement
+var mySyncPlayerRoom map[int]string
 func NewSync()*Sync{
 	mySyncRoomPool = make(map[string]*SyncRoomPoolElement)
+	mySyncPlayerRoom = make(map[int]string)
 	sync := new(Sync)
 	return sync
 }
@@ -84,12 +86,17 @@ func  (sync *Sync)start(roomId string){
 		PlayerList:     syncRoomPoolElement.Room.PlayerList,
 		RandSeek:       syncRoomPoolElement.RandSeek,
 	}
+
+	for _,v :=range syncRoomPoolElement.Room.PlayerList{
+		mySyncPlayerRoom[v.Id] = roomId
+	}
+
 	jsonStrByte,_ := json.Marshal(clientInitData)
-	sync.boardCastFrameInRoom(roomId,"start_init",string(jsonStrByte));
+	sync.boardCastFrameInRoom(roomId,"startInit",string(jsonStrByte));
 
 }
 //有一个房间内，搜索一个用户
-func (sync *Sync)getPlayerByIdInRoom(playerId int ,room *Room,)(myplayer Player,empty bool){
+func (sync *Sync)getPlayerByIdInRoom(playerId int ,room *Room,)(myplayer *Player,empty bool){
 	for _,player:= range room.PlayerList{
 		if player.Id == playerId{
 			return player,false
@@ -229,15 +236,42 @@ func  (sync *Sync)gameOver(content string,wsConn *WsConn){
 		mynetWay.Option.Mylog.Error("getPoolElementById is empty",logicFrame.RoomId)
 	}
 
-	sync.boardCastFrameInRoom(logicFrame.RoomId,"over","1")
+	responseGameOver := ResponseGameOver{}
+	jsonStr ,_ := json.Marshal(responseGameOver)
+	sync.boardCastFrameInRoom(logicFrame.RoomId,"gameOver",string(jsonStr))
 
 	syncRoomPoolElement.Status = SYNC_ELEMENT_STATUS_END
+	for _,v:= range syncRoomPoolElement.Room.PlayerList{
+		delete(mySyncPlayerRoom,v.Id)
+	}
 	//syncRoomPoolElement.Room.Status = ROOM_STATUS_WAIT_END
 }
 func (sync *Sync)upSyncRoomPoolElementPlayersAckStatus(roomId string,status int){
 	syncRoomPoolElement,_  := sync.getPoolElementById(roomId)
 	mylog.Notice("upSyncRoomPoolElementPlayersAckStatus ,old :",syncRoomPoolElement.PlayersAckStatus,"new",status)
 	syncRoomPoolElement.PlayersAckStatus = status
+}
+
+func (sync *Sync)cancelSign(wsConn *WsConn){
+	myMatch.delOnePlayer(wsConn.PlayerId)
+}
+func (sync *Sync)close(wsConn *WsConn){
+	mylog.Warning("sync.close")
+	roomId,ok := mySyncPlayerRoom[wsConn.PlayerId]
+	if !ok {
+		return
+	}
+
+	mynetWay.upPlayerPool(wsConn.PlayerId,PLAYER_STATUS_OFFLINE)
+
+	sync.boardCastFrameInRoom(roomId,"otherPlayerOffline",strconv.Itoa(wsConn.PlayerId))
+}
+func (sync *Sync)playerResumeGame(wsConn *WsConn){
+	_ ,empty := mynetWay.getPlayerStatusById(wsConn.PlayerId)
+	if empty{
+
+	}
+	//room := mySyncRoomPool[playerStatus.RoomId]
 }
 //给一个副本里的所有玩家广播数据，且该数据必须得有C端ACK
 func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,content string){
@@ -249,6 +283,10 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,content stri
 	}
 	PlayersAckList := make(map[int]int)
 	for _,player:= range syncRoomPoolElement.Room.PlayerList {
+		if player.Status == PLAYER_STATUS_OFFLINE{
+			mylog.Error("player offline")
+			continue
+		}
 		mynetWay.SendMsgByUid(player.Id,action,content)
 		PlayersAckList[player.Id] = 0
 	}
