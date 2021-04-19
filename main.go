@@ -14,6 +14,23 @@ import (
 
 var mylog *zlib.Log
 func main(){
+
+	//type Ccc struct {
+	//
+	//}
+	//
+	//ccc:= Ccc{}
+	//type Aaa struct {
+	//	Bbb interface{}
+	//}
+	//
+	//aaa := Aaa{
+	//
+	//	Bbb: ccc,
+	//}
+	//
+	//zlib.ExitPrint(aaa.Bbb.(Ccc))
+
 	mainChan := make(chan int )
 
 	rootCtx := context.Background()

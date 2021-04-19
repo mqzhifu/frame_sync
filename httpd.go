@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type MyServer struct {
@@ -18,6 +20,11 @@ type MyServer struct {
 	ActionMap		map[string]map[int]ActionMap
 	ContentType		int
 	LoginAuthType	string
+}
+
+type ApiList struct {
+	ActionMap		map[string]map[int]ActionMap
+	JsonFormat 		map[int]string
 }
 
 func  wwwHandler(w http.ResponseWriter, r *http.Request){
@@ -37,7 +44,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 			RoomPeople: mynetWay.Option.RoomPeople,
 			Uri: mynetWay.Option.WsUri,
 			OffLineWaitTime:mynetWay.Option.OffLineWaitTime,
-			ActionMap : mynetWay.getActionMap(),
+			ActionMap : mynetWay.ProtocolActions.getActionMap(),
 			ContentType: mynetWay.Option.ContentType,
 			LoginAuthType:mynetWay.Option.LoginAuthType,
 		}
@@ -50,6 +57,32 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Write(jsonStr)
 		return
+	}else if uri == "/www/apilist"{
+		ApiList := ApiList{
+			ActionMap : mynetWay.ProtocolActions.getActionMap(),
+		}
+		formatStr := make(map[int]string)
+		for k,v := range ApiList.ActionMap["client"]{
+			var out bytes.Buffer
+			apiJson := v.Demo
+			json.Indent(&out,[]byte(apiJson),"", "&nbsp;&nbsp;&nbsp;&nbsp;")
+			formatStr[k] = strings.Replace(out.String(),"\n","<br/>",-1)
+		}
+		for k,v := range ApiList.ActionMap["server"]{
+			var out bytes.Buffer
+			apiJson := v.Demo
+			json.Indent(&out,[]byte(apiJson),"", "&nbsp;&nbsp;&nbsp;&nbsp;")
+			formatStr[k] = strings.Replace(out.String(),"\n","<br/>",-1)
+		}
+		ApiList.JsonFormat = formatStr
+		jsonStr,_ := json.Marshal(&ApiList)
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")             //允许访问所有域
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type") //header的类型
+
+		w.Header().Set("Content-Length",strconv.Itoa( len(jsonStr) ) )
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Write(jsonStr)
 	}
 	routeStatic(w,r,uri)
 }
@@ -71,7 +104,8 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string){
 	//if uriSplit[0] == "/apireq.html" {
 	//	uri = uriSplit[0]
 	//}
-	if uri == "/www/ws.html" ||  uri == "/www/jquery.min.js"||  uri == "/www/sync.js"||  uri == "/www/config.html"{ //静态文件
+	if uri == "/www/ws.html" ||  uri == "/www/jquery.min.js"||  uri == "/www/sync.js"||
+		uri == "/www/config.html" || uri == "/www/apilist.html"{ //静态文件
 		fileContent, err := getStaticFileContent(uri)
 		if err != nil {
 			ResponseStatusCode(w, 404, err.Error())

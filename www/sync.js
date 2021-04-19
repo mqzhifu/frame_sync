@@ -14,7 +14,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.offLineWaitTime = offLineWaitTime;
     this.playerLocation = new Object();
     this.tableId = "";
-    //下面3项，是由S端供给
+    //下面，是由S端供给
     this.roomId = "";
     this.actionMap = actionMap;
     this.sequenceNumber = 0;
@@ -43,7 +43,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         self.sendMsg("login",data)
     };
     this.gameOverAndClear = function(){
-        commands ={"RoomId":self.roomId,"SequenceNumber":self.sequenceNumber,"Commands": []};
+        commands ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"result": "aaaa"};
         // var msg = {"action":"gameOver","content":JSON.stringify(commands)}
         // var jsonStr = JSON.stringify(msg)
         // self.sendById(jsonStr);
@@ -111,16 +111,17 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.onclose = function(ev){
         alert("receive server close:" +ev.code);
         window.clearInterval(self.heartbeatLoopFunc);
-        // $("#"+self.domIdObj.optBntId).html("服务端关闭，游戏结束，连接断开");
+        var reConnBntId = "reconn_"+self.playerId;
         if (self.myClose == 1){
-            self.upOptBnt("主动关闭WS，<a href='javascript:void(0);' onclick=''>重连接</a>",1)
+            self.upOptBnt("C端主动关闭WS，<a href='javascript:void(0);' id='"+reConnBntId+"'>重连接</a>",1)
+            $("#"+reConnBntId).click(self.create);
         }else{
             self.upOptBnt("服务端关闭，游戏结束，连接断开",1)
         }
     };
 
     this.sendPlayerLogicFrameAck = function ( SequenceNumber){
-        var logicFrame ={"RoomId":this.roomId,"SequenceNumber":SequenceNumber};
+        var logicFrame ={"roomId":this.roomId,"sequenceNumber":SequenceNumber};
         // var msg = {"action":"playerLogicFrameAck","content":JSON.stringify(logicFrame)}
         // var jsonStr = JSON.stringify(msg)
         // this.sendById(jsonStr);
@@ -169,6 +170,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             self.rOver(logicFrame);
         }else if( "pushLogicFrame" == action){
             self.rPushLogicFrame(logicFrame)
+        }else if( "otherPlayerResumeGame" == action){
+            alert("玩家断线恢复喽~");
         }else{
             return alert("action error.");
         }
@@ -177,16 +180,16 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.rPushLogicFrame = function(logicFrame){
         var pre = self.descPre;
 
-        var Commands = logicFrame.Commands;
+        var commands = logicFrame.commands;
         self.sequenceNumber  = logicFrame.SequenceNumber;
         $("#"+self.domIdObj.seqId).html(self.sequenceNumber);
 
-        console.log("sequenceNumber:"+self.sequenceNumber+ ", commandLen:" + Commands.length)
-        for(var i=0;i<Commands.length;i++){
-            str = pre + " , "+Commands[i].Action + " , "+ Commands[i].Value + " , " + Commands[i].PlayerId;
+        console.log("sequenceNumber:"+self.sequenceNumber+ ", commandLen:" +  commands.length)
+        for(var i=0;i<commands.length;i++){
+            str = pre + " , "+commands[i].action + " , "+ commands[i].value + " , " + commands[i].playerId;
             console.log(str);
-            if (Commands[i].Action == "move"){
-                var LocationArr = Commands[i].Value.split(",");
+            if (commands[i].action == "move"){
+                var LocationArr = commands[i].value.split(",");
                 var LocationStart = LocationArr[0];
                 var LocationEnd = LocationArr[1];
 
@@ -194,23 +197,24 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
                 var lightTd =self.getMapTdId(self.tableId,LocationStart,LocationEnd);
                 console.log(pre+"  "+lightTd);
                 var tdObj = $("#"+lightTd);
-                if(Commands[i].PlayerId == playerId){
+                if(commands[i].playerId == playerId){
                     tdObj.css("background", "green");
                 }else{
                     tdObj.css("background", "red");
                 }
                 var playerLocation = self.playerLocation;
-                if (playerLocation[Commands[i].PlayerId] == "empty"){
+                if (playerLocation[commands[i].playerId] == "empty"){
                     //证明是第一次移动，没有之前的数据
                 }else{
                     // playerLocation = getPlayerLocation(playerId);
-                    var playerLocationArr = playerLocation[Commands[i].PlayerId].split("_");
+                    // alert(commands[i].playerId);
+                    var playerLocationArr = playerLocation[commands[i].playerId].split("_");
                     //非首次移动，这次移动后，要把之前所有位置清掉
                     var lightTd = self.getMapTdId(self.tableId,playerLocationArr[0],playerLocationArr[1]);
                     var tdObj = $("#"+lightTd);
                     tdObj.css("background", "");
                 }
-                playerLocation[Commands[i].PlayerId] = LocationStart + "_"+LocationEnd;
+                playerLocation[commands[i].playerId] = LocationStart + "_"+LocationEnd;
             }
         }
         self.sendPlayerLogicFrameAck( self.sequenceNumber)
@@ -219,7 +223,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         var now = Date.now();
         // var msg = {"action": "pong", "content": now}
         // var jsonStr = JSON.stringify(msg)
-        logicFrame.ClientReceiveTime =  now
+        logicFrame.clientReceiveTime =  now
         self.sendMsg("clientPong",logicFrame,1)
     };
     this.rLoginRes = function(logicFrame){
@@ -245,12 +249,11 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         self.sendMsg("playerStatus",msg)
     };
     this.rPushPlayerStatus = function(logicFrame){
-        console.log("pushPlayerStatus:"+logicFrame.Status)
+        console.log("pushPlayerStatus:"+logicFrame.status)
         if (logicFrame.roomId ){//有未完结的记录
-            // var msg = {"action": "playerResumeGame", "content": ""}
-            // var jsonStr = JSON.stringify(msg)
-            // self.sendById(jsonStr)
-            self.sendMsg("playerResumeGame","",0)
+            alert("检测出，有未结束的一局游戏，开始恢复中...");
+            var commands ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"playerId":self.playerId };
+            self.sendMsg("playerResumeGame",commands)
         }else{
 
         }
@@ -258,26 +261,25 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.rOtherPlayerOffline = function(logicFrame){
         //房间内有其它玩家掉线了
         self.otherPlayerOffline = logicFrame;
-        return alert("其它玩家掉线了："+logicFrame +"，略等："+self.offLineWaitTime +"秒");
+        return alert("其它玩家掉线了："+logicFrame.playerId +"，略等："+self.offLineWaitTime +"秒");
     };
     this.rStartInit = function(logicFrame){
         var pre = self.descPre;
-        for(var i=0;i<logicFrame.PlayerList.length;i++){
-            self.playerLocation[""+logicFrame.PlayerList[i].Id+""] = "empty"
-            // alert(logicFrame.PlayerList[i].Id);
+        for(var i=0;i<logicFrame.playerList.length;i++){
+            self.playerLocation[""+logicFrame.playerList[i].id+""] = "empty"
         }
 
         // return 1;
-        self.randSeek  = logicFrame.RandSeek;
+        self.randSeek  = logicFrame.randSeek;
         // $("#randseek").html(self.randSeek);
         $("#"+self.domIdObj.randSeekId).html(self.randSeek);
 
 
-        self.sequenceNumber  = logicFrame.SequenceNumber;
+        self.sequenceNumber  = logicFrame.sequenceNumber;
         // $("#sid").html(self.sequenceNumber);
         $("#"+self.domIdObj.seqId).html(self.sequenceNumber);
 
-        self.roomId = logicFrame.RoomId;
+        self.roomId = logicFrame.roomId;
         // $("#rid").html(logicFrame.RoomId);
         $("#"+self.domIdObj.roomId).html(self.roomId);
 
@@ -412,7 +414,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
         console.log("dir:"+dir+"oldLocation"+nowLocationStr+" , newLocation:"+newLocation);
 
-        var commands ={"RoomId":self.roomId,"SequenceNumber":self.sequenceNumber,"Commands": [{"Action":"move","Value":newLocation,"PlayerId":self.playerId}]};
+        var commands ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"commands": [{"action":"move","value":newLocation,"playerId":self.playerId}]};
         // var msg = {"action":"playerCommandPush","content":JSON.stringify(commands)}
         // var jsonStr = JSON.stringify(msg)
         // self.sendById(jsonStr);

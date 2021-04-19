@@ -1,8 +1,9 @@
 |1001|loginRes|登陆结果|{"code":200,"content":"ok"}|
-|1003|serverPing|测试RTT|{"AddTime":1618660216145,"ClientReceiveTime":0,"ServerResponseTime":0}|
+|1003|serverPing|测试RTT|{"addTime":1618826987258,"clientReceiveTime":0,"serverResponseTime":0}|
 |1005|serverPong|测试RTT||
-|1007|startInit|开始游戏前初始化|{"RandSeek":56,"RoomId":"1618660696898","SequenceNumber":0,"PlayerList":[{"Id":1,"Nickname":"","Status":1,"AddTime":1618660642,"UpTime":0,"RoomId":"1618660696898"},{"Id":2,"Nickname":"","Status":1,"AddTime":1618660671,"UpTime":0,"RoomId":"1618660696898"},{"Id":3,"Nickname":"","Status":1,"AddTime":1618660672,"UpTime":0,"RoomId":"1618660696898"},{"Id":4,"Nickname":"","Status":1,"AddTime":1618660676,"UpTime":0,"RoomId":"1618660696898"}]}|
-|1009|pushLogicFrame|推送逻辑帧|{"RoomId":"1618660696898","SequenceNumber":1,"Commands":[{"Action":"move","Value":"5,9","PlayerId":1},{"Action":"move","Value":"7,5","PlayerId":2},{"Action":"move","Value":"7,6","PlayerId":3},{"Action":"move","Value":"6,9","PlayerId":4}]}|
-|1011|gameOver|游戏结束|{"result":""}|
-|1013|otherPlayerOffline|其它玩家掉线||
-|1015|pushPlayerStatus|推送玩家状态|{"Id":1,"Nickname":"","Status":1,"AddTime":1618660544,"UpTime":0,"RoomId":""}|
+|1007|startInit|开始游戏前初始化|{"randSeek":86,"roomId":"1618830353017","sequenceNumber":0,"playerList":[{"id":1,"nickname":"","status":1,"addTime":1618830348,"upTime":0,"roomId":"1618830353017"},{"id":2,"nickname":"","status":1,"addTime":1618830349,"upTime":0,"roomId":"1618830353017"},{"id":3,"nickname":"","status":1,"addTime":1618830350,"upTime":0,"roomId":"1618830353017"},{"id":4,"nickname":"","status":1,"addTime":1618830352,"upTime":0,"roomId":"1618830353017"}]}|
+|1009|pushLogicFrame|推送逻辑帧|{"roomId":"1618830583185","sequenceNumber":0,"commands":[{"action":"move","value":"7,9","playerId":2}]}|
+|1011|gameOver|游戏结束|{"playerId":0,"roomId":"1618827649890","sequenceNumber":1,"result":"aaaa"}|
+|1013|otherPlayerOffline|其它玩家掉线|{"playerId":1}|
+|1015|pushPlayerStatus|推送玩家状态|{"id":1,"nickname":"","status":1,"addTime":1618827272,"upTime":0,"roomId":""}|
+|1024|otherPlayerResumeGame|其它玩家恢复了游戏|{"roomId":"1618832590734","playerId":1,"sequenceNumber":0}|
