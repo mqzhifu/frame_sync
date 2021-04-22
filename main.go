@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 	"zlib"
 )
@@ -14,29 +15,31 @@ import (
 
 var mylog *zlib.Log
 func main(){
+	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
 
-	//type Ccc struct {
-	//
-	//}
-	//
-	//ccc:= Ccc{}
-	//type Aaa struct {
-	//	Bbb interface{}
-	//}
-	//
-	//aaa := Aaa{
-	//
-	//	Bbb: ccc,
-	//}
-	//
-	//zlib.ExitPrint(aaa.Bbb.(Ccc))
+	if len(os.Args) < 4{
+		msg := "os.Args len < 4 , ex :  env=dev , ip=127.0.0.1 , port=2222 , log_base_path=/data/www/golang/src/logs"
+		zlib.ExitPrint(msg)
+	}
 
+	env 			:= os.Args[1]
+	ip 			:= os.Args[2]
+	port 		:= os.Args[3]
+	log_base_path 	:= os.Args[4]
+
+
+	msg := "os.Args: env= "+env +" ,ip= "+ip +" ,port=" + port+ " ,log_base_path= " +log_base_path
+	zlib.MyPrint(msg)
+	if !CheckEnvExist(env){
+		list := GetEnvList()
+		zlib.ExitPrint("env is err , list:",list)
+	}
 	mainChan := make(chan int )
 
 	rootCtx := context.Background()
 	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
 	logOption := zlib.LogOption{
-		OutFilePath : "/data/www/golang/src/logs",
+		OutFilePath : log_base_path,
 		OutFileName: "frame_sync.log",
 		Level : 511,
 		Target : 7,
@@ -50,13 +53,15 @@ func main(){
 
 	newNetWayOption := NetWayOption{
 		Mylog 				:mylog,
+		Host				:ip,
+		Port				:port,
 		//Host 				:"192.168.192.125",
 		//Host 				:"192.168.192.91",
 		//Host 				:"192.168.192.132",
 		//Host 				:"192.168.192.97",
-		Host 				:"192.168.31.147",
+		//Host 				:"192.168.31.147",
 		//Host 				:"127.0.0.1",
-		Port 				:"2222",
+		//Port 				:"2222",
 		ContentType			:CONTENT_TYPE_JSON,
 		LoginAuthType		:"jwt",
 		LoginAuthSecretKey	:"chukong",

@@ -1,6 +1,13 @@
 package main
 
 const (
+	ENV_LOCAL					= "local"//开发环境
+	ENV_DEV					= "dev"//开发环境
+	ENV_TEST				= "test"//测试环境
+	ENV_PRE					= "pre"//预发布环境
+	ENV_ONLINE				= "online"//线上环境
+
+
 	CLOSE_SOURCE_CLIENT = 1			//客户端断开连接
 	CLOSE_SOURCE_AUTH_FAILED = 2	//服务端验证失败
 	CLOSE_SOURCE_CREATE = 3			//初始化 连接类失败，可能是连接数过大
@@ -38,3 +45,17 @@ const (
 	PLAYER_STATUS_ONLINE = 1
 	PLAYER_STATUS_OFFLINE = 2
 )
+
+func GetEnvList()[]string{
+	list := []string{ENV_LOCAL,ENV_DEV,ENV_TEST,ENV_PRE,ENV_ONLINE}
+	return list
+}
+func CheckEnvExist(env string)bool{
+	list := []string{ENV_LOCAL,ENV_DEV,ENV_TEST,ENV_PRE,ENV_ONLINE}
+	for _,v :=range list{
+		if v == env{
+			return true
+		}
+	}
+	return false
+}
