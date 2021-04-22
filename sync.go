@@ -317,7 +317,7 @@ func  (sync *Sync)RoomHistory(requestRoomHistory RequestRoomHistory,wsConn *WsCo
 	room,_ := sync.getPoolElementById(roomId)
 	responseRoomHistory := room.LogicFrameHistory
 	str,_ := json.Marshal(responseRoomHistory)
-	mynetWay.SendMsgByUid(wsConn.PlayerId,"otherPlayerResumeGame",string(str))
+	mynetWay.SendMsgByUid(wsConn.PlayerId,"pushRoomHistory",string(str))
 }
 func  (sync *Sync)playerResumeGame(requestPlayerResumeGame RequestPlayerResumeGame,wsConn *WsConn){
 	roomId := requestPlayerResumeGame.RoomId

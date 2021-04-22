@@ -151,7 +151,13 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         }else if( "pushLogicFrame" == action){
             self.rPushLogicFrame(logicFrame)
         }else if( "otherPlayerResumeGame" == action){
-            alert("玩家断线恢复喽~");
+            if(logicFrame){
+                var tdId = self.tableId + "_" + self.playerLocation[logicFrame.playerId];
+                var tdObj = $("#"+tdId)
+                tdObj.css("background", "red");
+            }
+
+
         }else if( "pushRoomHistory" == action){
             alert("接收到，玩家-房间-历史操作记录~");
         }else{
@@ -248,7 +254,22 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.rOtherPlayerOffline = function(logicFrame){
         //房间内有其它玩家掉线了
         self.otherPlayerOffline = logicFrame;
-        return alert("其它玩家掉线了："+logicFrame.playerId +"，略等："+self.offLineWaitTime +"秒");
+        alert("其它玩家掉线了："+logicFrame.playerId +"，略等："+self.offLineWaitTime +"秒");
+
+
+        var tdId = self.tableId + "_" + self.playerLocation[logicFrame.playerId];
+        var tdObj = $("#"+tdId)
+        tdObj.css("background", "#A9A9A9");
+        // var lightTd =self.getMapTdId(self.tableId,LocationStart,LocationEnd);
+        // console.log(pre+"  "+lightTd);
+        // var tdObj = $("#"+lightTd);
+        // if(commands[i].playerId == playerId){
+        //     tdObj.css("background", "green");
+        // }else{
+        //     tdObj.css("background", "red");
+        // }
+
+
     };
     this.rStartInit = function(logicFrame){
         var pre = self.descPre;
