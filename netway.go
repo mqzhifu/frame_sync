@@ -259,7 +259,15 @@ func(netWay *NetWay)SendMsgByUid(uid int,action string , content string){
 		mylog.Error("GetActionId empty",action)
 	}
 	content = strconv.Itoa(actionMapT.Id) + content
-	wsConn := ConnPool[uid]
+	wsConn,ok := ConnPool[uid]
+	if !ok {
+		mylog.Error("wsConn not in pool,maybe del.")
+		return
+	}
+	if wsConn.Status == CONN_STATUS_CLOSE{
+		mylog.Error("wsConn status =CONN_STATUS_CLOSE.")
+		return
+	}
 	wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
 }
 
@@ -318,6 +326,7 @@ func  (wsConn *WsConn)WsConnReadLoop(ctx context.Context){
 func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 	netWay.Option.Mylog.Info("wsConn close ,source : ",source)
 	if wsConn.Status == CONN_STATUS_EXECING{
+		wsConn.Status = CONN_STATUS_CLOSE
 		wsConn.CloseChan <- 1
 	}else{
 		netWay.Option.Mylog.Error("wsConn.Status error")

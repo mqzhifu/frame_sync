@@ -67,6 +67,7 @@ type ResponseClientInitData struct {
 	RoomId			string		`json:"roomId"`
 	SequenceNumber	int			`json:"sequenceNumber"`
 	PlayerList		[]*Player	`json:"playerList"`
+	Time 			int64 		`json:"time"`
 }
 
 type ResponseOtherPlayerOffline struct {

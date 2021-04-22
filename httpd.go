@@ -105,7 +105,7 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string){
 	//	uri = uriSplit[0]
 	//}
 	if uri == "/www/ws.html" ||  uri == "/www/jquery.min.js"||  uri == "/www/sync.js"||
-		uri == "/www/cocos_syna_fame,jpg.html" ||
+		uri == "/www/sync_frame_client_server.jpg" ||
 		uri == "/www/config.html" || uri == "/www/apilist.html"{ //静态文件
 		fileContent, err := getStaticFileContent(uri)
 		if err != nil {
