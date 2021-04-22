@@ -65,6 +65,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
                 return data[key].Id;
             }
         }
+        alert(action + ": no match");
         return "";
     };
     this.getActionName = function (actionId,category){
@@ -81,7 +82,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         // var jsonStr =  JSON.stringify(msg);
         var id = self.getActionId(action,"client");
         content = id+content;
-        console.log(self.descPre + " sendMsg:",content)
+        console.log( " sendMsg:" + self.descPre ,content)
         self.wsObj.send(content);
     };
     this.upOptBnt = function(content,clearClick){
@@ -134,27 +135,6 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         var content = ev.data.substr(4);
         var action = self.getActionName(actionId,"server")
         console.log(pre +" actionId:"+actionId , " content:",content , " actionName:",action);
-        // var msg = eval("("+ev.data+")");
-        // console.log(pre +" action:"+msg.action);
-        // console.log(pre +" content:"+msg.content);
-        // var logicFrame =  eval("("+msg.content+")");
-        // if ( msg.action == 'loginRes' ) {
-        //     self.rLoginRes(logicFrame);
-        // }else if( msg.action == 'pushPlayerStatus'){//获取一个当前玩家的状态，如：是否有历史未结束的游戏
-        //     self.rPushPlayerStatus(logicFrame);
-        // }else if( msg.action == 'ping'){//获取一个当前玩家的状态，如：是否有历史未结束的游戏
-        //     self.rPing(logicFrame);
-        // }else if ( msg.action == 'otherPlayerOffline' ){
-        //     self.rOtherPlayerOffline(logicFrame);
-        // }else if ( msg.action == 'startInit' ){
-        //     self.rStartInit(logicFrame);
-        // }else if( "over" == msg.action){
-        //     self.rOver(logicFrame);
-        // }else if( "pushLogicFrame" == msg.action){
-        //     self.rPushLogicFrame(logicFrame)
-        // }else{
-        //     return alert("action error.");
-        // }
         var logicFrame =  eval("("+content+")");
         if ( action == 'loginRes' ) {
             self.rLoginRes(logicFrame);
@@ -172,7 +152,10 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             self.rPushLogicFrame(logicFrame)
         }else if( "otherPlayerResumeGame" == action){
             alert("玩家断线恢复喽~");
+        }else if( "pushRoomHistory" == action){
+            alert("接收到，玩家-房间-历史操作记录~");
         }else{
+
             return alert("action error.");
         }
     };
@@ -181,7 +164,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         var pre = self.descPre;
 
         var commands = logicFrame.commands;
-        self.sequenceNumber  = logicFrame.SequenceNumber;
+        self.sequenceNumber  = logicFrame.sequenceNumber;
         $("#"+self.domIdObj.seqId).html(self.sequenceNumber);
 
         console.log("sequenceNumber:"+self.sequenceNumber+ ", commandLen:" +  commands.length)
@@ -251,9 +234,13 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.rPushPlayerStatus = function(logicFrame){
         console.log("pushPlayerStatus:"+logicFrame.status)
         if (logicFrame.roomId ){//有未完结的记录
-            alert("检测出，有未结束的一局游戏，开始恢复中...");
+            alert("检测出，有未结束的一局游戏，开始恢复中...,rooId:"+logicFrame.roomId);
+            self.roomId = logicFrame.roomId
             var commands ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"playerId":self.playerId };
             self.sendMsg("playerResumeGame",commands)
+
+            var history ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"playerId":self.playerId };
+            self.sendMsg("getRoomHistory",history)
         }else{
 
         }
@@ -414,7 +401,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
         console.log("dir:"+dir+"oldLocation"+nowLocationStr+" , newLocation:"+newLocation);
 
-        var commands ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"commands": [{"action":"move","value":newLocation,"playerId":self.playerId}]};
+        var commands ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"commands": [{"id":1,"action":"move","value":newLocation,"playerId":self.playerId}]};
         // var msg = {"action":"playerCommandPush","content":JSON.stringify(commands)}
         // var jsonStr = JSON.stringify(msg)
         // self.sendById(jsonStr);

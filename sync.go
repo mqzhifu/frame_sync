@@ -22,17 +22,20 @@ type SyncRoomPoolElement struct {
 	LogicFrameHistory 	[]LogicFrameHistory
 }
 type LogicFrameHistory struct {
-	Action string
+	Id 		int
+	Action 	string
 	Content string
 }
 //逻辑帧
 type LogicFrame struct {
+	Id 				int 		`json:"id"`
 	RoomId 			string		`json:"roomId"`
 	SequenceNumber 	int			`json:"sequenceNumber"`
 	Commands 		[]Command	`json:"commands"`
 }
 //玩家操作指令集
 type Command struct {
+	Id 			int 	`json:"id"`
 	Action 		string	`json:"action"`
 	Value 		string	`json:"value"`
 	PlayerId 	int		`json:"playerId"`
@@ -40,10 +43,16 @@ type Command struct {
 //集合 ：每个副本
 var mySyncRoomPool map[string]*SyncRoomPoolElement
 var mySyncPlayerRoom map[int]string
+var logicFrameMsgDefaultId int
+var commandDefaultId int
 func NewSync()*Sync{
 	mySyncRoomPool = make(map[string]*SyncRoomPoolElement)
 	mySyncPlayerRoom = make(map[int]string)
 	sync := new(Sync)
+
+	logicFrameMsgDefaultId = 16
+	commandDefaultId = 32
+
 	return sync
 }
 //给集合添加一个新的 游戏副本
@@ -197,6 +206,7 @@ func (sync *Sync) playerLogicFrameAck(logicFrame LogicFrame,wsConn *WsConn ){
 			for _,player:= range syncRoomPoolElement.Room.PlayerList{
 				location := strconv.Itoa(zlib.GetRandIntNum(mynetWay.Option.MapSize)) + "," + strconv.Itoa(zlib.GetRandIntNum(mynetWay.Option.MapSize))
 				command := Command{
+					Id: logicFrameMsgDefaultId,
 					Action: "move",
 					Value: location,
 					PlayerId: player.Id,
@@ -204,6 +214,7 @@ func (sync *Sync) playerLogicFrameAck(logicFrame LogicFrame,wsConn *WsConn ){
 				commands = append(commands,command)
 			}
 			logicFrameMsg := LogicFrame{
+				Id	: commandDefaultId,
 				RoomId: logicFrame.RoomId,
 				SequenceNumber :syncRoomPoolElement.SequenceNumber,
 				Commands 		:commands,
@@ -265,10 +276,16 @@ func (sync *Sync)close(wsConn *WsConn){
 
 	sync.boardCastFrameInRoom(roomId,"otherPlayerOffline",string(jsonStr),0)
 }
+
+
+
 //给一个副本里的所有玩家广播数据，且该数据必须得有C端ACK
 func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,content string,clientAck int){
 	mylog.Notice("boardCastFrameInRoom:",roomId,action)
-	syncRoomPoolElement,_  := sync.getPoolElementById(roomId)
+	syncRoomPoolElement,empty  := sync.getPoolElementById(roomId)
+	if empty {
+		zlib.ExitPrint("syncRoomPoolElement is empty!!!")
+	}
 	if syncRoomPoolElement.PlayersAckStatus == PLAYERS_ACK_STATUS_WAIT{
 		mylog.Error("syncRoomPoolElement PlayersAckStatus = ",PLAYERS_ACK_STATUS_WAIT,syncRoomPoolElement.PlayersAckList)
 		zlib.ExitPrint(11111)
@@ -295,10 +312,16 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,content stri
 	//该局副本的所有玩家操作日志，用于断线重连-补放/重播
 	syncRoomPoolElement.LogicFrameHistory = append(syncRoomPoolElement.LogicFrameHistory,logicFrameHistory)
 }
-
-func  (sync *Sync)playerResumeGame(requestPlayerResumeGame RequestPlayerResumeGame,wsConn *WsConn){
-	str,_ := json.Marshal(requestPlayerResumeGame)
-	//syncRoomPoolElement,_ := sync.getPoolElementById(requestPlayerResumeGame.RoomId)
-	//syncRoomPoolElement.LogicFrameHistory
+func  (sync *Sync)RoomHistory(requestRoomHistory RequestRoomHistory,wsConn *WsConn){
+	roomId := requestRoomHistory.RoomId
+	room,_ := sync.getPoolElementById(roomId)
+	responseRoomHistory := room.LogicFrameHistory
+	str,_ := json.Marshal(responseRoomHistory)
 	mynetWay.SendMsgByUid(wsConn.PlayerId,"otherPlayerResumeGame",string(str))
+}
+func  (sync *Sync)playerResumeGame(requestPlayerResumeGame RequestPlayerResumeGame,wsConn *WsConn){
+	roomId := requestPlayerResumeGame.RoomId
+	str,_ := json.Marshal(requestPlayerResumeGame)
+	mynetWay.SendMsgByUid(wsConn.PlayerId,"otherPlayerResumeGame",string(str))
+	sync.boardCastFrameInRoom(roomId,"otherPlayerResumeGame",string(str),0)
 }

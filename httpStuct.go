@@ -18,6 +18,12 @@ type RequestPlayerReady struct {
 	PlayerId	int `json:"playerId"`
 }
 
+type RequestRoomHistory struct {
+	PlayerId	int `json:"playerId"`
+	RoomId	 	string `json:"roomId"`
+	SequenceNumber int `json:"sequenceNumber"`
+}
+
 type RequestCancelSign struct {
 	PlayerId	int `json:"playerId"`
 }
@@ -72,6 +78,12 @@ type ResponseClientInitData struct {
 
 type ResponseOtherPlayerOffline struct {
 	PlayerId	int `json:"playerId"`
+}
+
+type ResponseRoomHistory struct {
+	RoomId	 	string `json:"roomId"`
+	SequenceNumber int `json:"sequenceNumber"`
+	Command 	LogicFrameHistory
 }
 
 

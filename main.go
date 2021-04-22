@@ -23,8 +23,8 @@ func main(){
 	}
 
 	env 			:= os.Args[1]
-	ip 			:= os.Args[2]
-	port 		:= os.Args[3]
+	ip 				:= os.Args[2]
+	port 			:= os.Args[3]
 	log_base_path 	:= os.Args[4]
 
 
@@ -52,16 +52,11 @@ func main(){
 
 
 	newNetWayOption := NetWayOption{
+		//Host 				:"192.168.192.125",
+		//Port 				:"2222",
 		Mylog 				:mylog,
 		Host				:ip,
 		Port				:port,
-		//Host 				:"192.168.192.125",
-		//Host 				:"192.168.192.91",
-		//Host 				:"192.168.192.132",
-		//Host 				:"192.168.192.97",
-		//Host 				:"192.168.31.147",
-		//Host 				:"127.0.0.1",
-		//Port 				:"2222",
 		ContentType			:CONTENT_TYPE_JSON,
 		LoginAuthType		:"jwt",
 		LoginAuthSecretKey	:"chukong",

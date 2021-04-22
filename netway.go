@@ -411,6 +411,10 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 			requestPlayerReady := RequestPlayerReady{}
 			RouterJsonUnmarshal(msg.Content,&requestPlayerReady)
 			netWay.playerReady(requestPlayerReady,wsConn)
+		case "getRoomHistory"://一局副本的，所有历史操作记录
+			requestRoomHistory := RequestRoomHistory{}
+			RouterJsonUnmarshal(msg.Content,&requestRoomHistory)
+			mySync.RoomHistory(requestRoomHistory,wsConn)
 		//case "netClose"://网络异常断开，也可能是主动断开
 		//case "clientPreClose"://C端主动断开连接前，提前通知
 		//	netWay.CloseOneConn(wsConn,CLOSE_SOURCE_CLIENT_PRE)
