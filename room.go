@@ -11,13 +11,35 @@ type Room struct {
 	AddTime 	int
 	Status 		int
 	PlayerList	[]*Player
+
+	SequenceNumber		int
+	PlayersAckList		map[int]int
+	PlayersAckStatus	int
+	RandSeek			int
+	LogicFrameHistory 	[]LogicFrameHistory
 }
 
 func NewRoom()*Room{
 	room := new(Room)
 	room.Id = CreateRoomId()
-	room.Status = ROOM_STATUS_WAIT
+	room.Status = ROOM_STATUS_INIT
 	room.AddTime = zlib.GetNowTimeSecondToInt()
+	room.SequenceNumber = 0
+	room.PlayersAckList =  make(map[int]int)
+	room.PlayersAckStatus = PLAYERS_ACK_STATUS_INIT
+	room.RandSeek = zlib.GetRandIntNum(100)
+
+	//mynetWay.Option.Mylog.Info("addPoolElement")
+	//_ ,exist := mySyncRoomPool[room.Id]
+	//if exist{
+	//	mynetWay.Option.Mylog.Error("mySyncRoomPool has exist : ",room.Id)
+	//	return
+	//}
+	//syncRoomPoolElement := SyncRoomPoolElement{
+	//	Status: SYNC_ELEMENT_STATUS_WAIT,
+	//	Room: room,
+	//}
+
 	return room
 }
 
@@ -29,4 +51,9 @@ func CreateRoomId()string{
 
 func(room *Room) AddPlayer(player *Player){
 	room.PlayerList = append(room.PlayerList,player)
+}
+
+func (room *Room)upStatus(status int){
+	mylog.Info("room upStatus ,old :",room.Status, " new :" ,status)
+	room.Status = status
 }

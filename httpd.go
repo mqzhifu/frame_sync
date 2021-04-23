@@ -83,6 +83,16 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		w.Header().Set("Content-Length",strconv.Itoa( len(jsonStr) ) )
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Write(jsonStr)
+	}else if uri == "/www/testCreateJwtToken"{
+		info := mynetWay.testCreateJwtToken()
+		jsonStr,_ := json.Marshal(&info)
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")             //允许访问所有域
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type") //header的类型
+
+		w.Header().Set("Content-Length",strconv.Itoa( len(jsonStr) ) )
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Write(jsonStr)
 	}
 	routeStatic(w,r,uri)
 }

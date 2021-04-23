@@ -11,16 +11,16 @@ type Sync struct {
 
 }
 //集合中的：每个副本元素
-type SyncRoomPoolElement struct {
-	Status 				int
-	Room 				*Room
-	SequenceNumber		int
-	PlayersAckList		map[int]int
-	PlayersAckStatus	int
-	AddTime 			int
-	RandSeek			int
-	LogicFrameHistory 	[]LogicFrameHistory
-}
+//type SyncRoomPoolElement struct {
+//	Status 				int
+//	Room 				*Room
+//	SequenceNumber		int
+//	PlayersAckList		map[int]int
+//	PlayersAckStatus	int
+//	AddTime 			int
+//	RandSeek			int
+//	LogicFrameHistory 	[]LogicFrameHistory
+//}
 type LogicFrameHistory struct {
 	Id 		int
 	Action 	string
@@ -41,12 +41,13 @@ type Command struct {
 	PlayerId 	int		`json:"playerId"`
 }
 //集合 ：每个副本
-var mySyncRoomPool map[string]*SyncRoomPoolElement
+var mySyncRoomPool map[string]*Room
+//索引表，PlayerId=>RoomId
 var mySyncPlayerRoom map[int]string
 var logicFrameMsgDefaultId int
 var commandDefaultId int
 func NewSync()*Sync{
-	mySyncRoomPool = make(map[string]*SyncRoomPoolElement)
+	mySyncRoomPool = make(map[string]*Room)
 	mySyncPlayerRoom = make(map[int]string)
 	sync := new(Sync)
 
@@ -63,39 +64,39 @@ func (sync *Sync) addPoolElement(room 	*Room){
 		mynetWay.Option.Mylog.Error("mySyncRoomPool has exist : ",room.Id)
 		return
 	}
-	syncRoomPoolElement := SyncRoomPoolElement{
-		Status: SYNC_ELEMENT_STATUS_WAIT,
-		Room: room,
-		SequenceNumber: 0,
-		PlayersAckList: make(map[int]int),
-		PlayersAckStatus:PLAYERS_ACK_STATUS_INIT,
-		AddTime: zlib.GetNowTimeSecondToInt(),
-		RandSeek: zlib.GetRandIntNum(100),
-
-	}
-	mySyncRoomPool[room.Id] = &syncRoomPoolElement
+	//syncRoomPoolElement := SyncRoomPoolElement{
+	//	Status: SYNC_ELEMENT_STATUS_WAIT,
+	//	Room: room,
+	//	SequenceNumber: 0,
+	//	PlayersAckList: make(map[int]int),
+	//	PlayersAckStatus:PLAYERS_ACK_STATUS_INIT,
+	//	AddTime: zlib.GetNowTimeSecondToInt(),
+	//	RandSeek: zlib.GetRandIntNum(100),
+	//
+	//}
+	mySyncRoomPool[room.Id] = room
 }
-
+//一个新的房间，开始同步
 func  (sync *Sync)start(roomId string){
 	mynetWay.Option.Mylog.Warning("start a new game:")
 
-	syncRoomPoolElement,_ := sync.getPoolElementById(roomId)
-	syncRoomPoolElement.Status = SYNC_ELEMENT_STATUS_EXECING
-	syncRoomPoolElement.Room.Status = ROOM_STATUS_WAIT_EXECING
-	//sync.upRoomPoolElementStatus(roomId   ,ROOM_STATUS_WAIT_EXECING )
-	clientInitData := ResponseClientInitData{
-		RoomId:         roomId,
-		SequenceNumber: 0,
-		PlayerList:     syncRoomPoolElement.Room.PlayerList,
-		RandSeek:       syncRoomPoolElement.RandSeek,
-		Time: 			time.Now().UnixNano() / 1e6,
+	room,_ := sync.getPoolElementById(roomId)
+	room.upStatus(ROOM_STATUS_EXECING)
+	responseClientInitRoomData := ResponseClientInitRoomData{
+		Status 			:room.Status,
+		AddTime 		:room.AddTime,
+		RoomId			:roomId,
+		SequenceNumber	: 0,
+		PlayerList		:room.PlayerList,
+		RandSeek		:room.RandSeek,
+		Time			:time.Now().UnixNano() / 1e6,
 	}
 
-	for _,v :=range syncRoomPoolElement.Room.PlayerList{
+	for _,v :=range room.PlayerList{
 		mySyncPlayerRoom[v.Id] = roomId
 	}
 
-	jsonStrByte,_ := json.Marshal(clientInitData)
+	jsonStrByte,_ := json.Marshal(responseClientInitRoomData)
 	sync.boardCastFrameInRoom(roomId,"startInit",string(jsonStrByte),1)
 
 }
@@ -109,7 +110,7 @@ func (sync *Sync)getPlayerByIdInRoom(playerId int ,room *Room,)(myplayer *Player
 	return myplayer,true
 }
 
-func (sync *Sync) getPoolElementById(roomId string)(SyncRoomPoolElement *SyncRoomPoolElement,empty bool){
+func (sync *Sync) getPoolElementById(roomId string)(SyncRoomPoolElement *Room,empty bool){
 	v,exist := mySyncRoomPool[roomId]
 	if !exist{
 		mynetWay.Option.Mylog.Error("getPoolElementById is empty,",roomId)
@@ -168,7 +169,7 @@ func (sync *Sync) playerLogicFrameAck(logicFrame LogicFrame,wsConn *WsConn ){
 		return
 	}
 
-	player ,empty := sync.getPlayerByIdInRoom(wsConn.PlayerId,syncRoomPoolElement.Room)
+	player ,empty := sync.getPlayerByIdInRoom(wsConn.PlayerId,syncRoomPoolElement)
 	if empty{
 		mynetWay.Option.Mylog.Error("playerId wrong,not found in this room.",wsConn.PlayerId)
 		return
@@ -203,7 +204,7 @@ func (sync *Sync) playerLogicFrameAck(logicFrame LogicFrame,wsConn *WsConn ){
 			mynetWay.Option.Mylog.Info("syncRoomPoolElement.SequenceNumber == 0")
 			//S端，每一逻辑帖，建立一个集合，保存广播的消息，玩家返回的确认ACK
 			commands := []Command{}
-			for _,player:= range syncRoomPoolElement.Room.PlayerList{
+			for _,player:= range syncRoomPoolElement.PlayerList{
 				location := strconv.Itoa(zlib.GetRandIntNum(mynetWay.Option.MapSize)) + "," + strconv.Itoa(zlib.GetRandIntNum(mynetWay.Option.MapSize))
 				command := Command{
 					Id: logicFrameMsgDefaultId,
@@ -228,28 +229,25 @@ func (sync *Sync) playerLogicFrameAck(logicFrame LogicFrame,wsConn *WsConn ){
 	return
 
 }
-
-func  (sync *Sync)gameOver(requestGameOver RequestGameOver,wsConn *WsConn){
-	//logicFrame := LogicFrame{}
-	//err := json.Unmarshal([]byte(content),&logicFrame)
-	//if err != nil{
-	//	mynetWay.Option.Mylog.Error("receiveCommand Unmarshal ",err.Error())
-	//	return
-	//}
-
-	syncRoomPoolElement,empty := sync.getPoolElementById(requestGameOver.RoomId)
+func  (sync *Sync)roomEnd(roomId string){
+	mylog.Info("roomEnd")
+	room,empty := sync.getPoolElementById(roomId)
 	if empty{
-		mynetWay.Option.Mylog.Error("getPoolElementById is empty",requestGameOver.RoomId)
+		mynetWay.Option.Mylog.Error("getPoolElementById is empty",roomId)
+		return
 	}
-
-	//responseGameOver := ResponseGameOver{}
+	room.upStatus(ROOM_STATUS_END)
+	for _,v:= range room.PlayerList{
+		mynetWay.Players.upPlayerRoomId(v.Id,"")
+		delete(mySyncPlayerRoom,v.Id)
+	}
+}
+func  (sync *Sync)gameOver(requestGameOver RequestGameOver,wsConn *WsConn){
+	sync.roomEnd(requestGameOver.RoomId)
 	jsonStr ,_ := json.Marshal(requestGameOver)
 	sync.boardCastFrameInRoom(requestGameOver.RoomId,"gameOver",string(jsonStr),0)
 
-	syncRoomPoolElement.Status = SYNC_ELEMENT_STATUS_END
-	for _,v:= range syncRoomPoolElement.Room.PlayerList{
-		delete(mySyncPlayerRoom,v.Id)
-	}
+
 	//syncRoomPoolElement.Room.Status = ROOM_STATUS_WAIT_END
 }
 func (sync *Sync)upSyncRoomPoolElementPlayersAckStatus(roomId string,status int){
@@ -263,17 +261,34 @@ func (sync *Sync)cancelSign(requestCancelSign RequestCancelSign,wsConn *WsConn){
 }
 func (sync *Sync)close(wsConn *WsConn){
 	mylog.Warning("sync.close")
+	//获取该玩家的roomId
 	roomId,ok := mySyncPlayerRoom[wsConn.PlayerId]
-	if !ok {
-		return
+	if ok {
+		//判断下所有玩家是否均下线了
+		playerOffLineCount := 0
+		room ,_ := sync.getPoolElementById(roomId)
+		for _,v := range room.PlayerList{
+			player,empty := mynetWay.Players.getById(v.Id)
+			if empty{
+				playerOffLineCount++
+				mylog.Notice("mynetWay.Players.getById empty",v.Id)
+				continue
+			}
+			if player.Status == PLAYER_STATUS_OFFLINE{
+				playerOffLineCount++
+			}
+		}
+		playerOffLineCount++//这里因为，已有一个玩家关闭中，但是还未处理
+		mylog.Info("playerOffLineCount : ",playerOffLineCount)
+		if len(room.PlayerList) == playerOffLineCount{
+			sync.roomEnd(roomId)
+		}
 	}
 
-	mynetWay.Players.upPlayerPool(wsConn.PlayerId,PLAYER_STATUS_OFFLINE)
 	responseOtherPlayerOffline := ResponseOtherPlayerOffline{
 		PlayerId: wsConn.PlayerId,
 	}
 	jsonStr,_ := json.Marshal(responseOtherPlayerOffline)
-
 	sync.boardCastFrameInRoom(roomId,"otherPlayerOffline",string(jsonStr),0)
 }
 
@@ -291,7 +306,7 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,content stri
 		zlib.ExitPrint(11111)
 	}
 	PlayersAckList := make(map[int]int)
-	for _,player:= range syncRoomPoolElement.Room.PlayerList {
+	for _,player:= range syncRoomPoolElement.PlayerList {
 		if player.Status == PLAYER_STATUS_OFFLINE{
 			mylog.Error("player offline")
 			continue
@@ -324,4 +339,19 @@ func  (sync *Sync)playerResumeGame(requestPlayerResumeGame RequestPlayerResumeGa
 	str,_ := json.Marshal(requestPlayerResumeGame)
 	mynetWay.SendMsgByUid(wsConn.PlayerId,"otherPlayerResumeGame",string(str))
 	sync.boardCastFrameInRoom(roomId,"otherPlayerResumeGame",string(str),0)
+}
+func  (sync *Sync)GetRoom(requestGetRoom RequestGetRoom,wsConn *WsConn){
+	roomId := requestGetRoom.RoomId
+	room,_ := sync.getPoolElementById(roomId)
+	responseClientInitRoomData := ResponseClientInitRoomData{
+		Status 			:room.Status,
+		AddTime 		:room.AddTime,
+		RoomId			:roomId,
+		SequenceNumber	: 0,
+		PlayerList		:room.PlayerList,
+		RandSeek		:room.RandSeek,
+		Time			:time.Now().UnixNano() / 1e6,
+	}
+	str,_ := json.Marshal(responseClientInitRoomData)
+	mynetWay.SendMsgByUid(wsConn.PlayerId,"pushRoomInfo",string(str))
 }

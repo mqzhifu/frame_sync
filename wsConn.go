@@ -18,7 +18,7 @@ type WsConn struct {
 	//outChan 	chan []byte
 }
 
-func (netWay *NetWay)CreateOneConnContainer(conn *websocket.Conn)(myWsConn *WsConn,err error ){
+func (netWay *NetWay)CreateOneWsConn(conn *websocket.Conn)(myWsConn *WsConn,err error ){
 	netWay.Option.Mylog.Info("Create one WsConn  client struct")
 	if len(ConnPool)   > netWay.Option.MaxClientConnNum{
 		netWay.Option.Mylog.Error("more MaxClientConnNum")
@@ -55,7 +55,7 @@ func   (wsConn *WsConn)Write(content string){
 	//wsConn.WsConn.SetWriteDeadline(time.Now().Add(time.Second * 3))
 	//wsConn.WsConn.Write([]byte(content))
 }
-func   (wsConn *WsConn)WsConnRead()(msg Message,empty bool,err error){
+func   (wsConn *WsConn)Read()(msg Message,empty bool,err error){
 	// 设置消息的最大长度 - 暂无
 
 	//wsConn.Conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(mynetWay.Option.IOTimeout)))

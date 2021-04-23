@@ -74,21 +74,22 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 			if len(signPlayerPool) >= match.Option.RoomPeople{
 				newRoom := NewRoom()
 				for i:=0;i < len(signPlayerPool);i++{
-					player := PlayerPool[signPlayerPool[i].PlayerId]
+					player,empty := mynetWay.Players.getById(signPlayerPool[i].PlayerId)
+					if empty{
+						mylog.Error("match Players.getById empty , ",signPlayerPool[i].PlayerId)
+					}
 					player.RoomId = newRoom.Id
 					newRoom.AddPlayer(player)
 				}
-				//zlib.MyPrint(newRoom)
-				//zlib.MyPrint(signPlayerPool)
+				//删除上面匹配成功的玩家
 				signPlayerPool = append(signPlayerPool[match.Option.RoomPeople:])
-				//zlib.ExitPrint(signPlayerPool)
 				mylog.Info("create a room :",newRoom)
+				//将该房间添加到容器中
 				mySync.addPoolElement(newRoom)
 				mySync.start(newRoom.Id)
 			}
 			time.Sleep(time.Second * 1)
 			//mySleepSecond(1,"matching player")
-			//mySleepSecond(1,"")
 		}
 	}
 end:

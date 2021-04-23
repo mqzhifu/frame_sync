@@ -17,7 +17,10 @@ type RequestPlayerStatus struct {
 type RequestPlayerReady struct {
 	PlayerId	int `json:"playerId"`
 }
-
+type RequestGetRoom struct {
+	PlayerId	int `json:"playerId"`
+	RoomId	 	string `json:"roomId"`
+}
 type RequestRoomHistory struct {
 	PlayerId	int `json:"playerId"`
 	RoomId	 	string `json:"roomId"`
@@ -47,8 +50,9 @@ type RequestGameOver struct {
 
 //================================================
 type ResponseLoginRes struct {
-	Code int		`json:"code"`
-	Content string `json:"content"`
+	Code int				`json:"code"`
+	ErrMsg string 			`json:"errMsg"`
+	PlayerConnInfo	Player 	`json:"playerConnInfo"`
 }
 
 type ResponseGameOver struct {
@@ -68,12 +72,14 @@ type ResponsePlayerStatus struct {
 }
 
 //游戏开始后，第一次的初始化
-type ResponseClientInitData struct {
+type ResponseClientInitRoomData struct {
 	RandSeek		int			`json:"randSeek"`
 	RoomId			string		`json:"roomId"`
 	SequenceNumber	int			`json:"sequenceNumber"`
 	PlayerList		[]*Player	`json:"playerList"`
 	Time 			int64 		`json:"time"`
+	AddTime 		int 		`json:"addTime"`
+	Status 			int 		`json:"status"`
 }
 
 type ResponseOtherPlayerOffline struct {
@@ -86,5 +92,7 @@ type ResponseRoomHistory struct {
 	Command 	LogicFrameHistory
 }
 
-
+type ResponseKickOff struct {
+	Time 			int64 		`json:"time"`
+}
 

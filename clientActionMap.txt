@@ -11,3 +11,5 @@
 |1020|playerOver|玩家死亡||
 |1022|gameOver|一局游戏结束|{"roomId":"1618827362536","sequenceNumber":1,"result":"aaaa"}|
 |1024|getRoomHistory|其它玩家恢复了游戏|{"roomId":"1618832590734","sequenceNumber":0}|
+|1026|kickOff|该玩家在其它地方登陆，踢掉了当前连接|{"time":"1618832590734"}|
+|1028|getRoomById|获取一个房间的信息|

@@ -8,3 +8,4 @@
 |1015|pushPlayerStatus|推送玩家状态|{"id":1,"nickname":"","status":1,"addTime":1618827272,"upTime":0,"roomId":""}|
 |1017|pushRoomHistory|推送逻辑帧|{"roomId":"1618830583185","sequenceNumber":0,"commands":[{"action":"move","value":"7,9","playerId":2}]}|
 |1019|otherPlayerResumeGame|通知其它玩家，有玩家断线后已恢复|
+|1021|pushRoomInfo|房间信息||

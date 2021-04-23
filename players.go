@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"zlib"
 )
 
@@ -23,19 +24,22 @@ func PlayersNew()*Players{
 	PlayerPool = make(map[int]*Player)
 	return players
 }
-//返回值是roomId,其实只是标注，让C端来获取
-func  (players *Players)addPlayerPool(id int)string{
+func  (players *Players)addPlayerPool(id int)(existPlayer Player,err error){
 	mylog.Info("addPlayerPool :",id)
-	hasPlayer,exist  := PlayerPool[id]
-	if exist{
-		mylog.Notice("this player id has exist pool")
+	hasPlayer,empty  := players.getById(id)
+	if !empty{
+		mylog.Notice("this player id has exist pool",id)
 		if hasPlayer.Status == PLAYER_STATUS_ONLINE{
-			mylog.Error("hasPlayer.Status = PLAYER_STATUS_ONLINE")
+			errMsg := "hasPlayer.Status = PLAYER_STATUS_ONLINE "
+			mylog.Error(errMsg)
+			err = errors.New(errMsg)
+			return *hasPlayer,err
 		}else{
-			players.upPlayerPool(id,PLAYER_STATUS_ONLINE)
+			players.upPlayerStatus(id,PLAYER_STATUS_ONLINE)
+			return *hasPlayer,nil
 		}
-		return hasPlayer.RoomId
 	}else{
+		mylog.Info("new player add")
 		player := Player{
 			Id: id,
 			AddTime: zlib.GetNowTimeSecondToInt(),
@@ -43,19 +47,21 @@ func  (players *Players)addPlayerPool(id int)string{
 			Status: PLAYER_STATUS_ONLINE,
 		}
 		PlayerPool[id] = &player
+		return player,nil
 	}
-	return ""
+	return existPlayer,nil
 }
-func  (players *Players)getPlayerStatusById(plyaerId int)(player *Player,empty bool){
-	playerStatus ,ok:= PlayerPool[plyaerId]
-	if !ok{
+func  (players *Players)getById(playerId int)(player *Player,empty bool){
+	myPlayer ,ok := PlayerPool[playerId]
+	if ok {
+		return myPlayer ,false
+	}else{
 		return player,true
 	}
-	return playerStatus,false
 }
 
 func  (players *Players)getPlayerStatus(requestPlayerStatus RequestPlayerStatus,wsConn *WsConn){
-	player,_ := players.getPlayerStatusById(requestPlayerStatus.PlayerId)
+	player,_ := players.getById(requestPlayerStatus.PlayerId)
 	responsePlayerStatus := ResponsePlayerStatus{
 		Id :player.Id,
 		Nickname: player.Nickname,
@@ -67,14 +73,25 @@ func  (players *Players)getPlayerStatus(requestPlayerStatus RequestPlayerStatus,
 	responsePlayerStatusStr,_ := json.Marshal(responsePlayerStatus)
 	mynetWay.SendMsgByUid(wsConn.PlayerId,"pushPlayerStatus",string(responsePlayerStatusStr))
 }
-
-func   (players *Players)upPlayerPool(id int,status int){
-
+func  (players *Players)delById(playerId int){
+	delete(PlayerPool,playerId)
+}
+func   (players *Players)upPlayerStatus(id int,status int){
 	player := PlayerPool[id]
 
-	mylog.Info("upPlayerPool" , " old : ",player.Status," new:",status)
+	mylog.Info("upPlayerStatus" , " old : ",player.Status," new:",status)
 
-	player.Status = PLAYER_STATUS_ONLINE
+	player.Status = status
+	player.UpTime = zlib.GetNowTimeSecondToInt()
+
+}
+
+func   (players *Players)upPlayerRoomId(playerId int,roomId string){
+	player := PlayerPool[playerId]
+
+	mylog.Info("upPlayerRoomId" , " old : ",player.RoomId," new:",roomId)
+
+	player.RoomId = roomId
 	player.UpTime = zlib.GetNowTimeSecondToInt()
 
 }
