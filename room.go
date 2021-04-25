@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"strconv"
 	"time"
 	"zlib"
@@ -17,6 +18,7 @@ type Room struct {
 	PlayersAckStatus	int
 	RandSeek			int
 	LogicFrameHistory 	[]LogicFrameHistory
+	CommandQueue 		*list.List
 }
 
 func NewRoom()*Room{
@@ -28,7 +30,7 @@ func NewRoom()*Room{
 	room.PlayersAckList =  make(map[int]int)
 	room.PlayersAckStatus = PLAYERS_ACK_STATUS_INIT
 	room.RandSeek = zlib.GetRandIntNum(100)
-
+	room.CommandQueue = list.New()
 	//mynetWay.Option.Mylog.Info("addPoolElement")
 	//_ ,exist := mySyncRoomPool[room.Id]
 	//if exist{
