@@ -164,7 +164,7 @@ func  (sync *Sync)pushLogicFrame(room *Room){
 		}
 	}
 end:
-	mylog.Warning("pushLogicFrame close")
+	mylog.Warning("pushLogicFrame loop routine close")
 }
 
 func  (sync *Sync)pushLogicFrameReal(room *Room)int{
@@ -387,24 +387,28 @@ func (sync *Sync)close(wsConn *WsConn){
 	mylog.Warning("sync.close")
 	//获取该玩家的roomId
 	roomId,ok := mySyncPlayerRoom[wsConn.PlayerId]
-	if ok {
-		//判断下所有玩家是否均下线了
-		playerOffLineCount := 0
-		room ,_ := sync.getPoolElementById(roomId)
-		for _,v := range room.PlayerList{
-			player,empty := mynetWay.Players.getById(v.Id)
-			if empty{
+	if !ok || roomId == "" {
+		return
+	}
+
+	//判断下所有玩家是否均下线了
+	playerOffLineCount := 0
+	room, _ := sync.getPoolElementById(roomId)
+	if room.Status == ROOM_STATUS_EXECING{
+		for _, v := range room.PlayerList {
+			player, empty := mynetWay.Players.getById(v.Id)
+			if empty {
 				playerOffLineCount++
-				mylog.Notice("mynetWay.Players.getById empty",v.Id)
+				mylog.Notice("mynetWay.Players.getById empty", v.Id)
 				continue
 			}
-			if player.Status == PLAYER_STATUS_OFFLINE{
+			if player.Status == PLAYER_STATUS_OFFLINE {
 				playerOffLineCount++
 			}
 		}
-		playerOffLineCount++//这里因为，已有一个玩家关闭中，但是还未处理
-		mylog.Info("playerOffLineCount : ",playerOffLineCount)
-		if len(room.PlayerList) == playerOffLineCount{
+		playerOffLineCount++ //这里因为，已有一个玩家关闭中，但是还未处理
+		mylog.Info("playerOffLineCount : ", playerOffLineCount)
+		if len(room.PlayerList) == playerOffLineCount {
 			sync.roomEnd(roomId)
 		}
 	}
