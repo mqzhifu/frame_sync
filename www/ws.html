@@ -82,21 +82,11 @@
     }
 
     function initPlayer(player,divId,data){
-        // var hostUri = "/ws";
         var host = "ws://"+data.Host + ":"+ data.Port;
         var hostUri = data.Uri;
         var matchGroupPeople = data.RoomPeople;
         var tableMax = data.MapSize;
         var OffLineWaitTime = data.OffLineWaitTime;
-        //
-        // var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVaWQiOjEsIkV4cGlyZSI6MTYxNzMyOTk2MywiQVRpbWUiOjE2MTcyNDM1NjMsIkFwcElkIjoxfQ.XxbHWdSZx4WvXklXHfCWjSpJAIZo2aVv4aUuD3SNsIE";
-
-        // wsObj1 = new ws(1,token,host,hostUri,matchGroupPeople,tableMax);
-        // wsObj1.getMap("map1");
-        //
-        // var token ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVaWQiOjIsIkV4cGlyZSI6MTYxNzc5NzUyMSwiQVRpbWUiOjE2MTc3MTExMjEsIkFwcElkIjoxfQ.vKWg0rKfanCZEWBoR4WfuHBAPj5-cH_AxY21YO_RUlk";
-        // wsObj2 = new ws(2,token,host,hostUri,matchGroupPeople,tableMax);
-        // wsObj2.getMap("map2");
 
         var DomIdPreObj = getPlayerDomIdPreObj(player.id);
         DomIdPreObj.playerId = player.id;

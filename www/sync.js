@@ -2,6 +2,7 @@ var self = null;
 function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineWaitTime,actionMap){
     var self = this;
 
+    this.commandsInc = 0;//玩家操作指令自增ID
     this.hostUri = host +uri;//ws 连接地址
     this.playerId = playerId;//玩家ID
     this.token = token;//玩家的凭证
@@ -11,11 +12,14 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.otherPlayerOffline = 0;//其它玩家调线
     // this.selfPlayerOffline = 0;//自己掉线
     this.heartbeatLoopFunc = null;//心跳回调函数
+    this.pushLogicFrameLoopFunc = null;//定时推送玩家操作
+    this.playerCommandQueue = [];
     this.myClose = 0;//C端 主动关闭标识
     this.domIdObj =DomIdObj ;
     this.offLineWaitTime = offLineWaitTime;
     this.playerLocation = new Object();
     this.tableId = "";
+    this.startInit = 0;
     //下面，是由S端供给
     this.roomId = "";
     this.actionMap = actionMap;
@@ -36,6 +40,10 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         };
         self.wsObj.onopen = function(){
             self.wsOpen();
+        };
+
+        self.wsObj.onerror = function(ev){
+            self.wsError(ev);
         };
     };
     //连接成功后，会执行此函数
@@ -95,27 +103,17 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             $("#"+self.domIdObj.optBntId).unbind("click");
         }
     };
-    this.closeFD = function (){
+    this.closeFD = function (){//主动关闭
         console.log("closeFD");
-        window.clearInterval(self.heartbeatLoopFunc);
+        // window.clearInterval(self.heartbeatLoopFunc);
+        // window.clearInterval(self.pushLogicFrameLoopFunc);
         self.myClose = 1;
         self.wsObj.close();
     };
-    this.wsError = function(){
-        this.wsObj.onerror = function(){
-            console.log("error:"+ev);
-            alert(ev);
-        }
-    };
-    this.heartbeat = function(){
-        // var msg = {"action":"heartbeat","content":""}
-        // self.sendById(JSON.stringify(msg));
-        var msg = {"time":Date.now()};
-        self.sendMsg("clientHeartbeat",msg)
-    };
-    this.onclose = function(ev){
+    this.onclose = function(ev){//接收到服务端关闭
         alert("receive server close:" +ev.code);
-        window.clearInterval(self.heartbeatLoopFunc);
+        window.clearInterval(self.pushLogicFrameLoopFunc);
+        // window.clearInterval(self.heartbeatLoopFunc);
         var reConnBntId = "reconn_"+self.playerId;
         if (self.myClose == 1){
             self.upOptBnt("C端主动关闭WS，<a href='javascript:void(0);' id='"+reConnBntId+"'>重连接</a>",1)
@@ -123,6 +121,17 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         }else{
             self.upOptBnt("服务端关闭，游戏结束，连接断开",1)
         }
+    };
+
+    this.wsError = function(ev){
+        console.log("error:"+ev);
+        alert(ev);
+    };
+    this.heartbeat = function(){
+        // var msg = {"action":"heartbeat","content":""}
+        // self.sendById(JSON.stringify(msg));
+        var msg = {"time":Date.now()};
+        self.sendMsg("clientHeartbeat",msg)
     };
 
     this.sendPlayerLogicFrameAck = function ( SequenceNumber){
@@ -188,16 +197,16 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         var history ={"roomId":self.roomId,"sequenceNumber":0,"playerId":self.playerId };
         self.sendMsg("getRoomHistory",history);
     };
-    this.rPushLogicFrame = function(logicFrame){
+    this.rPushLogicFrame = function(logicFrame){//接收S端逻辑帧
         var pre = self.descPre;
 
         var commands = logicFrame.commands;
         self.sequenceNumber  = logicFrame.sequenceNumber;
         $("#"+self.domIdObj.seqId).html(self.sequenceNumber);
 
-        console.log("sequenceNumber:"+self.sequenceNumber+ ", commandLen:" +  commands.length)
+        console.log("rPushLogicFrame ,sequenceNumber:"+self.sequenceNumber+ ", commandLen:" +  commands.length)
         for(var i=0;i<commands.length;i++){
-            str = pre + " , "+commands[i].action + " , "+ commands[i].value + " , " + commands[i].playerId;
+            var str = pre + " i=i , id: "+commands[i].id + " , action:"+commands[i].action + " , value:"+ commands[i].value + " , playerId:" + commands[i].playerId;
             console.log(str);
             if (commands[i].action == "move"){
                 var LocationArr = commands[i].value.split(",");
@@ -226,9 +235,11 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
                     tdObj.css("background", "");
                 }
                 playerLocation[commands[i].playerId] = LocationStart + "_"+LocationEnd;
+            }else if(commands[i].action == "empty"){
+
             }
         }
-        self.sendPlayerLogicFrameAck( self.sequenceNumber)
+        // self.sendPlayerLogicFrameAck( self.sequenceNumber)
     };
     this.rPing = function(logicFrame){
         var now = Date.now();
@@ -254,12 +265,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             self.upOptBnt(bntContent, 1);
             $("#"+readyBntId).click(self.ready);
 
-            self.heartbeatLoopFunc = setInterval(self.heartbeat, 5000);
-            // var msg = {"playerId": this.playerId}
-            // self.sendMsg("playerStatus",msg)
         }
-
-
+        // self.heartbeatLoopFunc = setInterval(self.heartbeat, 5000);
     };
     // this.rPushPlayerStatus = function(logicFrame){
     //     console.log("pushPlayerStatus:"+logicFrame.status)
@@ -304,6 +311,9 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         // $("#rid").html(logicFrame.RoomId);
         $("#"+self.domIdObj.roomId).html(self.roomId);
 
+
+        self.startInit = 1;
+
         var str =  pre+", RandSeek:"+    self.randSeek +" , SequenceNumber"+    self.sequenceNumber ;
         console.log(str);
     };
@@ -312,11 +322,13 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
         var exceptionOffLineId = "exceptionOffLineId"+self.playerId;
         self.upOptBnt("游戏中...<a href='javascript:void(0);'  id='"+exceptionOffLineId+"'>异常掉线</a>",1)
-        $("#"+exceptionOffLineId).click(self.closeFD)
+        $("#"+exceptionOffLineId).click(self.closeFD);
 
-        self.sendPlayerLogicFrameAck( self.sequenceNumber)
+        self.pushLogicFrameLoopFunc = setInterval(self.playerCommandPush,100);
+        // self.sendPlayerLogicFrameAck( self.sequenceNumber)
     };
     this.rOver = function(ev){
+        window.clearInterval(self.pushLogicFrameLoopFunc);
         self.upOptBnt("游戏结束2",1)
     }
     //=================== 以上都是 接收S端的处理函数========================================
@@ -362,6 +374,19 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
     };
     this.move = function ( dirObj ){
+
+        if (self.otherPlayerOffline){
+            return alert("玩家掉线了，请等待一下...");
+        }
+
+        if (self.myClose){
+            return alert("您已掉线了，请等待一下...");
+        }
+
+        if (!self.startInit){
+            return alert("还未初始化，请等待一下...");
+        }
+
         var dir = dirObj.data;
         var playerLocation = self.playerLocation;
         var nowLocationStr = playerLocation[self.playerId]
@@ -400,16 +425,6 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             return alert("move dir error."+dir);
         }
 
-
-        if (self.otherPlayerOffline){
-            return alert("玩家掉线了，请等待一下...");
-        }
-
-        if (self.myClose){
-            return alert("您已掉线了，请等待一下...");
-        }
-
-
         var localNewLocation = newLocation.replace(',','_');
         for(let key  in playerLocation){
             // alert(playerLocation[key]);
@@ -419,20 +434,30 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         }
 
         console.log("dir:"+dir+"oldLocation"+nowLocationStr+" , newLocation:"+newLocation);
-
-        var commands ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"commands": [{"id":1,"action":"move","value":newLocation,"playerId":self.playerId}]};
-        // var msg = {"action":"playerCommandPush","content":JSON.stringify(commands)}
-        // var jsonStr = JSON.stringify(msg)
-        // self.sendById(jsonStr);
-        self.sendMsg("playerCommandPush",commands)
-
-        // var playerLocation = getPlayerLocation(id);
+        // var commands ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"commands": [{"id":1,"action":"move","value":newLocation,"playerId":self.playerId}]};
+        // self.sendMsg("playerCommandPush",commands)
+        self.playerCommandQueue.push({"id":self.commandsInc,"action":"move","value":newLocation,"playerId":self.playerId});
+        self.commandsInc++;
         var playerLocationArr = playerLocation[self.playerId].split("_");
-        // var lightTd = "map"+id +"_"+playerLocation[id];
         var lightTd = self.getMapTdId(self.tableId,playerLocationArr[0],playerLocationArr[1]);
         var tdObj = $("#"+lightTd);
         tdObj.css("background", "");
     }
+    this.playerCommandPush = function (){
+        var loginFrame ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"commands": []};
+
+        if (self.playerCommandQueue.length > 0){
+            loginFrame.commands = self.playerCommandQueue;
+            self.playerCommandQueue = [];
+            //
+        }else{
+            var emptyCommand = [{"id":1,"action":"empty","value":"-1","playerId":self.playerId}];
+            loginFrame.commands = emptyCommand;
+        }
+
+        self.sendMsg("playerCommandPush",loginFrame);
+    };
+
 
     this.getPlayerDescById = function (id){
         return "player_"+ id;

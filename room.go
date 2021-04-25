@@ -19,6 +19,7 @@ type Room struct {
 	RandSeek			int
 	LogicFrameHistory 	[]LogicFrameHistory
 	CommandQueue 		*list.List
+	CloseChan 	chan int
 }
 
 func NewRoom()*Room{

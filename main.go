@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"context"
 	"os"
 	"time"
@@ -13,8 +14,18 @@ import (
 //github.com/gorilla/websocket
 //http://github.com/golang/net
 
+
+func test(){
+	queue := list.New()
+	queue.PushBack("aaaa")
+	element := queue.Front()
+	info := element.Value.(string)
+	zlib.ExitPrint(info)
+}
+
 var mylog *zlib.Log
 func main(){
+	//test()
 	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
 
 	if len(os.Args) < 4{

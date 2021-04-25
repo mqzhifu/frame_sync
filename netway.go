@@ -184,6 +184,7 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 	netWay.SendMsgByUid(jwtData.Payload.Uid,"loginRes",string(loginResJsonStr))
 	//初始化即登陆成功的响应均完成后，开始该连接的 读取协程
 	go NewWsConn.IOLoop()
+
 	netWay.pintRTT(jwtData.Payload.Uid)
 }
 
@@ -204,6 +205,7 @@ func  (netWay *NetWay)parserContent(content string)Message{
 	if empty{
 		mylog.Error("parserContent actionId no match",actionId)
 	}
+	mylog.Info("parserContent",actionName.Action)
 	msg := Message{
 		Action: actionName.Action,
 		Content: content[4:],
