@@ -38,6 +38,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 
 	if uri == "/www/getServer"{
 		myServer := MyServer{
+			//Host: "39.106.65.76",
 			Host: mynetWay.Option.Host,
 			Port: mynetWay.Option.Port,
 			MapSize: mynetWay.Option.MapSize,

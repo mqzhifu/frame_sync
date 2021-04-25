@@ -100,27 +100,29 @@ func  (sync *Sync)start(roomId string){
 	jsonStrByte,_ := json.Marshal(responseClientInitRoomData)
 	sync.boardCastInRoom(roomId,"startInit",string(jsonStrByte))
 
-
 	//初始结束后，这里方便测试，再补一帧，所有玩家的随机位置
-	commands := []Command{}
-	for _,player:= range room.PlayerList{
-		location := strconv.Itoa(zlib.GetRandIntNum(mynetWay.Option.MapSize)) + "," + strconv.Itoa(zlib.GetRandIntNum(mynetWay.Option.MapSize))
-		command := Command{
-			Id: logicFrameMsgDefaultId,
-			Action: "move",
-			Value: location,
-			PlayerId: player.Id,
+	if room.PlayerList[0].Id < 999{
+		commands := []Command{}
+		for _,player:= range room.PlayerList{
+			location := strconv.Itoa(zlib.GetRandIntNum(mynetWay.Option.MapSize)) + "," + strconv.Itoa(zlib.GetRandIntNum(mynetWay.Option.MapSize))
+			command := Command{
+				Id: logicFrameMsgDefaultId,
+				Action: "move",
+				Value: location,
+				PlayerId: player.Id,
+			}
+			commands = append(commands,command)
 		}
-		commands = append(commands,command)
+		logicFrameMsg := LogicFrame{
+			Id	: commandDefaultId,
+			RoomId: roomId,
+			SequenceNumber :room.SequenceNumber,
+			Commands 		:commands,
+		}
+		logicFrameMsgJson ,_ := json.Marshal(logicFrameMsg)
+		sync.boardCastInRoom(roomId,"pushLogicFrame",string(logicFrameMsgJson))
+
 	}
-	logicFrameMsg := LogicFrame{
-		Id	: commandDefaultId,
-		RoomId: roomId,
-		SequenceNumber :room.SequenceNumber,
-		Commands 		:commands,
-	}
-	logicFrameMsgJson ,_ := json.Marshal(logicFrameMsg)
-	sync.boardCastInRoom(roomId,"pushLogicFrame",string(logicFrameMsgJson))
 
 	room.CloseChan = make(chan int)
 	go sync.pushLogicFrame(room)
