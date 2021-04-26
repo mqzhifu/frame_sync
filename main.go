@@ -85,6 +85,7 @@ func main(){
 		MapSize				:10,
 		OffLineWaitTime		:20,
 		LockMode: LOCK_MODE_PESSIMISTIC,
+		FPS					:10,
 	}
 	newNetWay := NewNetWay(newNetWayOption)
 	go newNetWay.Startup()
@@ -104,6 +105,8 @@ func main(){
 
 	mainEnd:
 		mylog.Warning("main end...")
+
+	time.Sleep(5 * time.Second)
 }
 //信号 处理
 func  DemonSignal(newNetWay *NetWay,mainCtx context.Context,mainCancel context.CancelFunc){

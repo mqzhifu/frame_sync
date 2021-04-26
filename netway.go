@@ -42,6 +42,7 @@ type NetWayOption struct {
 	RoomTimeout 		int 		//一个房间超时时间
 	OffLineWaitTime		int			//lockStep 玩家掉线后，其它玩家等待最长时间
 	LockMode  			int 		//锁模式，乐观|悲观
+	FPS 				int 		//frame pre second
 }
 
 type Message struct {
@@ -73,7 +74,7 @@ func NewNetWay(option NetWayOption)*NetWay{
 	}
 	myMatch = NewMatch(matchOption)
 	mySync = NewSync()
-	//go mySync
+
 	//全局变量
 	ConnPool = make(map[int]*WsConn)
 
@@ -95,6 +96,8 @@ func (netWay *NetWay)Startup(){
 	go myMatch.matchingPlayerCreateRoom  (startupCtx)
 	//监听超时的WS连接
 	go netWay.checkConnPoolTimeout(startupCtx)
+	//清理，房间到期后，未回收的情况
+	//go mySync.checkRoomTimeoutLoop(startupCtx)
 
 	netWay.startHttpServer()
 
@@ -210,15 +213,6 @@ func  (netWay *NetWay)parserContent(content string)Message{
 		Action: actionName.Action,
 		Content: content[4:],
 	}
-	//switch netWay.Option.ContentType {
-	//case CONTENT_TYPE_JSON:
-	//	err := json.Unmarshal([]byte(content),&msg)
-	//	if err != nil{
-	//		netWay.Option.Mylog.Error("json.Unmarshal err : ",err.Error())
-	//	}
-	//default:
-	//	mylog.Error("content type err:",netWay.Option.ContentType)
-	//}
 	return msg
 }
 func (netWay *NetWay)getConnPoolById(id int)(*WsConn,bool){

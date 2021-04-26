@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -11,17 +12,6 @@ import (
 type Sync struct {
 
 }
-//集合中的：每个副本元素
-//type SyncRoomPoolElement struct {
-//	Status 				int
-//	Room 				*Room
-//	SequenceNumber		int
-//	PlayersAckList		map[int]int
-//	PlayersAckStatus	int
-//	AddTime 			int
-//	RandSeek			int
-//	LogicFrameHistory 	[]LogicFrameHistory
-//}
 type LogicFrameHistory struct {
 	Id 		int
 	Action 	string
@@ -58,11 +48,15 @@ func NewSync()*Sync{
 
 	return sync
 }
-func (sync *Sync)checkRoomTimeoutLoop(){
+func (sync *Sync)checkRoomTimeoutLoop(ctx context.Context){
 	for{
 		select {
+		case <- ctx.Done():
+			mylog.Warning("checkRoomTimeoutLoop done.")
+			return
 		default:
 			sync.checkRoomTimeout()
+			time.Sleep(1 * time.Second)
 		}
 	}
 }
@@ -172,18 +166,19 @@ func (sync *Sync) getPoolElementById(roomId string)(SyncRoomPoolElement *Room,em
 	}
 	return v,false
 }
-func  (sync *Sync)createOneCommandQueue(room Room){
-	//queue := list.New()
-	//commandQueuePool[room.Id] = queue
-}
+
 func  (sync *Sync)pushLogicFrame(room *Room){
+	if mynetWay.Option.FPS > 1000 {
+		zlib.ExitPrint("fps > 1000 ms")
+	}
+
+	fpsTime := int( 1000 /  mynetWay.Option.FPS )
 	for{
 		select {
 		case   <-room.CloseChan:
 			goto end
 		default:
-			sync.pushLogicFrameReal(room)
-			sleepMsTime := sync.pushLogicFrameReal(room)
+			sleepMsTime := sync.pushLogicFrameReal(room,fpsTime)
 			sleepMsTimeD := time.Duration(sleepMsTime)
 			if sleepMsTime > 0 {
 				time.Sleep(sleepMsTimeD * time.Millisecond)
@@ -194,25 +189,27 @@ end:
 	mylog.Warning("pushLogicFrame loop routine close")
 }
 
-func  (sync *Sync)pushLogicFrameReal(room *Room)int{
+func  (sync *Sync)pushLogicFrameReal(room *Room,fpsTime int)int{
 	queue := room.CommandQueue
 	end := queue.Len()
 	//mylog.Info("queue.Len:", end)
 	if end <= 0 {
 		//mylog.Warning("commandQueue len == 0")
-		return 100
+		return fpsTime
 	}
 
-	ack := 0
-	for _, v := range room.PlayersAckList {
-		if v == 1 {
-			ack++
+	if mynetWay.Option.LockMode == LOCK_MODE_PESSIMISTIC{
+		ack := 0
+		for _, v := range room.PlayersAckList {
+			if v == 1 {
+				ack++
+			}
 		}
-	}
 
-	if ack < len(room.PlayersAckList) {
-		mylog.Error("还有玩家未发送操作记录")
-		return 100
+		if ack < len(room.PlayersAckList) {
+			mylog.Error("还有玩家未发送操作记录")
+			return fpsTime
+		}
 	}
 
 	sync.upSyncRoomPoolElementPlayersAckStatus(room.Id, PLAYERS_ACK_STATUS_OK)
@@ -253,7 +250,7 @@ func  (sync *Sync)pushLogicFrameReal(room *Room)int{
 	logicFrameStr, _ := json.Marshal(logicFrame)
 	sync.boardCastFrameInRoom(room.Id, "pushLogicFrame", string(logicFrameStr))
 
-	return 100
+	return fpsTime
 }
 
 func  (sync *Sync)receiveCommand(logicFrame LogicFrame,wsConn *WsConn){
@@ -473,9 +470,11 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,content stri
 	if empty {
 		zlib.ExitPrint("syncRoomPoolElement is empty!!!")
 	}
-	if syncRoomPoolElement.PlayersAckStatus == PLAYERS_ACK_STATUS_WAIT{
-		mylog.Error("syncRoomPoolElement PlayersAckStatus = ",PLAYERS_ACK_STATUS_WAIT,syncRoomPoolElement.PlayersAckList)
-		zlib.ExitPrint(11111)
+	if mynetWay.Option.LockMode == LOCK_MODE_PESSIMISTIC{
+		if syncRoomPoolElement.PlayersAckStatus == PLAYERS_ACK_STATUS_WAIT{
+			mylog.Error("syncRoomPoolElement PlayersAckStatus = ",PLAYERS_ACK_STATUS_WAIT,syncRoomPoolElement.PlayersAckList)
+			zlib.ExitPrint(11111)
+		}
 	}
 	PlayersAckList := make(map[int]int)
 	for _,player:= range syncRoomPoolElement.PlayerList {
@@ -487,8 +486,11 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,content stri
 		PlayersAckList[player.Id] = 0
 	}
 
-	syncRoomPoolElement.PlayersAckList = PlayersAckList
-	sync.upSyncRoomPoolElementPlayersAckStatus(roomId,PLAYERS_ACK_STATUS_WAIT)
+	if mynetWay.Option.LockMode == LOCK_MODE_PESSIMISTIC{
+		syncRoomPoolElement.PlayersAckList = PlayersAckList
+		sync.upSyncRoomPoolElementPlayersAckStatus(roomId,PLAYERS_ACK_STATUS_WAIT)
+	}
+
 
 	sync.addOneRoomHistory(syncRoomPoolElement,action,content)
 }

@@ -91,6 +91,7 @@ func   (wsConn *WsConn)Read()(msg Message,empty bool,err error){
 	//myWs.Option.Mylog.Info("WsConnRead:",content)
 	if content != ""{
 		msg := mynetWay.parserContent(content)
+		 wsConn.UpTime = zlib.GetNowTimeSecondToInt()
 		return msg,false,nil
 	}else{
 		return msg,true,nil
