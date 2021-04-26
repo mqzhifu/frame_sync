@@ -85,7 +85,7 @@ func main(){
 		MapSize				:10,
 		OffLineWaitTime		:20,
 		LockMode: LOCK_MODE_PESSIMISTIC,
-		FPS					:10,
+		FPS					:15,
 	}
 	newNetWay := NewNetWay(newNetWayOption)
 	go newNetWay.Startup()

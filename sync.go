@@ -172,7 +172,7 @@ func  (sync *Sync)pushLogicFrame(room *Room){
 		zlib.ExitPrint("fps > 1000 ms")
 	}
 
-	fpsTime := int( 1000 /  mynetWay.Option.FPS )
+	fpsTime :=  1000 /  mynetWay.Option.FPS
 	for{
 		select {
 		case   <-room.CloseChan:
