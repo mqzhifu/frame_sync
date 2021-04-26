@@ -207,7 +207,7 @@ func  (sync *Sync)pushLogicFrameReal(room *Room,fpsTime int)int{
 		}
 
 		if ack < len(room.PlayersAckList) {
-			mylog.Error("还有玩家未发送操作记录")
+			mylog.Error("还有玩家未发送操作记录,当前确认人数:",len(room.PlayersAckList))
 			return fpsTime
 		}
 		sync.upSyncRoomPoolElementPlayersAckStatus(room.Id, PLAYERS_ACK_STATUS_OK)
