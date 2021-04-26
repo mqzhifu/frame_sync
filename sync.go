@@ -210,9 +210,10 @@ func  (sync *Sync)pushLogicFrameReal(room *Room,fpsTime int)int{
 			mylog.Error("还有玩家未发送操作记录")
 			return fpsTime
 		}
+		sync.upSyncRoomPoolElementPlayersAckStatus(room.Id, PLAYERS_ACK_STATUS_OK)
 	}
 
-	sync.upSyncRoomPoolElementPlayersAckStatus(room.Id, PLAYERS_ACK_STATUS_OK)
+
 	room.SequenceNumber++
 
 	logicFrame := LogicFrame{
@@ -276,8 +277,17 @@ func  (sync *Sync)checkReceiveCommand(room *Room,logicFrame LogicFrame,wsConn *W
 	if room.Status == ROOM_STATUS_END{
 		return errors.New("room status err,has end")
 	}
-	if logicFrame.SequenceNumber != room.SequenceNumber{
-		return errors.New("room.SequenceNumber err")
+
+	if logicFrame.SequenceNumber == room.SequenceNumber{
+		return nil
+	}
+
+	if logicFrame.SequenceNumber > room.SequenceNumber{
+		return errors.New("client num > room.SequenceNumber err")
+	}
+	//客户端延迟较高 相对的  服务端 发送较快
+	if logicFrame.SequenceNumber < room.SequenceNumber{
+		return errors.New("client num < room.SequenceNumber err")
 	}
 	return nil
 }
@@ -445,7 +455,7 @@ func (sync *Sync)close(wsConn *WsConn){
 		PlayerId: wsConn.PlayerId,
 	}
 	jsonStr,_ := json.Marshal(responseOtherPlayerOffline)
-	sync.boardCastFrameInRoom(roomId,"otherPlayerOffline",string(jsonStr))
+	sync.boardCastInRoom(roomId,"otherPlayerOffline",string(jsonStr))
 }
 //单纯的给一个房间里的人发消息，不考虑是否有顺序号的情况
 func  (sync *Sync)boardCastInRoom(roomId string,action string ,content string){
@@ -490,7 +500,6 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,content stri
 		syncRoomPoolElement.PlayersAckList = PlayersAckList
 		sync.upSyncRoomPoolElementPlayersAckStatus(roomId,PLAYERS_ACK_STATUS_WAIT)
 	}
-
 
 	sync.addOneRoomHistory(syncRoomPoolElement,action,content)
 }

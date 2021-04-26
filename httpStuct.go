@@ -24,7 +24,8 @@ type RequestGetRoom struct {
 type RequestRoomHistory struct {
 	PlayerId	int `json:"playerId"`
 	RoomId	 	string `json:"roomId"`
-	SequenceNumber int `json:"sequenceNumber"`
+	SequenceNumberStart int `json:"sequenceNumberStart"`
+	SequenceNumberEnd int `json:"sequenceNumberEnd"`
 }
 
 type RequestCancelSign struct {
