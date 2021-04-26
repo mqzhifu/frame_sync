@@ -20,6 +20,7 @@ type Player struct {
 }
 var PlayerPool map[int]*Player	//玩家 状态池
 func PlayersNew()*Players{
+	mylog.Info("new Players instance")
 	players := new(Players)
 	PlayerPool = make(map[int]*Player)
 	return players

@@ -22,6 +22,7 @@ type PlayerSign struct {
 
 var signPlayerPool []PlayerSign
 func NewMatch(matchOption MatchOption)*Match{
+	mylog.Info("NewMatch instance")
 	match  := new(Match)
 	match.Option = matchOption
 	return match
@@ -73,6 +74,8 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 			//mylog.Info("matching:",len(signPlayerPool),match.Option.RoomPeople)
 			if len(signPlayerPool) >= match.Option.RoomPeople{
 				newRoom := NewRoom()
+				timeout := zlib.GetNowTimeSecondToInt() + mynetWay.Option.RoomTimeout
+				newRoom.Timeout = timeout
 				for i:=0;i < len(signPlayerPool);i++{
 					player,empty := mynetWay.Players.getById(signPlayerPool[i].PlayerId)
 					if empty{

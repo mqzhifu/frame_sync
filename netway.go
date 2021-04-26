@@ -7,10 +7,7 @@ import (
 	"flag"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
 	"zlib"
 )
@@ -29,20 +26,22 @@ type NetWayOption struct {
 	Host 				string
 	Port 				string
 	Mylog 				*zlib.Log
-	ContentType 		int
-	LoginAuthType		string
-	LoginAuthSecretKey	string
-	MaxClientConnNum	int
-	MsgContentMax		int		//一条消息内容最大值
-	IOTimeout			int64
-	Cxt 				context.Context	//调用方的CTX
-	ConnTimeout 		int		//检测FD最后更新时间
-	WsUri				string
-	Protocol 			int
+	ContentType 		int			//json protobuf
+	LoginAuthType		string		//jwt
+	LoginAuthSecretKey	string		//密钥
+	MaxClientConnNum	int			//客户端最大连接数
+	MsgContentMax		int			//一条消息内容最大值
+	IOTimeout			int64		//read write sock fd 超时时间
+	Cxt 				context.Context	//调用方的CTX，用于所有协程的退出操作
 	MainChan			chan int
-	MapSize				int
-	RoomPeople			int
-	OffLineWaitTime		int	//lockStep 玩家掉线后，其它玩家等待最长时间
+	ConnTimeout 		int			//检测FD最后更新时间
+	WsUri				string		//接HOST的后面的URL地址
+	Protocol 			int			//协议  ，ws sockdt udp
+	MapSize				int			//地址大小，给前端初始化使用
+	RoomPeople			int			//一局游戏包含几个玩家
+	RoomTimeout 		int 		//一个房间超时时间
+	OffLineWaitTime		int			//lockStep 玩家掉线后，其它玩家等待最长时间
+	LockMode  			int 		//锁模式，乐观|悲观
 }
 
 type Message struct {
@@ -59,16 +58,14 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-
 var ConnPool 	map[int]*WsConn	//ws 连接池
-//下面是快捷全局变量
+//下面是全局变量，主要是快捷方便使用，没实际意义
 var mynetWay	*NetWay
 var mySync 		*Sync
 var myMatch		*Match
 
-
 func NewNetWay(option NetWayOption)*NetWay{
-	option.Mylog.Info("NewNetWay")
+	option.Mylog.Info("New NetWay instance :")
 	zlib.PrintStruct(option," : ")
 
 	matchOption := MatchOption{
@@ -76,6 +73,7 @@ func NewNetWay(option NetWayOption)*NetWay{
 	}
 	myMatch = NewMatch(matchOption)
 	mySync = NewSync()
+	//go mySync
 	//全局变量
 	ConnPool = make(map[int]*WsConn)
 
@@ -93,17 +91,25 @@ func (netWay *NetWay)Startup(){
 	startupCtx ,cancel := context.WithCancel(netWay.Option.Cxt)
 	netWay.MyCtx = startupCtx
 	netWay.MyCtxCancel = cancel
+	//开启匹配服务
+	go myMatch.matchingPlayerCreateRoom  (startupCtx)
+	//监听超时的WS连接
+	go netWay.checkConnPoolTimeout(startupCtx)
 
-	uri := netWay.Option.WsUri
-	netWay.Option.Mylog.Info("ws Startup : ",uri,netWay.Option.Host+":"+netWay.Option.Port)
+	netWay.startHttpServer()
+
+}
+func (netWay *NetWay)startHttpServer( ){
+	netWay.Option.Mylog.Info("ws Startup : ",netWay.Option.WsUri,netWay.Option.Host+":"+netWay.Option.Port)
 
 	dns := netWay.Option.Host + ":" + netWay.Option.Port
 	var addr = flag.String("server addr", dns, "server address")
+
 	httpServer := & http.Server{
 		Addr:*addr,
 	}
 	//监听WS请求
-	http.HandleFunc(uri,netWay.wsHandler)
+	http.HandleFunc(netWay.Option.WsUri,netWay.wsHandler)
 	//监听普通HTTP请求
 	http.HandleFunc("/www/",wwwHandler)
 
@@ -112,13 +118,7 @@ func (netWay *NetWay)Startup(){
 	go func() {
 		<- netWay.CloseChan
 		netWay.Quit()
-
 	}()
-	go netWay.DemonSignal()//监听信号
-	//开启匹配服务
-	go myMatch.matchingPlayerCreateRoom  (startupCtx)
-	//监听超时的WS连接
-	go netWay.checkConnPoolTimeout(startupCtx)
 
 	err := httpServer.ListenAndServe()
 	if err != nil {
@@ -304,16 +304,22 @@ func  (wsConn *WsConn)WsConnReadLoop(ctx context.Context){
 			goto end
 		default:
 			msg,empty,err :=  wsConn.Read()
+			if err != nil{
+				mylog.Warning("WsConnReadLoop WsConnRead err:",err.Error())
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure){
+					mynetWay.CloseOneConn(wsConn,CLOSE_SOURCE_CLIENT_WS_FD_GONE)
+					goto end
+				}else{
+					continue
+				}
+
+			}
 			if empty{
 				mylog.Warning("WsConnReadLoop WsConnRead empty~")
 				//time.Sleep(time.Second * 1)
 				continue
 			}
-			if err != nil{
-				mylog.Warning("WsConnReadLoop WsConnRead err:",err.Error())
-				//time.Sleep(time.Second * 1)
-				continue
-			}
+
 			mynetWay.Router(msg,wsConn)
 			i++
 			//if i > 3 {
@@ -514,35 +520,7 @@ func  (netWay *NetWay)Quit(){
 	netWay.Option.Mylog.Warning("quit finish")
 
 }
-//信号 处理
-func (netWay *NetWay)DemonSignal(){
-	mylog.Warning("SIGNAL init : ")
-	c := make(chan os.Signal)
-	//syscall.SIGHUP :ssh 挂断会造成这个信号被捕获，先注释掉吧
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGUSR1, syscall.SIGUSR2)
-	prefix := "SIGNAL-DEMON :"
-	for{
-		sign := <- c
-		mylog.Warning(prefix,sign)
-		switch sign {
-		case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-			mylog.Warning(prefix+" exit!!!")
-			netWay.Quit()
-			goto end
-		case syscall.SIGUSR1:
-			mylog.Warning(prefix+" usr1!!!")
-		case syscall.SIGUSR2:
-			mylog.Warning(prefix+" usr2!!!")
-		default:
-			mylog.Warning(prefix+" unknow!!!")
-		}
-		mySleepSecond(1,prefix)
-	}
-	end :
-		netWay.Option.Mylog.Warning("DemonSignal end")
-		netWay.Option.MainChan <- 1
-		netWay.Option.Mylog.Warning("DemonSignal end2")
-}
+
 //睡眠 - 协程
 func   mySleepSecond(second time.Duration , msg string){
 	mylog.Info(msg," sleep second ", strconv.Itoa(int(second)))

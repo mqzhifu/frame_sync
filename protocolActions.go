@@ -18,6 +18,7 @@ type ActionMap struct {
 
 //var actionMap  	map[string]map[int]ActionMap
 func ProtocolActionsNew()*ProtocolActions{
+	mylog.Info("New ProtocolAction instance")
 	protocolActions := new(ProtocolActions)
 	protocolActions.initProtocolActionMap()
 	return protocolActions

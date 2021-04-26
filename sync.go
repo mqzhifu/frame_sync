@@ -48,6 +48,7 @@ var mySyncPlayerRoom map[int]string
 var logicFrameMsgDefaultId int
 var commandDefaultId int
 func NewSync()*Sync{
+	mylog.Info("NewSync instance")
 	mySyncRoomPool = make(map[string]*Room)
 	mySyncPlayerRoom = make(map[int]string)
 	sync := new(Sync)
@@ -57,6 +58,32 @@ func NewSync()*Sync{
 
 	return sync
 }
+func (sync *Sync)checkRoomTimeoutLoop(){
+	for{
+		select {
+		default:
+			sync.checkRoomTimeout()
+		}
+	}
+}
+func (sync *Sync)checkRoomTimeout(){
+	roomLen := len(mySyncRoomPool)
+	if roomLen <= 0{
+		return
+	}
+
+	now :=  zlib.GetNowTimeSecondToInt()
+	for _,v:=range mySyncRoomPool{
+		if v.Status != ROOM_STATUS_EXECING{
+			continue
+		}
+
+		if now > v.Timeout{
+			sync.roomEnd(v.Id)
+		}
+	}
+}
+
 //给集合添加一个新的 游戏副本
 func (sync *Sync) addPoolElement(room 	*Room){
 	mynetWay.Option.Mylog.Info("addPoolElement")
@@ -382,6 +409,20 @@ func (sync *Sync)upSyncRoomPoolElementPlayersAckStatus(roomId string,status int)
 func (sync *Sync)cancelSign(requestCancelSign RequestCancelSign,wsConn *WsConn){
 	myMatch.delOnePlayer(wsConn.PlayerId)
 }
+//判定一个房间内，玩家在线的人
+func (sync *Sync)roomOnlinePlayers(room *Room)[]int{
+	var playerOnLine []int
+	for _, v := range room.PlayerList {
+		player, empty := mynetWay.Players.getById(v.Id)
+		if empty {
+			continue
+		}
+		if player.Status == PLAYER_STATUS_ONLINE {
+			playerOnLine = append(playerOnLine,player.Id)
+		}
+	}
+	return playerOnLine
+}
 //玩家断开连接后
 func (sync *Sync)close(wsConn *WsConn){
 	mylog.Warning("sync.close")
@@ -392,23 +433,13 @@ func (sync *Sync)close(wsConn *WsConn){
 	}
 
 	//判断下所有玩家是否均下线了
-	playerOffLineCount := 0
 	room, _ := sync.getPoolElementById(roomId)
 	if room.Status == ROOM_STATUS_EXECING{
-		for _, v := range room.PlayerList {
-			player, empty := mynetWay.Players.getById(v.Id)
-			if empty {
-				playerOffLineCount++
-				mylog.Notice("mynetWay.Players.getById empty", v.Id)
-				continue
-			}
-			if player.Status == PLAYER_STATUS_OFFLINE {
-				playerOffLineCount++
-			}
-		}
-		playerOffLineCount++ //这里因为，已有一个玩家关闭中，但是还未处理
-		mylog.Info("playerOffLineCount : ", playerOffLineCount)
-		if len(room.PlayerList) == playerOffLineCount {
+		playerOnLine := sync.roomOnlinePlayers(room)
+		playerOnLineCount := len(playerOnLine)
+		playerOnLineCount-- //这里因为，已有一个玩家关闭中，但是还未处理
+		mylog.Info("playerOnLineCount : ", playerOnLineCount)
+		if playerOnLineCount <= 0 {
 			sync.roomEnd(roomId)
 		}
 	}

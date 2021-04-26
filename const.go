@@ -17,6 +17,7 @@ const (
 	CLOSE_SOURCE_SIGNAL_QUIT = 7 	//接收到关闭信号
 	CLOSE_SOURCE_FD_READ_EMPTY = 8	//首次建立连接时，获取token为空
 	CLOSE_SOURCE_FD_READ_ERR = 9	//首次建立连接时，read出错
+	CLOSE_SOURCE_CLIENT_WS_FD_GONE = 10	//客户端异常关闭了
 
 	CONTENT_TYPE_JSON = 1			//内容类型 json
 	CONTENT_TYPE_PROTOBUF = 2		//proto_buf
@@ -45,6 +46,9 @@ const (
 
 	PLAYER_STATUS_ONLINE = 1
 	PLAYER_STATUS_OFFLINE = 2
+
+	LOCK_MODE_PESSIMISTIC = 1
+	LOCK_MODE_OPTIMISTIC = 2
 )
 
 func GetEnvList()[]string{

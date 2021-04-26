@@ -65,7 +65,7 @@ func   (wsConn *WsConn)Read()(msg Message,empty bool,err error){
 	if err != nil{
 		mynetWay.Option.Mylog.Error("wsConn.Conn.ReadMessage err: ",err.Error())
 		return msg,true,err
-		//	websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure)
+
 		//	log.Println("消息读取出现错误", err.Error())
 		//	wsConn.close()
 		//	return

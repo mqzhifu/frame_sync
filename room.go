@@ -12,7 +12,7 @@ type Room struct {
 	AddTime 	int
 	Status 		int
 	PlayerList	[]*Player
-
+	Timeout 	int
 	SequenceNumber		int
 	PlayersAckList		map[int]int
 	PlayersAckStatus	int
