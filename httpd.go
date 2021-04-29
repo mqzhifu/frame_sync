@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -13,13 +14,14 @@ import (
 type MyServer struct {
 	Host 			string
 	Port 			string
-	MapSize 		int
-	RoomPeople 		int
+	MapSize 		int32
+	RoomPeople 		int32
 	Uri				string
-	OffLineWaitTime int
+	OffLineWaitTime int32
 	ActionMap		map[string]map[int]ActionMap
-	ContentType		int
+	ContentType		int32
 	LoginAuthType	string
+	FPS 			int32
 }
 
 type ApiList struct {
@@ -36,27 +38,11 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
+	var jsonStr []byte
 	if uri == "/www/getServer"{
-		myServer := MyServer{
-			//Host: "39.106.65.76",
-			Host: mynetWay.Option.Host,
-			Port: mynetWay.Option.Port,
-			MapSize: mynetWay.Option.MapSize,
-			RoomPeople: mynetWay.Option.RoomPeople,
-			Uri: mynetWay.Option.WsUri,
-			OffLineWaitTime:mynetWay.Option.OffLineWaitTime,
-			ActionMap : mynetWay.ProtocolActions.getActionMap(),
-			ContentType: mynetWay.Option.ContentType,
-			LoginAuthType:mynetWay.Option.LoginAuthType,
-		}
-		jsonStr,_ := json.Marshal(&myServer)
+		options := mynetWay.Option
+		jsonStr,_ = json.Marshal(&options)
 
-		w.Header().Set("Access-Control-Allow-Origin", "*")             //允许访问所有域
-		w.Header().Add("Access-Control-Allow-Headers", "Content-Type") //header的类型
-
-		w.Header().Set("Content-Length",strconv.Itoa( len(jsonStr) ) )
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Write(jsonStr)
 		return
 	}else if uri == "/www/apilist"{
 		ApiList := ApiList{
@@ -64,6 +50,11 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		}
 		formatStr := make(map[int]string)
 		for k,v := range ApiList.ActionMap["client"]{
+			//name := "main.Request" + zlib.StrFirstToUpper( v.Action )
+			//pt := proto.MessageType(name)
+			//strc := reflect.New(pt.Elem()).Interface()
+			//aa ,err := protoregistry.GlobalTypes.FindMessageByName("main.RequestLogin")
+
 			var out bytes.Buffer
 			apiJson := v.Demo
 			json.Indent(&out,[]byte(apiJson),"", "&nbsp;&nbsp;&nbsp;&nbsp;")
@@ -76,26 +67,32 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 			formatStr[k] = strings.Replace(out.String(),"\n","<br/>",-1)
 		}
 		ApiList.JsonFormat = formatStr
-		jsonStr,_ := json.Marshal(&ApiList)
+		jsonStr,_ = json.Marshal(&ApiList)
 
-		w.Header().Set("Access-Control-Allow-Origin", "*")             //允许访问所有域
-		w.Header().Add("Access-Control-Allow-Headers", "Content-Type") //header的类型
-
-		w.Header().Set("Content-Length",strconv.Itoa( len(jsonStr) ) )
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Write(jsonStr)
 	}else if uri == "/www/testCreateJwtToken"{
 		info := mynetWay.testCreateJwtToken()
-		jsonStr,_ := json.Marshal(&info)
-
-		w.Header().Set("Access-Control-Allow-Origin", "*")             //允许访问所有域
-		w.Header().Add("Access-Control-Allow-Headers", "Content-Type") //header的类型
-
-		w.Header().Set("Content-Length",strconv.Itoa( len(jsonStr) ) )
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Write(jsonStr)
+		jsonStr,_ = json.Marshal(&info)
+	}else if uri == "/www/getProtoFile"{
+		filePath := "/api.proto"
+		fileContent, err := getStaticFileContent(filePath)
+		if err != nil{
+			mylog.Error("/www/getProtoFile:",err.Error())
+		}
+		jsonStr = []byte(fileContent)
+	}else{
+		err := routeStatic(w,r,uri)
+		if err != nil{
+			return
+		}
 	}
-	routeStatic(w,r,uri)
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")             //允许访问所有域
+	w.Header().Add("Access-Control-Allow-Headers", "Content-Type") //header的类型
+
+	w.Header().Set("Content-Length",strconv.Itoa( len(jsonStr) ) )
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Write(jsonStr)
+
 }
 
 func  getStaticFileContent(fileSuffix string)(content string ,err error){
@@ -110,18 +107,22 @@ func  getStaticFileContent(fileSuffix string)(content string ,err error){
 	return string(b),err
 }
 
-func  routeStatic(w http.ResponseWriter,r *http.Request,uri string){
+func  routeStatic(w http.ResponseWriter,r *http.Request,uri string)error{
 	//uriSplit := strings.Split(uri,"?")
 	//if uriSplit[0] == "/apireq.html" {
 	//	uri = uriSplit[0]
 	//}
-	if uri == "/www/ws.html" ||  uri == "/www/jquery.min.js"||  uri == "/www/sync.js"||
+	if  uri == "/www/ws.html" ||
+		uri == "/www/jquery.min.js"||
+		uri == "/www/sync.js"||
 		uri == "/www/sync_frame_client_server.jpg" ||
-		uri == "/www/config.html" || uri == "/www/apilist.html"{ //静态文件
+		uri == "/www/config.html" ||
+		uri == "/www/apilist.html"{ //静态文件
+
 		fileContent, err := getStaticFileContent(uri)
 		if err != nil {
 			ResponseStatusCode(w, 404, err.Error())
-			return
+			return errors.New("routeStatic 404")
 		}
 		//踦域处理
 		w.Header().Set("Access-Control-Allow-Origin","*")
@@ -131,6 +132,7 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string){
 		w.Header().Set("Content-Length", strconv.Itoa(len(fileContent)))
 		w.Write([]byte(fileContent))
 	}
+	return nil
 }
 
 //http 响应状态码

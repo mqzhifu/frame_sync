@@ -1,0 +1,192 @@
+syntax = "proto3";
+
+package main;
+option go_package ="./;main";
+
+message RequestLogin{
+    string token = 1;
+}
+
+message RequestClientPong{
+    int64 addTime               = 1;
+    int64 clientReceiveTime     = 2;
+    int64 serverResponseTime    = 3;
+}
+
+message RequestPlayerOperations{
+	int32 Id 	                    = 1;
+	string RoomId 		            = 2;
+	int32 SequenceNumber            = 3;
+	repeated Operation Operations   = 4;
+}
+
+
+message Operation{
+	int32   Id 	    = 1;
+	string  Event 	= 2;
+	string  Value 	= 3;
+	int32   PlayerId 	= 4;
+}
+
+
+message RequestClientPing{
+    int64 addTime               = 1;
+    int64 clientReceiveTime     = 2;
+    int64 serverResponseTime    = 3;
+}
+
+message RequestPlayerResumeGame{
+    int32 playerId        = 1;
+    string roomId       = 2;
+    int32 sequenceNumber  = 3;
+}
+
+message RequestPlayerMatchSign{
+    int32 playerId = 1;
+}
+
+message RequestPlayerReady{
+    int32 playerId  = 1;
+    string roomId = 2;
+}
+
+message RequestGetRoom{
+    int32 playerId  = 1;
+    string roomId = 2;
+}
+
+message RequestRoomHistory{
+    int32 playerId            = 1;
+    string roomId           = 2;
+    int32 sequenceNumberStart = 3;
+    int32 sequenceNumberEnd   = 4;
+}
+
+message RequestPlayerMatchSignCancel{
+    int32 playerId = 1;
+}
+
+message RequestClientHeartbeat{
+    int64 time = 1;
+}
+
+message RequestGameOver{
+    int32 playerId         = 1;
+    string roomId          = 2;
+    int32 sequenceNumber   = 3;
+    string result          = 4;
+}
+
+message RequestPlayerOver{
+    int32 playerId = 1;
+    int32 sequenceNumber   = 2;
+}
+
+message ResponseLoginRes{
+    int32 code        = 1;
+    string errMsg   = 2;
+    Player player   = 3;
+}
+
+message ResponsePlayerStatus{
+    int32 id          = 1;
+    string nickname = 2;
+    int32 status      = 3;
+    string roomId   = 4;
+    int32 addTime     = 5;
+    int32 upTime      = 6;
+}
+
+message ResponseOtherPlayerOffline{
+    int32 playerId = 1;
+}
+
+message ResponseKickOff{
+    int64 time = 1;
+}
+
+message ResponseStartBattle{
+    int32 SequenceNumberStart = 1;
+}
+
+message ResponseServerPing{
+    int64 addTime               = 1;
+    int64 clientReceiveTime     = 2;
+    int64 serverResponseTime    = 3;
+}
+
+message ResponseServerPong{
+    int64 addTime               = 1;
+    int64 clientReceiveTime     = 2;
+    int64 serverResponseTime    = 3;
+}
+
+
+message ResponseEnterBattle{
+    int32 randSeek              = 1;
+    string roomId               = 2;
+    int32 sequenceNumber        = 3;
+    int32 status                = 4;
+    int32 addTime               = 5;
+    int64 time                  = 6;
+
+    repeated Player playerList  = 7;
+}
+
+message ResponsePushLogicFrame{
+	int32 Id 	                    = 1;
+	string RoomId 		            = 2;
+	int32 SequenceNumber            = 3;
+	repeated Operation Operations   = 4;
+}
+
+
+message ResponseOtherPlayerOver{
+    int32 playerId = 1;
+    int32 sequenceNumber = 2;
+}
+
+message ResponseGameOver{
+    int32 playerId          = 1;
+    string roomId           = 2;
+    int32 sequenceNumber    = 3;
+    string result           = 4;
+}
+
+message ResponsePushRoomInfo{
+    string Id 	                = 1;
+    int32 addTime               = 2;
+    int32 status                = 3;
+    int32 Timeout 	            = 4;
+    int32 sequenceNumber        = 5;
+    int32 randSeek              = 6;
+    repeated Player playerList  = 7;
+}
+
+message ResponsePushRoomHistory{
+    repeated ResponseRoomHistory list = 1;
+}
+
+message ResponseRoomHistory{
+	int32  id      = 1;
+	string Action  = 2;
+	string Content = 3;
+}
+
+message ResponseOtherPlayerResumeGame{
+    int32 playerId        = 1;
+    string roomId       = 2;
+    int32 sequenceNumber  = 3;
+}
+
+message Player{
+    int32 id          = 1;
+    int32 roleId      = 2;
+    string nickname   = 3;
+    int32 status      = 4;
+    int32 addTime     = 5;
+    int32 upTime      = 6;
+    string roomId     = 7;
+    int32 updPort     = 8;
+    string ip         = 9;
+}

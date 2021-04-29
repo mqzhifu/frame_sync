@@ -9,16 +9,17 @@ import (
 
 type Room struct {
 	Id			string
-	AddTime 	int
-	Status 		int
+	AddTime 	int32
+	Status 		int32
 	PlayerList	[]*Player
-	Timeout 	int
+	Timeout 	int32
 	SequenceNumber		int
-	PlayersAckList		map[int]int
+	PlayersAckList		map[int32]int32
 	PlayersAckStatus	int
-	RandSeek			int
-	LogicFrameHistory 	[]LogicFrameHistory
-	CommandQueue 		*list.List
+	PlayersReadyList	map[int32]int32
+	RandSeek			int32
+	LogicFrameHistory 	[]*ResponseRoomHistory
+	PlayersOperationQueue 		*list.List
 	CloseChan 	chan int
 }
 
@@ -26,12 +27,14 @@ func NewRoom()*Room{
 	room := new(Room)
 	room.Id = CreateRoomId()
 	room.Status = ROOM_STATUS_INIT
-	room.AddTime = zlib.GetNowTimeSecondToInt()
+	room.AddTime = int32(zlib.GetNowTimeSecondToInt())
 	room.SequenceNumber = 0
-	room.PlayersAckList =  make(map[int]int)
+	room.PlayersAckList =  make(map[int32]int32)
 	room.PlayersAckStatus = PLAYERS_ACK_STATUS_INIT
-	room.RandSeek = zlib.GetRandIntNum(100)
-	room.CommandQueue = list.New()
+	room.RandSeek = int32(zlib.GetRandIntNum(100))
+	room.PlayersOperationQueue = list.New()
+	room.PlayersReadyList =  make(map[int32]int32)
+
 	//mynetWay.Option.Mylog.Info("addPoolElement")
 	//_ ,exist := mySyncRoomPool[room.Id]
 	//if exist{
@@ -56,7 +59,7 @@ func(room *Room) AddPlayer(player *Player){
 	room.PlayerList = append(room.PlayerList,player)
 }
 
-func (room *Room)upStatus(status int){
+func (room *Room)upStatus(status int32){
 	mylog.Info("room upStatus ,old :",room.Status, " new :" ,status)
 	room.Status = status
 }

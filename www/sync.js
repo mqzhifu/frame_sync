@@ -1,25 +1,28 @@
 var self = null;
-function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineWaitTime,actionMap){
+function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineWaitTime,actionMap,FPS){
     var self = this;
 
-    this.commandsInc = 0;//玩家操作指令自增ID
+    this.status = "init";//1初始化 2等待准备 3运行中  4结束
+    this.wsObj = null;//js内置ws 对象
+
     this.hostUri = host +uri;//ws 连接地址
     this.playerId = playerId;//玩家ID
     this.token = token;//玩家的凭证
     this.matchGroupPeople = matchGroupPeople;//一个副本的人数
     this.tableMax = tableMax;//地址的表格大小
-    this.wsObj = null;//js内置ws 对象
     this.otherPlayerOffline = 0;//其它玩家调线
-    // this.selfPlayerOffline = 0;//自己掉线
     this.heartbeatLoopFunc = null;//心跳回调函数
     this.pushLogicFrameLoopFunc = null;//定时推送玩家操作
-    this.playerCommandQueue = [];
-    this.myClose = 0;//C端 主动关闭标识
-    this.domIdObj =DomIdObj ;
+    this.playerOperationsQueue = [];
+    this.closeFlag = 0;//关闭标识，0正常1手动关闭2后端关闭
+    this.domIdObj = DomIdObj ;
     this.offLineWaitTime = offLineWaitTime;
     this.playerLocation = new Object();
     this.tableId = "";
-    this.startInit = 0;
+    this.operationsInc = 0;//玩家操作指令自增ID
+    this.logicFrameLoopTimeMs = 0;
+    this.FPS = FPS;
+    this.playerCommandPushLock = 0;
     //下面，是由S端供给
     this.roomId = "";
     this.actionMap = actionMap;
@@ -29,9 +32,11 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
     //入口函数，必须得建立连接后，都有后续的所有操作
     this.create  = function(){
+        self.closeFlag = 0;
+        self.logicFrameLoopTimeMs = parseInt( 1000 / this.FPS);
         console.log("create new WebSocket"+self.hostUri)
         self.wsObj = new WebSocket(self.hostUri);
-        // self.wsOpen();
+
         self.wsObj.onclose = function(ev){
             self.onclose(ev)
         };
@@ -41,26 +46,26 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         self.wsObj.onopen = function(){
             self.wsOpen();
         };
-
         self.wsObj.onerror = function(ev){
             self.wsError(ev);
         };
     };
     //连接成功后，会执行此函数
     this.wsOpen = function(){
-        console.log("ws link success , onOpen")
-        // var data = '{"action":"login","content":"'+self.token+'"}';
-        // self.sendById(data)
+        console.log("onOpen : ws link success  ")
+        this.status = "wsLInkSuccess";
         var data = {"token":self.token}
         self.sendMsg("login",data)
     };
     this.gameOverAndClear = function(){
-        commands ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"result": "aaaa"};
+        var operations ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"result": "aaaa"};
         // var msg = {"action":"gameOver","content":JSON.stringify(commands)}
         // var jsonStr = JSON.stringify(msg)
         // self.sendById(jsonStr);
-        self.sendMsg("gameOver",commands,1)
+        self.sendMsg("gameOver",operations,1)
 
+        this.status = "end";
+        window.clearInterval(self.pushLogicFrameLoopFunc);
         self.upOptBnt("游戏结束1",1)
         return alert("完犊子了，撞车了...这游戏得结束了....");
     };
@@ -114,11 +119,14 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         alert("receive server close:" +ev.code);
         window.clearInterval(self.pushLogicFrameLoopFunc);
         // window.clearInterval(self.heartbeatLoopFunc);
-        var reConnBntId = "reconn_"+self.playerId;
         if (self.myClose == 1){
-            self.upOptBnt("C端主动关闭WS，<a href='javascript:void(0);' id='"+reConnBntId+"'>重连接</a>",1)
-            $("#"+reConnBntId).click(self.create);
+            var reConnBntId = "reconn_"+self.playerId;
+            var msg = "重连接";
+            self.upOptBntHref(reConnBntId,msg,self.create)
+            // self.upOptBnt("C端主动关闭WS，<a href='javascript:void(0);' id='"+reConnBntId+"'>重连接</a>",1)
+            // $("#"+reConnBntId).click(self.create);
         }else{
+            self.closeFlag = 2;
             self.upOptBnt("服务端关闭，游戏结束，连接断开",1)
         }
     };
@@ -155,16 +163,20 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             self.rPushPlayerStatus(logicFrame);
         }else if( action == 'serverPing'){//获取一个当前玩家的状态，如：是否有历史未结束的游戏
             self.rPing(logicFrame);
+        }else if ( action == 'startBattle' ){
+            self.rStartBattle(logicFrame);
         }else if ( action == 'pushRoomInfo' ){
             self.rPushRoomInfo(logicFrame);
         }else if ( action == 'otherPlayerOffline' ){
             self.rOtherPlayerOffline(logicFrame);
-        }else if ( action == 'startInit' ){
-            self.rStartInit(logicFrame);
+        }else if ( action == 'enterBattle' ){
+            self.rEnterBattle(logicFrame);
         }else if( "gameOver" == action){
             self.rOver(logicFrame);
         }else if( "pushLogicFrame" == action){
             self.rPushLogicFrame(logicFrame)
+        }else if( "serverPong" == action){
+            self.rServerPong(logicFrame)
         }else if( "otherPlayerResumeGame" == action){
             if(logicFrame.playerId != self.playerId){
                 var tdId = self.tableId + "_" + self.playerLocation[logicFrame.playerId];
@@ -191,7 +203,58 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         var commands ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"playerId":self.playerId };
         self.sendMsg("playerResumeGame",commands)
     };
+    this.upOptBntHref = function(domId,value,clickCallback){
+        var bntContent = "<a href='javascript:void(0);' onclick='' id='"+domId+"'>"+value+"</a>";
+        self.upOptBnt(bntContent, 1);
+        $("#"+domId).click(clickCallback);
+    };
     //=================== 以下都是 接收S端的处理函数========================================
+    this.rLoginRes = function(logicFrame){
+        if (logicFrame.code != 200) {
+            this.status = "loginFailed";
+            return alert("loginRes failed!!!"+logicFrame.code + " , "+logicFrame.errMsg);
+        }
+        var now = Date.now();
+        var msg = {"addTime":now,"clientReceiveTime":0,"serverResponseTime":0};
+        self.sendMsg("clientPing",msg);
+
+        this.status = "loginSuccess";
+
+        var playerConnInfo = logicFrame.player
+        if (playerConnInfo.roomId){
+            alert("检测出，有未结束的一局游戏，开始恢复中...,先获取房间信息:rooId:"+playerConnInfo.roomId);
+            var msg = {"roomId":playerConnInfo.roomId,"playerId":playerId};
+            self.sendMsg("getRoomById",msg);
+        }else{
+            var matchSignBntId = "matchSign_"+self.playerId;
+            var hrefBody = "连接成功，匹配报名";
+
+            self.upOptBntHref(matchSignBntId,hrefBody,self.matchSign);
+            // var bntContent = "连接成功，<a href='javascript:void(0);' onclick='' id='"+readyBntId+"'>准备/报名</a>";
+            // self.upOptBnt(bntContent, 1);
+            // $("#"+readyBntId).click(self.ready);
+        }
+        // self.heartbeatLoopFunc = setInterval(self.heartbeat, 5000);
+    };
+    this.rServerPong = function(logicFrame){
+        console.log("rServerPong:",logicFrame)
+    };
+    this.rPing = function(logicFrame){
+        var now = Date.now();
+        logicFrame.clientReceiveTime =  now
+        self.sendMsg("clientPong",logicFrame,1)
+    };
+    this.rStartBattle = function(logicFrame){
+        this.status = "startBattle";
+        self.pushLogicFrameLoopFunc = setInterval(self.playerCommandPush,self.logicFrameLoopTimeMs);
+
+        var exceptionOffLineId = "exceptionOffLineId"+self.playerId;
+        // self.upOptBnt("游戏中...<a href='javascript:void(0);'  id='"+exceptionOffLineId+"'>异常掉线</a>",1)
+        // $("#"+exceptionOffLineId).click(self.closeFD);
+
+        var msg = "异常掉线";
+        self.upOptBntHref(exceptionOffLineId,msg,self.closeFD);
+    };
     this.rPushRoomInfo = function(logicFrame){
         self.initLocalGlobalVar(logicFrame);
         var history ={"roomId":self.roomId,"sequenceNumber":0,"playerId":self.playerId };
@@ -200,16 +263,18 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.rPushLogicFrame = function(logicFrame){//接收S端逻辑帧
         var pre = self.descPre;
 
-        var commands = logicFrame.commands;
+        var operations = logicFrame.operations;
         self.sequenceNumber  = logicFrame.sequenceNumber;
         $("#"+self.domIdObj.seqId).html(self.sequenceNumber);
 
-        console.log("rPushLogicFrame ,sequenceNumber:"+self.sequenceNumber+ ", commandLen:" +  commands.length)
-        for(var i=0;i<commands.length;i++){
-            var str = pre + " i=i , id: "+commands[i].id + " , action:"+commands[i].action + " , value:"+ commands[i].value + " , playerId:" + commands[i].playerId;
+        self.playerCommandPushLock = 0;
+
+        console.log("rPushLogicFrame ,sequenceNumber:"+self.sequenceNumber+ ", operationsLen:" +  operations.length)
+        for(var i=0;i<operations.length;i++){
+            var str = pre + " i=i , id: "+operations[i].id + " , event:"+operations[i].event + " , value:"+ operations[i].value + " , playerId:" + operations[i].playerId;
             console.log(str);
-            if (commands[i].action == "move"){
-                var LocationArr = commands[i].value.split(",");
+            if (operations[i].event == "move"){
+                var LocationArr = operations[i].value.split(",");
                 var LocationStart = LocationArr[0];
                 var LocationEnd = LocationArr[1];
 
@@ -217,57 +282,31 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
                 var lightTd =self.getMapTdId(self.tableId,LocationStart,LocationEnd);
                 console.log(pre+"  "+lightTd);
                 var tdObj = $("#"+lightTd);
-                if(commands[i].playerId == playerId){
+                if(operations[i].playerId == playerId){
                     tdObj.css("background", "green");
                 }else{
                     tdObj.css("background", "red");
                 }
                 var playerLocation = self.playerLocation;
-                if (playerLocation[commands[i].playerId] == "empty"){
+                if (playerLocation[operations[i].playerId] == "empty"){
                     //证明是第一次移动，没有之前的数据
                 }else{
                     // playerLocation = getPlayerLocation(playerId);
                     // alert(commands[i].playerId);
-                    var playerLocationArr = playerLocation[commands[i].playerId].split("_");
+                    var playerLocationArr = playerLocation[operations[i].playerId].split("_");
                     //非首次移动，这次移动后，要把之前所有位置清掉
                     var lightTd = self.getMapTdId(self.tableId,playerLocationArr[0],playerLocationArr[1]);
                     var tdObj = $("#"+lightTd);
                     tdObj.css("background", "");
                 }
-                playerLocation[commands[i].playerId] = LocationStart + "_"+LocationEnd;
-            }else if(commands[i].action == "empty"){
+                playerLocation[operations[i].playerId] = LocationStart + "_"+LocationEnd;
+            }else if(operations[i].event == "empty"){
 
             }
         }
         // self.sendPlayerLogicFrameAck( self.sequenceNumber)
     };
-    this.rPing = function(logicFrame){
-        var now = Date.now();
-        // var msg = {"action": "pong", "content": now}
-        // var jsonStr = JSON.stringify(msg)
-        logicFrame.clientReceiveTime =  now
-        self.sendMsg("clientPong",logicFrame,1)
-    };
-    this.rLoginRes = function(logicFrame){
-        if (logicFrame.code != 200) {
-            return alert("loginRes failed!!!"+logicFrame.code + " , "+logicFrame.errMsg);
-        }
 
-        self.myClose = 0;
-        var playerConnInfo = logicFrame.playerConnInfo
-        if (playerConnInfo.roomId){
-            alert("检测出，有未结束的一局游戏，开始恢复中...,先获取房间信息:rooId:"+playerConnInfo.roomId);
-            var msg = {"roomId":playerConnInfo.roomId,"playerId":playerId};
-            self.sendMsg("getRoomById",msg);
-        }else{
-            var readyBntId = "ready_"+self.playerId;
-            var bntContent = "连接成功，<a href='javascript:void(0);' onclick='' id='"+readyBntId+"'>准备/报名</a>";
-            self.upOptBnt(bntContent, 1);
-            $("#"+readyBntId).click(self.ready);
-
-        }
-        // self.heartbeatLoopFunc = setInterval(self.heartbeat, 5000);
-    };
     // this.rPushPlayerStatus = function(logicFrame){
     //     console.log("pushPlayerStatus:"+logicFrame.status)
     //     if (logicFrame.roomId ){//有未完结的记录
@@ -311,20 +350,18 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         // $("#rid").html(logicFrame.RoomId);
         $("#"+self.domIdObj.roomId).html(self.roomId);
 
-
-        self.startInit = 1;
-
         var str =  pre+", RandSeek:"+    self.randSeek +" , SequenceNumber"+    self.sequenceNumber ;
         console.log(str);
     };
-    this.rStartInit = function(logicFrame){
+    this.rEnterBattle = function(logicFrame){
         self.initLocalGlobalVar(logicFrame);
 
-        var exceptionOffLineId = "exceptionOffLineId"+self.playerId;
-        self.upOptBnt("游戏中...<a href='javascript:void(0);'  id='"+exceptionOffLineId+"'>异常掉线</a>",1)
-        $("#"+exceptionOffLineId).click(self.closeFD);
+        var readySignBntId = "ready_"+self.playerId;
+        var hrefBody = "匹配成功，准备";
 
-        self.pushLogicFrameLoopFunc = setInterval(self.playerCommandPush,100);
+        self.upOptBntHref(readySignBntId,hrefBody,self.ready);
+
+        // self.pushLogicFrameLoopFunc = setInterval(self.playerCommandPush,100);
         // self.sendPlayerLogicFrameAck( self.sequenceNumber)
     };
     this.rOver = function(ev){
@@ -354,37 +391,62 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             trTemp.appendTo(tableObj);
         }
     };
-    this.cancelSign = function(){
-        var msg = {"playerId" :self.playerId};
-        self.sendMsg("playerCancelReady",msg)
-
-        var readyBntId = "ready_"+self.playerId;
-        var bntContent = "连接成功，<a href='javascript:void(0);' onclick='' id='"+readyBntId+"'>准备/报名</a>";
-        self.upOptBnt(bntContent, 1);
-        $("#"+readyBntId).click(self.ready);
-    };
     this.ready = function(){
+        this.status = "ready";
+
         var msg = {"playerId" :self.playerId};
         self.sendMsg("playerReady",msg)
 
-        var cancelBntId = "cancelSign_"+self.playerId;
-        var bntContent = "<a href='javascript:void(0);' onclick='' id='"+cancelBntId+"'>取消报名/准备</a>";
-        self.upOptBnt(bntContent, 1);
-        $("#"+cancelBntId).click(self.cancelSign);
+        // var cancelBntId = "cancelSign_"+self.playerId;
+        // var bntContent = "<a href='javascript:void(0);' onclick='' id='"+cancelBntId+"'>取消报名/准备</a>";
+        // self.upOptBnt(bntContent, 1);
+        // $("#"+cancelBntId).click(self.cancelSign);
+        self.upOptBntHref("","等待其它玩家准备",this.ready);
+    };
+    this.cancelSign = function(){
+        this.status = "cancelSign";
 
+        var msg = {"playerId" :self.playerId};
+        self.sendMsg("playerMatchSignCancel",msg)
+
+        var matchSignBntId = "matchSign_"+self.playerId;
+        var hrefBody = "连接成功，匹配报名";
+
+        self.upOptBntHref(matchSignBntId,hrefBody,self.matchSign);
+
+        // var readyBntId = "ready_"+self.playerId;
+        // var bntContent = "连接成功，<a href='javascript:void(0);' onclick='' id='"+readyBntId+"'>准备/报名</a>";
+        // self.upOptBnt(bntContent, 1);
+        // $("#"+readyBntId).click(self.ready);
+    };
+    this.matchSign = function(){
+        this.status = "matchSign";
+
+        var msg = {"playerId" :self.playerId};
+        self.sendMsg("playerMatchSign",msg);
+
+        var cancelBntId = "cancelSign_"+self.playerId;
+        var hrefBody = "取消匹配报名";
+
+        self.upOptBntHref(cancelBntId,hrefBody,self.cancelSign);
+
+        // var cancelBntId = "cancelSign_"+self.playerId;
+        // var bntContent = "<a href='javascript:void(0);' onclick='' id='"+cancelBntId+"'>取消报名/准备</a>";
+        // self.upOptBnt(bntContent, 1);
+        // $("#"+cancelBntId).click(self.cancelSign);
     };
     this.move = function ( dirObj ){
 
         if (self.otherPlayerOffline){
-            return alert("玩家掉线了，请等待一下...");
+            return alert("其它玩家掉线了，请等待一下...");
         }
 
-        if (self.myClose){
-            return alert("您已掉线了，请等待一下...");
+        if (self.closeFlag > 0 ){
+            return alert("WS FD 已关闭...");
         }
 
-        if (!self.startInit){
-            return alert("还未初始化，请等待一下...");
+        if (self.status != "startBattle"){
+            return alert("status err , != startBattle ， 游戏还未开始，请等待一下...");
         }
 
         var dir = dirObj.data;
@@ -436,26 +498,30 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         console.log("dir:"+dir+"oldLocation"+nowLocationStr+" , newLocation:"+newLocation);
         // var commands ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"commands": [{"id":1,"action":"move","value":newLocation,"playerId":self.playerId}]};
         // self.sendMsg("playerCommandPush",commands)
-        self.playerCommandQueue.push({"id":self.commandsInc,"action":"move","value":newLocation,"playerId":self.playerId});
-        self.commandsInc++;
+        self.playerOperationsQueue.push({"id":self.operationsInc,"event":"move","value":newLocation,"playerId":self.playerId});
+        self.operationsInc++;
         var playerLocationArr = playerLocation[self.playerId].split("_");
         var lightTd = self.getMapTdId(self.tableId,playerLocationArr[0],playerLocationArr[1]);
         var tdObj = $("#"+lightTd);
         tdObj.css("background", "");
     }
     this.playerCommandPush = function (){
-        var loginFrame ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"commands": []};
-
-        if (self.playerCommandQueue.length > 0){
-            loginFrame.commands = self.playerCommandQueue;
-            self.playerCommandQueue = [];
+        var loginFrame ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"operations": []};
+        if(self.playerCommandPushLock == 1){
+            console.log("lock...");
+            return
+        }
+        if (self.playerOperationsQueue.length > 0){
+            loginFrame.operations = self.playerOperationsQueue;
+            self.playerOperationsQueue = [];
             //
         }else{
-            var emptyCommand = [{"id":1,"action":"empty","value":"-1","playerId":self.playerId}];
-            loginFrame.commands = emptyCommand;
+            var emptyCommand = [{"id":1,"event":"empty","value":"-1","playerId":self.playerId}];
+            loginFrame.operations = emptyCommand;
         }
 
-        self.sendMsg("playerCommandPush",loginFrame);
+        self.playerCommandPushLock = 1;
+        self.sendMsg("playerOperations",loginFrame);
     };
 
 

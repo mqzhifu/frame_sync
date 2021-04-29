@@ -3,22 +3,22 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
+	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
+	"log"
 	"net/http"
 	"strconv"
-	"time"
 	"zlib"
 )
 
 type NetWay struct {
-	Option NetWayOption
-	CloseChan	chan int
-	httpServer *http.Server
-	MyCtx 		context.Context
-	MyCtxCancel context.CancelFunc
-	Players *Players
+	Option 			NetWayOption
+	CloseChan		chan int32
+	httpServer 		*http.Server
+	MyCtx 			context.Context
+	MyCtxCancel 	context.CancelFunc
+	Players 		*Players
 	ProtocolActions *ProtocolActions
 }
 
@@ -26,23 +26,23 @@ type NetWayOption struct {
 	Host 				string
 	Port 				string
 	Mylog 				*zlib.Log
-	ContentType 		int			//json protobuf
+	ContentType 		int32			//json protobuf
 	LoginAuthType		string		//jwt
 	LoginAuthSecretKey	string		//密钥
-	MaxClientConnNum	int			//客户端最大连接数
-	MsgContentMax		int			//一条消息内容最大值
+	MaxClientConnNum	int32			//客户端最大连接数
+	MsgContentMax		int32			//一条消息内容最大值
 	IOTimeout			int64		//read write sock fd 超时时间
 	Cxt 				context.Context	//调用方的CTX，用于所有协程的退出操作
-	MainChan			chan int
-	ConnTimeout 		int			//检测FD最后更新时间
+	MainChan			chan int32
+	ConnTimeout 		int32			//检测FD最后更新时间
 	WsUri				string		//接HOST的后面的URL地址
-	Protocol 			int			//协议  ，ws sockdt udp
-	MapSize				int			//地址大小，给前端初始化使用
-	RoomPeople			int			//一局游戏包含几个玩家
-	RoomTimeout 		int 		//一个房间超时时间
-	OffLineWaitTime		int			//lockStep 玩家掉线后，其它玩家等待最长时间
-	LockMode  			int 		//锁模式，乐观|悲观
-	FPS 				int 		//frame pre second
+	Protocol 			int32			//协议  ，ws sockdt udp
+	MapSize				int32			//地址大小，给前端初始化使用
+	RoomPeople			int32			//一局游戏包含几个玩家
+	RoomTimeout 		int32 		//一个房间超时时间
+	OffLineWaitTime		int32			//lockStep 玩家掉线后，其它玩家等待最长时间
+	LockMode  			int32 		//锁模式，乐观|悲观
+	FPS 				int32 		//frame pre second
 }
 
 type Message struct {
@@ -59,11 +59,11 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-var ConnPool 	map[int]*WsConn	//ws 连接池
 //下面是全局变量，主要是快捷方便使用，没实际意义
 var mynetWay	*NetWay
 var mySync 		*Sync
 var myMatch		*Match
+var wsConnManager *WsConnManager
 
 func NewNetWay(option NetWayOption)*NetWay{
 	option.Mylog.Info("New NetWay instance :")
@@ -74,9 +74,7 @@ func NewNetWay(option NetWayOption)*NetWay{
 	}
 	myMatch = NewMatch(matchOption)
 	mySync = NewSync()
-
-	//全局变量
-	ConnPool = make(map[int]*WsConn)
+	wsConnManager = NewWsConnManager()
 
 	netWay := new(NetWay)
 	netWay.Option = option
@@ -86,7 +84,7 @@ func NewNetWay(option NetWayOption)*NetWay{
 	mynetWay = netWay
 	return netWay
 }
-
+//启动 - 入口
 func (netWay *NetWay)Startup(){
 	//从外层调用的CTX上，派生netway自己的根ctx
 	startupCtx ,cancel := context.WithCancel(netWay.Option.Cxt)
@@ -95,13 +93,13 @@ func (netWay *NetWay)Startup(){
 	//开启匹配服务
 	go myMatch.matchingPlayerCreateRoom  (startupCtx)
 	//监听超时的WS连接
-	go netWay.checkConnPoolTimeout(startupCtx)
+	go wsConnManager.checkConnPoolTimeout(startupCtx)
 	//清理，房间到期后，未回收的情况
 	//go mySync.checkRoomTimeoutLoop(startupCtx)
 
 	netWay.startHttpServer()
-
 }
+//启动HTTP 服务
 func (netWay *NetWay)startHttpServer( ){
 	netWay.Option.Mylog.Info("ws Startup : ",netWay.Option.WsUri,netWay.Option.Host+":"+netWay.Option.Port)
 
@@ -117,7 +115,7 @@ func (netWay *NetWay)startHttpServer( ){
 	http.HandleFunc("/www/",wwwHandler)
 
 	netWay.httpServer = httpServer
-	netWay.CloseChan = make(chan int)
+	netWay.CloseChan = make(chan int32)
 	go func() {
 		<- netWay.CloseChan
 		netWay.Quit()
@@ -139,16 +137,51 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 	//创建一个连接元素，将WS FD 保存到该容器中
-	NewWsConn ,err := netWay.CreateOneWsConn(wsConnFD)
+	NewWsConn ,err := wsConnManager.CreateOneWsConn(wsConnFD)
 	if err !=nil{
 		netWay.Option.Mylog.Error(err.Error())
 		NewWsConn.Write(err.Error())
 		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_CREATE)
 		return
 	}
+	//登陆验证
+	jwtData,err := mynetWay.loginPre(NewWsConn)
+	if err != nil{
+		return
+	}
+	var loginRes ResponseLoginRes
+	//登陆验证通过，开始添加各种状态及初始化
+	NewWsConn.PlayerId = jwtData.Payload.Uid
+	//将新的连接加入到连接池中，并且与玩家ID绑定
+	err = wsConnManager.addConnPool( NewWsConn)
+	if err != nil{
+		loginRes = ResponseLoginRes{Code: 500,ErrMsg: err.Error() }
+		//loginResJsonStr,_ := json.Marshal(loginRes)
+		//netWay.SendMsgByUid(jwtData.Payload.Uid,"loginRes",string(loginResJsonStr))
+		netWay.SendMsgCompressByUid(jwtData.Payload.Uid,"loginRes",loginRes)
+		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_OVERRIDE)
+		return
+	}
+	//给用户再绑定到 用户状态池,该池与连接池的区分 是：连接一但关闭，该元素即删除~而用户状态得需要保存
+	playerConnInfo ,_ :=netWay.Players.addPlayerPool(jwtData.Payload.Uid)
+	loginRes = ResponseLoginRes{Code: 200,ErrMsg: "",Player: &playerConnInfo}
+	//loginResJsonStr,_ := json.Marshal(loginRes)
+	//netWay.SendMsgByUid(jwtData.Payload.Uid,"loginRes",string(loginResJsonStr))
+	netWay.SendMsgCompressByUid(jwtData.Payload.Uid,"loginRes",loginRes)
+	//初始化即登陆成功的响应均完成后，开始该连接的 读取协程
+	go NewWsConn.IOLoop()
+
+	netWay.pintRTT(jwtData.Payload.Uid)
+}
+func  (netWay *NetWay)loginPre(NewWsConn *WsConn)(jwt zlib.JwtData,err error){
 	//这里有个问题，连接成功后，C端立刻就得发消息，不然就异常~
-	msg,empty,err := NewWsConn.Read()
-	if empty{
+	content,err := NewWsConn.Read()
+	if err != nil{
+		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_FD_READ_EMPTY)
+		return
+	}
+	msg,err := netWay.parserContent(content)
+	if err != nil{
 		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_FD_READ_EMPTY)
 		return
 	}
@@ -156,115 +189,24 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_FD_READ_ERR)
 		return
 	}
+	if msg.Action != "login"{
+		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_FD_READ_ERR)
+		mylog.Error("first msg must login api!!!")
+		return
+	}
+
 	//开始：登陆/验证 过程
-	var loginRes ResponseLoginRes
-	requestLogin := RequestLogin{}
-	RouterJsonUnmarshal(msg.Content,&requestLogin)
-	jwtData,err := mynetWay.login(requestLogin,NewWsConn)
-	netWay.Option.Mylog.Debug("login rs :",jwtData,err)
+	jwtDataInterface,err := netWay.Router(msg,NewWsConn)
+	jwt = jwtDataInterface.(zlib.JwtData)
+	netWay.Option.Mylog.Debug("login rs :",jwt,err)
 	if err != nil{
 		netWay.Option.Mylog.Error(err.Error())
 		NewWsConn.Write(err.Error())
 		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_AUTH_FAILED)
-		return
+		return jwt ,err
 	}
 	netWay.Option.Mylog.Info("login success~~~")
-	//登陆验证通过，开始添加各种状态及初始化
-	NewWsConn.PlayerId = jwtData.Payload.Uid
-	//将新的连接加入到连接池中，并且与玩家ID绑定
-	err = netWay.addConnPool( NewWsConn)
-	if err != nil{
-		loginRes = ResponseLoginRes{Code: 500,ErrMsg: err.Error() }
-		loginResJsonStr,_ := json.Marshal(loginRes)
-		netWay.SendMsgByUid(jwtData.Payload.Uid,"loginRes",string(loginResJsonStr))
-		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_OVERRIDE)
-		return
-	}
-	//给用户再绑定到 用户状态池,该池与连接池的区分 是：连接一但关闭，该元素即删除~而用户状态得需要保存
-	playerConnInfo ,_ :=netWay.Players.addPlayerPool(jwtData.Payload.Uid)
-	loginRes = ResponseLoginRes{Code: 200,ErrMsg: "",PlayerConnInfo: playerConnInfo}
-	loginResJsonStr,_ := json.Marshal(loginRes)
-	netWay.SendMsgByUid(jwtData.Payload.Uid,"loginRes",string(loginResJsonStr))
-	//初始化即登陆成功的响应均完成后，开始该连接的 读取协程
-	go NewWsConn.IOLoop()
-
-	netWay.pintRTT(jwtData.Payload.Uid)
-}
-
-func  (netWay *NetWay)pintRTT(playerId int){
-	//ping 一下，测试下RTT
-	ss := time.Now().UnixNano() / 1e6
-	PingRTT := RequestPingRTT{
-		AddTime:ss,
-	}
-	PingRTTJsonStr ,_:=json.Marshal(PingRTT)
-	netWay.SendMsgByUid(playerId,"serverPing",string(PingRTTJsonStr))
-}
-
-func  (netWay *NetWay)parserContent(content string)Message{
-	actionIdStr := content[0:4]
-	actionId,_ := strconv.Atoi(actionIdStr)
-	actionName,empty := netWay.ProtocolActions.GetActionName(actionId,"client")
-	if empty{
-		mylog.Error("parserContent actionId no match",actionId)
-	}
-	mylog.Info("parserContent",actionName.Action)
-	msg := Message{
-		Action: actionName.Action,
-		Content: content[4:],
-	}
-	return msg
-}
-func (netWay *NetWay)getConnPoolById(id int)(*WsConn,bool){
-	wsConn,ok := ConnPool[id]
-	return wsConn,ok
-}
-func (netWay *NetWay)addConnPool( NewWsConn *WsConn)error{
-	v ,exist := netWay.getConnPoolById(NewWsConn.PlayerId)
-	if exist{
-		msg := strconv.Itoa(NewWsConn.PlayerId) + " has joined conn pool ,addTime : "+strconv.Itoa(v.AddTime) + " , u can , kickOff old fd.?"
-		netWay.Option.Mylog.Warning(msg)
-		err := errors.New(msg)
-		return err
-	}
-	netWay.Option.Mylog.Info("addConnPool : ",NewWsConn.PlayerId)
-	ConnPool[NewWsConn.PlayerId] = NewWsConn
-	return nil
-}
-func  (netWay *NetWay)delConnPool(uid int  ){
-	netWay.Option.Mylog.Warning("delConnPool uid :",uid)
-	delete(ConnPool,uid)
-}
-
-
-func  (wsConn *WsConn)CloseHandler(code int, text string) error{
-	mynetWay.CloseOneConn(wsConn,CLOSE_SOURCE_CLIENT)
-	return nil
-}
-
-func(netWay *NetWay)SendMsgByUid(uid int,action string , content string){
-	//msg :=  Msg{
-	//	Action: action,
-	//	Content: content,
-	//}
-	//netWay.Option.Mylog.Info("SendMsgByUid :",uid)
-	//jsonContent,_ := json.Marshal(msg)
-	actionMapT,empty := netWay.ProtocolActions.GetActionId(action,"server")
-	mylog.Info("SendMsgByUid",actionMapT.Id,uid,action,content)
-	if empty{
-		mylog.Error("GetActionId empty",action)
-	}
-	content = strconv.Itoa(actionMapT.Id) + content
-	wsConn,ok := ConnPool[uid]
-	if !ok {
-		mylog.Error("wsConn not in pool,maybe del.")
-		return
-	}
-	if wsConn.Status == CONN_STATUS_CLOSE{
-		mylog.Error("wsConn status =CONN_STATUS_CLOSE.")
-		return
-	}
-	wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
+	return jwt,nil
 }
 
 func(netWay *NetWay)login(requestLogin RequestLogin,wsConn *WsConn)(JwtData zlib.JwtData,err error){
@@ -279,50 +221,98 @@ func(netWay *NetWay)login(requestLogin RequestLogin,wsConn *WsConn)(JwtData zlib
 
 	return JwtData,err
 }
-func  (wsConn *WsConn)IOLoop(){
-	mynetWay.Option.Mylog.Info("IOLoop:")
-	mynetWay.Option.Mylog.Info("set wsConn status :",CONN_STATUS_EXECING, " make close chan")
-	wsConn.Status = CONN_STATUS_EXECING
-	wsConn.CloseChan = make(chan int)
-	ctx,cancel := context.WithCancel(mynetWay.Option.Cxt)
-	go wsConn.WsConnReadLoop(ctx)
-	<- wsConn.CloseChan
-	mynetWay.Option.Mylog.Warning("IOLoop receive chan quit~~~")
-	cancel()
-}
-func  (wsConn *WsConn)WsConnReadLoop(ctx context.Context){
-	i := 0
-	for{
-		select{
-		case <-ctx.Done():
-			goto end
-		default:
-			msg,empty,err :=  wsConn.Read()
-			if err != nil{
-				mylog.Warning("WsConnReadLoop WsConnRead err:",err.Error())
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure){
-					mynetWay.CloseOneConn(wsConn,CLOSE_SOURCE_CLIENT_WS_FD_GONE)
-					goto end
-				}else{
-					continue
-				}
-
-			}
-			if empty{
-				mylog.Warning("WsConnReadLoop WsConnRead empty~")
-				//time.Sleep(time.Second * 1)
-				continue
-			}
-
-			mynetWay.Router(msg,wsConn)
-			i++
-			//if i > 3 {
-			//	break
-			//}
-		}
+//==================================
+func  (netWay *NetWay)pintRTT(playerId int32){
+	//ping 一下，测试下RTT
+	millisecond  := zlib.GetNowMillisecond()
+	PingRTT := ResponseServerPing{
+		AddTime:millisecond,
 	}
-	end :
-		mynetWay.Option.Mylog.Warning("WsConnReadLoop receive signal: done.")
+	//PingRTTJsonStr ,_:=json.Marshal(PingRTT)
+	//netWay.SendMsgByUid(playerId,"serverPing",string(PingRTTJsonStr))
+	netWay.SendMsgCompressByUid(playerId,"serverPing",PingRTT)
+}
+
+func(netWay *NetWay) ClientPong(requestClientPong RequestClientPong,wsConn *WsConn){
+	RTT := requestClientPong.ClientReceiveTime -  requestClientPong.AddTime
+	wsConn.RTT = RTT
+	mylog.Info("client RTT:",RTT," ms")
+}
+
+func(netWay *NetWay)clientPing(pingRTT RequestClientPing,wsConn *WsConn){
+	responseServerPong := ResponseServerPong{
+		AddTime: pingRTT.AddTime,
+		ClientReceiveTime :pingRTT.ClientReceiveTime,
+		ServerResponseTime:zlib.GetNowMillisecond(),
+	}
+	netWay.SendMsgCompressByUid(wsConn.PlayerId,"serverPong",responseServerPong)
+}
+
+func(netWay *NetWay)heartbeat(requestClientHeartbeat RequestClientHeartbeat,wsConn *WsConn){
+	now := zlib.GetNowTimeSecondToInt()
+	wsConn.UpTime = int32(now)
+}
+//=================================
+//发送一条消息给一个玩家FD，同时将消息内容进行压缩
+func(netWay *NetWay)SendMsgCompressByUid(uid int32,action string , contentStruct interface{}){
+	mylog.Info("SendMsgCompressByUid",contentStruct)
+	var err error
+	var contentByte []byte
+
+	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON{
+		contentByte,err = json.Marshal(contentStruct)
+		//if action == "enterBattle"{
+		//	zlib.ExitPrint(string(contentByte))
+		//}
+
+	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{
+		contentStruct := contentStruct.(proto.Message)
+		contentByte, err = proto.Marshal(contentStruct)
+		if err != nil {
+			log.Fatal("marshaling error: ", err)
+		}
+	}else{
+		mylog.Error("SendMsgCompressByUid switch err")
+		return
+	}
+	if err != nil{
+		mylog.Error("Compress err :",err.Error())
+		return
+	}
+
+	netWay.SendMsgByUid(uid,action,string(contentByte))
+}
+//发送一条消息给一个玩家FD，
+func(netWay *NetWay)SendMsgByUid(uid int32,action string , content string){
+	actionMapT,empty := netWay.ProtocolActions.GetActionId(action,"server")
+	mylog.Info("SendMsgByUid",actionMapT.Id,uid,action,content)
+	if empty{
+		mylog.Error("GetActionId empty",action)
+	}
+	content = strconv.Itoa(actionMapT.Id) + content
+	wsConn,ok := wsConnManager.getConnPoolById(uid)
+	if !ok {
+		mylog.Error("wsConn not in pool,maybe del.")
+		return
+	}
+	if wsConn.Status == CONN_STATUS_CLOSE{
+		mylog.Error("wsConn status =CONN_STATUS_CLOSE.")
+		return
+	}
+	wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
+}
+//给报名池添加用户，以快速成一局游戏
+func(netWay *NetWay)playerMatchSign(requestPlayerMatchSign RequestPlayerMatchSign ,wsConn *WsConn) {
+	err := myMatch.addOnePlayer(wsConn.PlayerId)
+	if err != nil{
+		mylog.Error("playerReady",err.Error())
+		return
+	}
+}
+//监听到某个FD被关闭后，回调函数
+func  (wsConn *WsConn)CloseHandler(code int, text string) error{
+	mynetWay.CloseOneConn(wsConn,CLOSE_SOURCE_CLIENT)
+	return nil
 }
 
 func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
@@ -341,182 +331,26 @@ func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 	err := wsConn.Conn.Close()
 	netWay.Option.Mylog.Info("wsConn.Conn.Close err:",err)
 
-	netWay.delConnPool(wsConn.PlayerId)
+	wsConnManager.delConnPool(wsConn.PlayerId)
 	//netWay.Players.delById(wsConn.PlayerId)//这个不能删除，用于玩家掉线恢复的记录
 	netWay.Players.upPlayerStatus(wsConn.PlayerId,PLAYER_STATUS_OFFLINE)
 	//处理掉-已报名的玩家
 	myMatch.delOnePlayer(wsConn.PlayerId)
 	//mySleepSecond(2,"CloseOneConn")
 }
-
-func(netWay *NetWay)playerReady(requestPlayerReady RequestPlayerReady ,wsConn *WsConn) {
-	//给报名池添加用户，以快速成一局游戏
-	err := myMatch.addOnePlayer(wsConn.PlayerId)
-	if err != nil{
-		mylog.Error("playerReady",err.Error())
-		//loginRes := LoginRes{Code: 501,Content: err.Error() }
-		//loginResJsonStr,_ := json.Marshal(loginRes)
-		//netWay.SendMsgByUid(jwtData.Payload.Uid,"loginRes",string(loginResJsonStr))
-		//netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_OVERRIDE)
-		return
-	}
-}
-func(netWay *NetWay) ClientPong(PingRTT RequestPingRTT,wsConn *WsConn){
-
-	RTT := PingRTT.ClientReceiveTime -  PingRTT.AddTime
-	wsConn.RTT = RTT
-	mylog.Info("client RTT:",RTT," ms")
-}
-
-func RouterJsonUnmarshal(content string ,out interface{}){
-	err := json.Unmarshal([]byte(content),out)
-	if err != nil{
-		mylog.Error("RouterJsonUnmarshal err ",err.Error())
-	}
-}
-
-func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err error){
-	switch msg.Action {
-		case "clientPong"://
-			PingRTT :=RequestPingRTT{}
-			RouterJsonUnmarshal(msg.Content,&PingRTT)
-			netWay.ClientPong(PingRTT,wsConn)
-		case "playerResumeGame"://恢复未结束的游戏
-			requestPlayerResumeGame := RequestPlayerResumeGame{}
-			RouterJsonUnmarshal(msg.Content,&requestPlayerResumeGame)
-			mySync.playerResumeGame(requestPlayerResumeGame,wsConn )
-		case "playerStatus"://玩家检测是否有未结束的游戏
-			requestPlayerStatus := RequestPlayerStatus{}
-			RouterJsonUnmarshal(msg.Content,&requestPlayerStatus)
-			netWay.Players.getPlayerStatus(requestPlayerStatus,wsConn)
-		case "playerCommandPush"://玩家推送操作指令
-			logicFrame := LogicFrame{}
-			RouterJsonUnmarshal(msg.Content,&logicFrame)
-			mySync.receiveCommand(logicFrame,wsConn)
-		case "playerLogicFrameAck":
-			logicFrame := LogicFrame{}
-			RouterJsonUnmarshal(msg.Content,&logicFrame)
-			mySync.playerLogicFrameAck(logicFrame,wsConn)
-		case "playerCancelReady"://玩家取消报名等待
-			RequestCancelSign := RequestCancelSign{}
-			RouterJsonUnmarshal(msg.Content,&RequestCancelSign)
-			mySync.cancelSign(RequestCancelSign,wsConn)
-		case "gameOver"://游戏结束
-			requestGameOver := RequestGameOver{}
-			RouterJsonUnmarshal(msg.Content,&requestGameOver)
-			mySync.gameOver(requestGameOver,wsConn)
-		case "clientHeartbeat"://心跳
-			requestClientHeartbeat := RequestClientHeartbeat{}
-			RouterJsonUnmarshal(msg.Content,&requestClientHeartbeat)
-			netWay.heartbeat(requestClientHeartbeat,wsConn)
-		case "playerReady"://玩家进入状态状态
-			requestPlayerReady := RequestPlayerReady{}
-			RouterJsonUnmarshal(msg.Content,&requestPlayerReady)
-			netWay.playerReady(requestPlayerReady,wsConn)
-		case "getRoomHistory"://一局副本的，所有历史操作记录
-			requestRoomHistory := RequestRoomHistory{}
-			RouterJsonUnmarshal(msg.Content,&requestRoomHistory)
-			mySync.RoomHistory(requestRoomHistory,wsConn)
-		case "getRoomById"://
-			requestGetRoom := RequestGetRoom{}
-			RouterJsonUnmarshal(msg.Content,&requestGetRoom)
-			mySync.GetRoom(requestGetRoom,wsConn)
-
-
-
-		//case "netClose"://网络异常断开，也可能是主动断开
-		//case "clientPreClose"://C端主动断开连接前，提前通知
-		//	netWay.CloseOneConn(wsConn,CLOSE_SOURCE_CLIENT_PRE)
-		//case "playerGameOver"://玩家的某些操作，触发了该玩家挂了
-		//case "playerAddRoom"://玩家进入房间
-		//case "gameStart"://所有-玩家均进入准备状态，点击'开始按钮'，触发游戏开始事件
-		default:
-			mylog.Error("Router err:",msg)
-	}
-	return data,nil
-}
-func(netWay *NetWay)heartbeat(requestClientHeartbeat RequestClientHeartbeat,wsConn *WsConn){
-	now := zlib.GetNowTimeSecondToInt()
-	wsConn.UpTime = now
-}
-
-func(netWay *NetWay)checkConnPoolTimeout(ctx context.Context){
-	netWay.Option.Mylog.Info("checkConnPoolTimeout start:")
-	for{
-		select {
-		case   <-ctx.Done():
-			goto end
-		default:
-			for _,v := range ConnPool{
-				now := zlib.GetNowTimeSecondToInt()
-				if now  >  v.UpTime + netWay.Option.ConnTimeout{
-					netWay.CloseOneConn(v,CLOSE_SOURCE_TIMEOUT)
-				}
-			}
-			time.Sleep(time.Second * 1)
-			//mySleepSecond(1,"checkConnPoolTimeout")
-		}
-	}
-	end:
-		netWay.Option.Mylog.Warning("checkConnPoolTimeout close")
-}
-
-type MyTokenTest struct {
-	AppId 	int
-	Uid 	int
-	ATime	int
-	Expire  int
-	Token 	string
-}
-func (netWay *NetWay)testCreateJwtToken()[]MyTokenTest{
-
-	var tokenList   []MyTokenTest
-	appId := 2
-	for i:=1000;i<1010;i++{
-		addTime := zlib.GetNowTimeSecondToInt()
-		Expire := zlib.GetNowTimeSecondToInt() +  24 * 60 * 60
-		jwtDataPayload := zlib.JwtDataPayload{
-			AppId: appId,
-			Uid : i,
-			ATime: addTime,
-			Expire:Expire,
-		}
-
-		myTokenTest := MyTokenTest{
-			AppId: appId,
-			Uid :i,
-			ATime: addTime,
-			Expire:Expire,
-		}
-
-		jwtToken := zlib.CreateJwtToken(netWay.Option.LoginAuthSecretKey,jwtDataPayload)
-		myTokenTest.Token = jwtToken
-
-		tokenList = append(tokenList,myTokenTest)
-	}
-
-
-	return tokenList
-}
-func  (netWay *NetWay)Quit(){
-	ctx ,_ := context.WithCancel(netWay.Option.Cxt)
+//退出
+func  (netWay *NetWay)Quit() {
+	ctx, _ := context.WithCancel(netWay.Option.Cxt)
 	netWay.httpServer.Shutdown(ctx)
 
-	netWay.MyCtxCancel()//关闭 FD超时检测 、玩家匹配成团
+	netWay.MyCtxCancel() //关闭 FD超时检测 、玩家匹配成团
 
-	if len(ConnPool) == 0{
+	if len(wsConnManager.Pool) == 0 {
 		netWay.Option.Mylog.Warning("ConnPool is 0")
 		return
 	}
-	for _,v := range ConnPool{
-		netWay.CloseOneConn(v,CLOSE_SOURCE_SIGNAL_QUIT)
+	for _, v := range wsConnManager.Pool {
+		netWay.CloseOneConn(v, CLOSE_SOURCE_SIGNAL_QUIT)
 	}
 	netWay.Option.Mylog.Warning("quit finish")
-
-}
-
-//睡眠 - 协程
-func   mySleepSecond(second time.Duration , msg string){
-	mylog.Info(msg," sleep second ", strconv.Itoa(int(second)))
-	time.Sleep(second * time.Second)
 }

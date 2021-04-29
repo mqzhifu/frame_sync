@@ -12,12 +12,12 @@ type Match struct {
 }
 
 type MatchOption struct {
-	RoomPeople	int
+	RoomPeople	int32
 }
 
 type PlayerSign struct {
-	AddTime 	int
-	PlayerId	int
+	AddTime 	int32
+	PlayerId	int32
 }
 
 var signPlayerPool []PlayerSign
@@ -28,7 +28,7 @@ func NewMatch(matchOption MatchOption)*Match{
 	return match
 }
 
-func (match *Match)getOneSignPlayerById(playerId int ) (playerSign PlayerSign,empty bool){
+func (match *Match)getOneSignPlayerById(playerId int32 ) (playerSign PlayerSign,empty bool){
 	for _,v := range signPlayerPool{
 		if v.PlayerId == playerId {
 			return v,false
@@ -37,17 +37,17 @@ func (match *Match)getOneSignPlayerById(playerId int ) (playerSign PlayerSign,em
 	return playerSign,true
 }
 
-func (match *Match) addOnePlayer(playerId int)error{
+func (match *Match) addOnePlayer(playerId int32)error{
 	_,empty := match.getOneSignPlayerById(playerId)
 	if !empty{
 		return errors.New("match sign addOnePlayer : player has exist")
 	}
-	newPlayerSign := PlayerSign{PlayerId: playerId,AddTime: zlib.GetNowTimeSecondToInt()}
+	newPlayerSign := PlayerSign{PlayerId: playerId,AddTime: int32(zlib.GetNowTimeSecondToInt())}
 	signPlayerPool = append(signPlayerPool,newPlayerSign)
 	return nil
 }
 
-func (match *Match) delOnePlayer(playerId int){
+func (match *Match) delOnePlayer(playerId int32){
 	mylog.Info("cancel : delOnePlayer ",playerId)
 	for k,v:=range signPlayerPool{
 		if v.PlayerId == playerId{
@@ -59,7 +59,7 @@ func (match *Match) delOnePlayer(playerId int){
 			return
 		}
 	}
-	mylog.Error("no match playerId",playerId)
+	mylog.Warning("no match playerId",playerId)
 }
 
 func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
@@ -72,10 +72,10 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 		default:
 			//zlib.MyPrint(len(signPlayerPool))
 			//mylog.Info("matching:",len(signPlayerPool),match.Option.RoomPeople)
-			if len(signPlayerPool) >= match.Option.RoomPeople{
+			if int32(len(signPlayerPool)) >= match.Option.RoomPeople{
 				newRoom := NewRoom()
-				timeout := zlib.GetNowTimeSecondToInt() + mynetWay.Option.RoomTimeout
-				newRoom.Timeout = timeout
+				timeout := int32(zlib.GetNowTimeSecondToInt()) + mynetWay.Option.RoomTimeout
+				newRoom.Timeout = int32(timeout)
 				for i:=0;i < len(signPlayerPool);i++{
 					player,empty := mynetWay.Players.getById(signPlayerPool[i].PlayerId)
 					if empty{
@@ -83,6 +83,7 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 					}
 					player.RoomId = newRoom.Id
 					newRoom.AddPlayer(player)
+					newRoom.PlayersReadyList[player.Id] = 0
 				}
 				//删除上面匹配成功的玩家
 				signPlayerPool = append(signPlayerPool[match.Option.RoomPeople:])

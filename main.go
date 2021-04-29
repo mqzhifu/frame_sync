@@ -1,34 +1,20 @@
 package main
 
 import (
-	"container/list"
 	"context"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 	"zlib"
 )
 
-//http://code.google.com/p/go.net/websocket
-//http://code.google.com/p/go.net/websocket
-//http://golang.org/x/net/websocket
-//github.com/gorilla/websocket
-//http://github.com/golang/net
-
-
-func test(){
-	queue := list.New()
-	queue.PushBack("aaaa")
-	element := queue.Front()
-	info := element.Value.(string)
-	zlib.ExitPrint(info)
-}
-
 var mylog *zlib.Log
 func main(){
-	//test()
 	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
+
+	test()
 
 	if len(os.Args) < 4{
 		msg := "os.Args len < 4 , ex :  env=dev , ip=127.0.0.1 , port=2222 , log_base_path=/data/www/golang/src/logs"
@@ -39,7 +25,6 @@ func main(){
 	ip 				:= os.Args[2]
 	port 			:= os.Args[3]
 	log_base_path 	:= os.Args[4]
-
 
 	msg := "os.Args: env= "+env +" ,ip= "+ip +" ,port=" + port+ " ,log_base_path= " +log_base_path
 	zlib.MyPrint(msg)
@@ -106,7 +91,7 @@ func main(){
 	mainEnd:
 		mylog.Warning("main end...")
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * time.Second)
 }
 //信号 处理
 func  DemonSignal(newNetWay *NetWay,mainCtx context.Context,mainCancel context.CancelFunc){
@@ -135,4 +120,10 @@ func  DemonSignal(newNetWay *NetWay,mainCtx context.Context,mainCancel context.C
 end :
 	mylog.Warning("DemonSignal end")
 	mainCancel()
+}
+
+//睡眠 - 协程
+func   mySleepSecond(second time.Duration , msg string){
+	mylog.Info(msg," sleep second ", strconv.Itoa(int(second)))
+	time.Sleep(second * time.Second)
 }
