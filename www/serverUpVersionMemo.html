@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>memo</title>
+</head>
+<body>
+
+2021-04-30
+<table>
+    <p>
+        C端接口 pushLoginFrame 改为  playerOperations<br/>
+        LoginFrame对象KEY值变更： commands 改为  operations<br/>
+        getServer接口  所有KEY 首字母改小写<br/>
+        原getServer中的actionMap.  key删除， 请使用接口请求方式 ：/www/actionMap<br/>
+        接口startInit. 改为    enterBattle<br/>
+        增加S端接口：  startBattle<br/>
+        S端兼容protobuf，具体文件请求回首页查看<br/>
+        流程修改：
+        之前是连接成功后，报名即可，现在改为：连接成功后，报名匹配playerMatchSign接口，匹配成功后推送enterBattle，前端进入战场渲染，成功后，需要告知S端，已准备playerReady接口，这个时候S端会推送startBattle<br/>
+        增加接口：clientPing   serverPong<br/>
+
+    </p>
+
+
+</table>
+
+</body>
+</html>
