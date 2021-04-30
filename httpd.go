@@ -39,11 +39,10 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 	}
 
 	var jsonStr []byte
+	//var err error
 	if uri == "/www/getServer"{
 		options := mynetWay.Option
 		jsonStr,_ = json.Marshal(&options)
-
-		return
 	}else if uri == "/www/apilist"{
 		ApiList := ApiList{
 			ActionMap : mynetWay.ProtocolActions.getActionMap(),
@@ -69,7 +68,10 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		ApiList.JsonFormat = formatStr
 		jsonStr,_ = json.Marshal(&ApiList)
 
-	}else if uri == "/www/testCreateJwtToken"{
+	}else if uri == "/www/actionMap"{
+		info := mynetWay.ProtocolActions.getActionMap()
+		jsonStr,_ = json.Marshal(&info)
+	} else if uri == "/www/testCreateJwtToken"{
 		info := mynetWay.testCreateJwtToken()
 		jsonStr,_ = json.Marshal(&info)
 	}else if uri == "/www/getProtoFile"{
@@ -113,9 +115,11 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string)error{
 	//	uri = uriSplit[0]
 	//}
 	if  uri == "/www/ws.html" ||
+		uri == "/www/sync_frame_client_server.jpg" ||
 		uri == "/www/jquery.min.js"||
 		uri == "/www/sync.js"||
 		uri == "/www/sync_frame_client_server.jpg" ||
+		uri == "/www/index.html" ||
 		uri == "/www/config.html" ||
 		uri == "/www/apilist.html"{ //静态文件
 

@@ -9,9 +9,9 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.playerId = playerId;//玩家ID
     this.token = token;//玩家的凭证
     this.matchGroupPeople = matchGroupPeople;//一个副本的人数
+    this.heartbeatLoopFunc = null;//心跳回调函数
     this.tableMax = tableMax;//地址的表格大小
     this.otherPlayerOffline = 0;//其它玩家调线
-    this.heartbeatLoopFunc = null;//心跳回调函数
     this.pushLogicFrameLoopFunc = null;//定时推送玩家操作
     this.playerOperationsQueue = [];
     this.closeFlag = 0;//关闭标识，0正常1手动关闭2后端关闭
@@ -28,7 +28,6 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.actionMap = actionMap;
     this.sequenceNumber = 0;
     this.randSeek = 0;
-
 
     //入口函数，必须得建立连接后，都有后续的所有操作
     this.create  = function(){

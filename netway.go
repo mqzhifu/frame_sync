@@ -23,26 +23,26 @@ type NetWay struct {
 }
 
 type NetWayOption struct {
-	Host 				string
-	Port 				string
-	Mylog 				*zlib.Log
-	ContentType 		int32			//json protobuf
-	LoginAuthType		string		//jwt
-	LoginAuthSecretKey	string		//密钥
-	MaxClientConnNum	int32			//客户端最大连接数
-	MsgContentMax		int32			//一条消息内容最大值
-	IOTimeout			int64		//read write sock fd 超时时间
-	Cxt 				context.Context	//调用方的CTX，用于所有协程的退出操作
-	MainChan			chan int32
-	ConnTimeout 		int32			//检测FD最后更新时间
-	WsUri				string		//接HOST的后面的URL地址
-	Protocol 			int32			//协议  ，ws sockdt udp
-	MapSize				int32			//地址大小，给前端初始化使用
-	RoomPeople			int32			//一局游戏包含几个玩家
-	RoomTimeout 		int32 		//一个房间超时时间
-	OffLineWaitTime		int32			//lockStep 玩家掉线后，其它玩家等待最长时间
-	LockMode  			int32 		//锁模式，乐观|悲观
-	FPS 				int32 		//frame pre second
+	Host 				string		`json:"host"`
+	Port 				string		`json:"port"`
+	Mylog 				*zlib.Log	`json:"mylog"`
+	ContentType 		int32		`json:"contentType"`	//json protobuf
+	LoginAuthType		string		`json:"loginAuthType"`	//jwt
+	LoginAuthSecretKey	string								//密钥
+	MaxClientConnNum	int32		`json:"maxClientConnMum"`//客户端最大连接数
+	MsgContentMax		int32								//一条消息内容最大值
+	IOTimeout			int64								//read write sock fd 超时时间
+	Cxt 				context.Context						//调用方的CTX，用于所有协程的退出操作
+	MainChan			chan int32	`json:"-"`
+	ConnTimeout 		int32								//检测FD最后更新时间
+	WsUri				string		`json:"wsUri"`			//接HOST的后面的URL地址
+	Protocol 			int32		`json:"protocol"`		//协议  ，ws sockdt udp
+	MapSize				int32		`json:"mapSize"`		//地址大小，给前端初始化使用
+	RoomPeople			int32		`json:"roomPeople"`		//一局游戏包含几个玩家
+	RoomTimeout 		int32 		`json:"roomTimeout"`	//一个房间超时时间
+	OffLineWaitTime		int32		`json:"offLineWaitTime"`//lockStep 玩家掉线后，其它玩家等待最长时间
+	LockMode  			int32 		`json:"lockMode"`		//锁模式，乐观|悲观
+	FPS 				int32 		`json:"fps"`			//frame pre second
 }
 
 type Message struct {

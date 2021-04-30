@@ -83,15 +83,15 @@ S端配置信息
     }
 
     function initPlayer(player,divId,data){
-        var host = "ws://"+data.Host + ":"+ data.Port;
-        var hostUri = data.Uri;
-        var matchGroupPeople = data.RoomPeople;
-        var tableMax = data.MapSize;
-        var OffLineWaitTime = data.OffLineWaitTime;
+        var host = "ws://"+data.host + ":"+ data.port;
+        var hostUri = data.wsUri;
+        var matchGroupPeople = data.roomPeople;
+        var tableMax = data.mapSize;
+        var offLineWaitTime = data.offLineWaitTime;
 
         var DomIdPreObj = getPlayerDomIdPreObj(player.id);
         DomIdPreObj.playerId = player.id;
-        var wsObj = new ws(player.id,player.token,host,hostUri,matchGroupPeople,tableMax,DomIdPreObj,OffLineWaitTime,data.ActionMap,data.FPS);
+        var wsObj = new ws(player.id,player.token,host,hostUri,matchGroupPeople,tableMax,DomIdPreObj,offLineWaitTime,data.ActionMap,data.fps);
         var html = getTemplateHtml();
         html = ReplaceTemplateHtml(html,DomIdPreObj);
         $("#"+divId).html(html);
@@ -107,22 +107,21 @@ S端配置信息
 
     function init(data){
         var serverConfigTable = $("#server_config_table");
-        var host = "ws://"+data.Host + ":"+ data.Port;
-        var hostUri = data.Uri;
-        var matchGroupPeople = data.RoomPeople;
-        var tableMax = data.MapSize;
-        var OffLineWaitTime = data.OffLineWaitTime;
+        var host = "ws://"+data.host + ":"+ data.port;
+        var hostUri = data.wsUri;
+        var matchGroupPeople = data.roomPeople;
+        var tableMax = data.mapSize;
+        var offLineWaitTime = data.offLineWaitTime;
 
         var html = "<tr><td>host</td><td>"+host+"</td></tr>";
         // html += "<tr><td>hostUri</td><td>"+hostUri+"</td></tr>";
         // html += "<tr><td>matchGroupPeople</td><td>"+matchGroupPeople+"</td></tr>";
         // html += "<tr><td>tableMax</td><td>"+tableMax+"</td></tr>";
         // html += "<tr><td>OffLineWaitTime</td><td>"+OffLineWaitTime+"</td></tr>";
-        html += "<tr><td>FPS</td><td>"+ data.FPS+"</td></tr>";
-        html += "<tr><td>FPS-MS</td><td>"+ 1000 /  data.FPS+"</td></tr>";
+        html += "<tr><td>FPS</td><td>"+ data.fps+"</td></tr>";
+        html += "<tr><td>FPS-MS</td><td>"+ 1000 /  data.fps+"</td></tr>";
 
         serverConfigTable.html(html);
-
 
         initPlayer(player1,"p1",data);
         initPlayer(player2,"p2",data);
