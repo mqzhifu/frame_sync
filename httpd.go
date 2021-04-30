@@ -42,6 +42,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 	//var err error
 	if uri == "/www/getServer"{
 		options := mynetWay.Option
+		options.Host = "39.106.65.76"
 		jsonStr,_ = json.Marshal(&options)
 	}else if uri == "/www/apilist"{
 		ApiList := ApiList{
