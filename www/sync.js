@@ -74,7 +74,9 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     //     self.wsObj.send(msg);
     // };
     this.getActionId = function (action,category){
+        // return alert(self.actionMap);
         var data = self.actionMap[category];
+        console.log(data);
         for(let key  in data){
             // console.log(data[key].Action);
             if (data[key].Action == action){

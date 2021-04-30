@@ -14,18 +14,18 @@ message RequestClientPong{
 }
 
 message RequestPlayerOperations{
-	int32 Id 	                    = 1;
-	string RoomId 		            = 2;
-	int32 SequenceNumber            = 3;
-	repeated Operation Operations   = 4;
+	int32 id 	                    = 1;
+	string roomId 		            = 2;
+	int32 sequenceNumber            = 3;
+	repeated Operation operations   = 4;
 }
 
 
 message Operation{
-	int32   Id 	    = 1;
-	string  Event 	= 2;
-	string  Value 	= 3;
-	int32   PlayerId 	= 4;
+	int32   id 	    = 1;
+	string  event 	= 2;
+	string  value 	= 3;
+	int32   playerId 	= 4;
 }
 
 
@@ -106,7 +106,7 @@ message ResponseKickOff{
 }
 
 message ResponseStartBattle{
-    int32 SequenceNumberStart = 1;
+    int32 sequenceNumberStart = 1;
 }
 
 message ResponseServerPing{
@@ -134,10 +134,10 @@ message ResponseEnterBattle{
 }
 
 message ResponsePushLogicFrame{
-	int32 Id 	                    = 1;
-	string RoomId 		            = 2;
-	int32 SequenceNumber            = 3;
-	repeated Operation Operations   = 4;
+	int32 id 	                    = 1;
+	string roomId 		            = 2;
+	int32 sequenceNumber            = 3;
+	repeated Operation operations   = 4;
 }
 
 
@@ -169,8 +169,8 @@ message ResponsePushRoomHistory{
 
 message ResponseRoomHistory{
 	int32  id      = 1;
-	string Action  = 2;
-	string Content = 3;
+	string action  = 2;
+	string content = 3;
 }
 
 message ResponseOtherPlayerResumeGame{

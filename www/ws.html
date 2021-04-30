@@ -38,6 +38,7 @@ S端配置信息
 <script type="text/javascript">
     var domain = window.location.host;
     var serverHostUri = "http://"+domain + "/www/getServer";
+    var actionMapHostUri = "http://"+domain + "/www/apilist";
     $.ajax({
         // url: "http://127.0.0.1:2222/www/getServer",
         // data: {username:$("#username").val(), content:$("#content").val()},
@@ -45,9 +46,27 @@ S端配置信息
         type: "GET",
         url:serverHostUri,
         success: function(data){
-            init(data);
+            initActionMap(data);
         }
     });
+
+
+    function initActionMap(data){
+
+        $.ajax({
+            // url: "http://127.0.0.1:2222/www/getServer",
+            // data: {username:$("#username").val(), content:$("#content").val()},
+            // dataType: "json",
+            type: "GET",
+            url:actionMapHostUri,
+            success: function(dataActionMap){
+                data.ActionMap = dataActionMap.ActionMap;
+                init(data);
+            }
+        });
+
+    }
+
 
     var player1 = {"id":1,"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVaWQiOjEsIkV4cGlyZSI6MTYxNzMyOTk2MywiQVRpbWUiOjE2MTcyNDM1NjMsIkFwcElkIjoxfQ.XxbHWdSZx4WvXklXHfCWjSpJAIZo2aVv4aUuD3SNsIE"};
     var player2 = {"id":2,"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVaWQiOjIsIkV4cGlyZSI6MTYxNzc5NzUyMSwiQVRpbWUiOjE2MTc3MTExMjEsIkFwcElkIjoxfQ.vKWg0rKfanCZEWBoR4WfuHBAPj5-cH_AxY21YO_RUlk"};
