@@ -54,7 +54,15 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         console.log("onOpen : ws link success  ")
         this.status = "wsLInkSuccess";
         var data = {"token":self.token}
-        self.sendMsg("login",data)
+        // self.sendMsg("login",data)
+
+
+
+        var mainRequestLogin = new proto.main.RequestLogin();
+        mainRequestLogin.setToken("aaaa")
+        var bb = mainRequestLogin.serializeBinary();
+        self.sendMsg("login",bb);
+
     };
     this.gameOverAndClear = function(){
         var operations ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"result": "aaaa"};
@@ -94,14 +102,38 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
     this.sendMsg =  function ( action,content,jsonEncode  ){
         // if (jsonEncode == 1){
-            content = JSON.stringify(content)
+        //     content = JSON.stringify(content)
         // }
         // var msg = {"action":action,"content":content};
         // var jsonStr =  JSON.stringify(msg);
+        // var tmpcontent = content
+        // self.wsObj.send(content);
+        // return 111;
+
+        // content = JSON.stringify(content)
+
         var id = self.getActionId(action,"client");
-        content = id+content;
-        console.log( " sendMsg:" + self.descPre ,content)
-        self.wsObj.send(content);
+        id = id + "";
+        var idBinary = stringToUint8Array(id);
+
+        var mergedArray = new Uint8Array(idBinary.length + content.length);
+        mergedArray.set(idBinary);
+        mergedArray.set(content, idBinary.length);
+
+        // content = idBinary+content;
+        console.log( " sendMsg:" + self.descPre ,mergedArray)
+        self.wsObj.send(mergedArray);
+
+
+        // var buffer = new ArrayBuffer(tmpcontent.length + 4);
+        // var view = new DataView(buffer);
+        // view.setUint32(0, tmpcontent.length);
+        // for (var i = 0; i < tmpcontent.length; i++) {
+        //     view.setUint8(i + 4, tmpcontent[i]);
+        // }
+        // self.wsObj.send(view);
+
+
     };
     this.upOptBnt = function(content,clearClick){
         $("#"+self.domIdObj.optBntId).html(content);
@@ -151,6 +183,19 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         self.sendMsg("playerLogicFrameAck",logicFrame,1);
     }
     this.onmessage = function(ev){
+        console.log(ev.data);
+        var reader = new FileReader();
+        reader.readAsArrayBuffer(ev.data);
+        reader.onloadend = function(e) {
+            console.info(reader.result);
+            var buf = new Uint8Array(reader.result);
+            console.info(buf);
+            var rs = proto.main.RequestLogin.deserializeBinary(reader.result);
+        };
+
+        return 1;
+
+
         var pre = self.descPre;
         console.log("onmessage:"+ pre + " " +ev.data);
         var actionId = ev.data.substr(0,4);
@@ -159,6 +204,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         console.log(pre +" actionId:"+actionId , " content:",content , " actionName:",action);
         var logicFrame =  eval("("+content+")");
         if ( action == 'loginRes' ) {
+            console.log(logicFrame)
+            return alert("测试protobuf中，先断掉...");
             self.rLoginRes(logicFrame);
         }else if( action == 'pushPlayerStatus'){//获取一个当前玩家的状态，如：是否有历史未结束的游戏
             self.rPushPlayerStatus(logicFrame);
@@ -544,3 +591,12 @@ if ("WebSocket" in window) {
     alert("您的浏览器不支持 WebSocket!");
 }
 
+function stringToUint8Array(str){
+    var arr = [];
+    for (var i = 0, j = str.length; i < j; ++i) {
+        arr.push(str.charCodeAt(i));
+    }
+
+    var tmpUint8Array = new Uint8Array(arr);
+    return tmpUint8Array
+}

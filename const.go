@@ -15,9 +15,13 @@ const (
 	CLOSE_SOURCE_OVERRIDE = 5		//创建新连接时，发现，该用户还有一个未关闭的连接
 	CLOSE_SOURCE_TIMEOUT = 6		//最后更新时间 ，超时
 	CLOSE_SOURCE_SIGNAL_QUIT = 7 	//接收到关闭信号
-	CLOSE_SOURCE_FD_READ_EMPTY = 8	//首次建立连接时，获取token为空
-	CLOSE_SOURCE_FD_READ_ERR = 9	//首次建立连接时，read出错
-	CLOSE_SOURCE_CLIENT_WS_FD_GONE = 10	//客户端异常关闭了
+	CLOSE_SOURCE_CLIENT_WS_FD_GONE = 8	//客户端异常关闭了
+	CLOSE_SOURCE_FD_READ_EMPTY = 9	//首次建立连接时，获取token为空
+	CLOSE_SOURCE_FD_READ_ERR = 10	//首次建立连接时，read出错
+	CLOSE_SOURCE_FD_PARSE_CONTENT = 11	//首次建立连接时，解析内容时出错
+	CLOSE_SOURCE_FIRST_NO_LOGIN = 12	//
+
+
 
 	CONTENT_TYPE_JSON = 1			//内容类型 json
 	CONTENT_TYPE_PROTOBUF = 2		//proto_buf

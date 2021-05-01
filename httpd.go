@@ -119,6 +119,7 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string)error{
 		uri == "/www/sync_frame_client_server.jpg" ||
 		uri == "/www/jquery.min.js"||
 		uri == "/www/sync.js"||
+		uri == "/www/api_web_pb.js"||
 		uri == "/www/serverUpVersionMemo.html"||
 		uri == "/www/sync_frame_client_server.jpg" ||
 		uri == "/www/index.html" ||

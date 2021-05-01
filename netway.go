@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
-	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
-	"log"
 	"net/http"
 	"strconv"
 	"zlib"
@@ -133,14 +130,14 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 	wsConnFD, err := upgrader.Upgrade(resp, req, nil)
 	netWay.Option.Mylog.Info("Upgrade this http req to websocket")
 	if err != nil {
-		netWay.Option.Mylog.Error("Upgrade websocket failed", err.Error())
+		netWay.Option.Mylog.Error("Upgrade websocket failed: ", err.Error())
 		return
 	}
 	//创建一个连接元素，将WS FD 保存到该容器中
 	NewWsConn ,err := wsConnManager.CreateOneWsConn(wsConnFD)
 	if err !=nil{
 		netWay.Option.Mylog.Error(err.Error())
-		NewWsConn.Write(err.Error())
+		NewWsConn.Write([]byte(err.Error()))
 		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_CREATE)
 		return
 	}
@@ -155,57 +152,69 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 	//将新的连接加入到连接池中，并且与玩家ID绑定
 	err = wsConnManager.addConnPool( NewWsConn)
 	if err != nil{
-		loginRes = ResponseLoginRes{Code: 500,ErrMsg: err.Error() }
-		//loginResJsonStr,_ := json.Marshal(loginRes)
-		//netWay.SendMsgByUid(jwtData.Payload.Uid,"loginRes",string(loginResJsonStr))
+		loginRes = ResponseLoginRes{
+			Code: 500,
+			ErrMsg: err.Error(),
+		}
 		netWay.SendMsgCompressByUid(jwtData.Payload.Uid,"loginRes",loginRes)
 		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_OVERRIDE)
 		return
 	}
 	//给用户再绑定到 用户状态池,该池与连接池的区分 是：连接一但关闭，该元素即删除~而用户状态得需要保存
 	playerConnInfo ,_ :=netWay.Players.addPlayerPool(jwtData.Payload.Uid)
-	loginRes = ResponseLoginRes{Code: 200,ErrMsg: "",Player: &playerConnInfo}
-	//loginResJsonStr,_ := json.Marshal(loginRes)
-	//netWay.SendMsgByUid(jwtData.Payload.Uid,"loginRes",string(loginResJsonStr))
+	loginRes = ResponseLoginRes{
+		Code: 200,
+		ErrMsg: "",
+		Player: &playerConnInfo,
+	}
 	netWay.SendMsgCompressByUid(jwtData.Payload.Uid,"loginRes",loginRes)
 	//初始化即登陆成功的响应均完成后，开始该连接的 读取协程
 	go NewWsConn.IOLoop()
 
 	netWay.pintRTT(jwtData.Payload.Uid)
+
+	mylog.Info("wsHandler end ,player login success!!!")
 }
 func  (netWay *NetWay)loginPre(NewWsConn *WsConn)(jwt zlib.JwtData,err error){
-	//这里有个问题，连接成功后，C端立刻就得发消息，不然就异常~
+	//这里有个问题，连接成功后，C端立刻就得发消息，不然就异常~bug
+	var loginRes ResponseLoginRes
+
 	content,err := NewWsConn.Read()
 	if err != nil{
+		loginRes = ResponseLoginRes{
+			Code : 500,
+			ErrMsg:err.Error(),
+		}
+		NewWsConn.SendMsg(loginRes)
 		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_FD_READ_EMPTY)
 		return
 	}
 	msg,err := netWay.parserContent(content)
 	if err != nil{
-		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_FD_READ_EMPTY)
-		return
-	}
-	if err != nil {
-		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_FD_READ_ERR)
+		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_FD_PARSE_CONTENT)
 		return
 	}
 	if msg.Action != "login"{
-		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_FD_READ_ERR)
+		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_FIRST_NO_LOGIN)
 		mylog.Error("first msg must login api!!!")
 		return
 	}
-
 	//开始：登陆/验证 过程
 	jwtDataInterface,err := netWay.Router(msg,NewWsConn)
 	jwt = jwtDataInterface.(zlib.JwtData)
 	netWay.Option.Mylog.Debug("login rs :",jwt,err)
 	if err != nil{
 		netWay.Option.Mylog.Error(err.Error())
-		NewWsConn.Write(err.Error())
+		loginRes = ResponseLoginRes{
+			Code : 500,
+			ErrMsg:err.Error(),
+		}
+		NewWsConn.SendMsg(loginRes)
+
 		netWay.CloseOneConn(NewWsConn,CLOSE_SOURCE_AUTH_FAILED)
 		return jwt ,err
 	}
-	netWay.Option.Mylog.Info("login success~~~")
+	netWay.Option.Mylog.Info("login jwt auth ok~~")
 	return jwt,nil
 }
 
@@ -256,30 +265,7 @@ func(netWay *NetWay)heartbeat(requestClientHeartbeat RequestClientHeartbeat,wsCo
 //发送一条消息给一个玩家FD，同时将消息内容进行压缩
 func(netWay *NetWay)SendMsgCompressByUid(uid int32,action string , contentStruct interface{}){
 	mylog.Info("SendMsgCompressByUid",contentStruct)
-	var err error
-	var contentByte []byte
-
-	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON{
-		contentByte,err = json.Marshal(contentStruct)
-		//if action == "enterBattle"{
-		//	zlib.ExitPrint(string(contentByte))
-		//}
-
-	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{
-		contentStruct := contentStruct.(proto.Message)
-		contentByte, err = proto.Marshal(contentStruct)
-		if err != nil {
-			log.Fatal("marshaling error: ", err)
-		}
-	}else{
-		mylog.Error("SendMsgCompressByUid switch err")
-		return
-	}
-	if err != nil{
-		mylog.Error("Compress err :",err.Error())
-		return
-	}
-
+	contentByte ,_ := CompressContent(contentStruct)
 	netWay.SendMsgByUid(uid,action,string(contentByte))
 }
 //发送一条消息给一个玩家FD，

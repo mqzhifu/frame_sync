@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/gorilla/websocket"
+	"github.com/golang/protobuf/proto"
 	"strconv"
 	"time"
 	"zlib"
@@ -65,7 +67,7 @@ func (wsConnManager *WsConnManager)getConnPoolById(id int32)(*WsConn,bool){
 func  (wsConnManager *WsConnManager)addConnPool( NewWsConn *WsConn)error{
 	v ,exist := wsConnManager.getConnPoolById(NewWsConn.PlayerId)
 	if exist{
-		msg := strconv.Itoa(int(NewWsConn.PlayerId)) + " has joined conn pool ,addTime : "+strconv.Itoa(int(v.AddTime)) + " , u can , kickOff old fd.?"
+		msg := strconv.Itoa(int(NewWsConn.PlayerId)) + " player has joined conn pool ,addTime : "+strconv.Itoa(int(v.AddTime)) + " , u can , kickOff old fd.?"
 		mylog.Warning(msg)
 		err := errors.New(msg)
 		return err
@@ -80,21 +82,45 @@ func  (wsConnManager *WsConnManager)delConnPool(uid int32  ){
 	delete(wsConnManager.Pool,uid)
 }
 
-func   (wsConn *WsConn)Write(content string){
+
+func CompressContent(contentStruct interface{})(content []byte  ,err error){
+	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON{
+		content,err = json.Marshal(contentStruct)
+	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{
+		contentStruct := contentStruct.(proto.Message)
+		content, err = proto.Marshal(contentStruct)
+	}else{
+		err = errors.New(" switch err")
+	}
+	if err != nil{
+		mylog.Error("Compress err :",err.Error())
+	}
+	return content,err
+}
+
+//发送一条消息，此方法是给:UID还未注册到池里的情况 ，主要是首次登陆验证出错 的时候
+func   (wsConn *WsConn)SendMsg(contentStruct interface{}){
+	contentByte ,_ := CompressContent(contentStruct)
+	wsConn.Write(contentByte)
+}
+
+func   (wsConn *WsConn)Write(content []byte){
 	wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
 	//go NewWsConn.outChan
-
-	//send_msg := "[" + string(ReadMsgData[:n]) + "]"
-	//m, err := ws.Write([]byte(send_msg))
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//fmt.Printf("Send: %s\n", ReadMsgData[:m])
-	//wsConn.WsConn.SetWriteDeadline(time.Now().Add(time.Second * 3))
-	//wsConn.WsConn.Write([]byte(content))
 }
 func   (wsConn *WsConn)UpLastTime(){
 	wsConn.UpTime = int32( zlib.GetNowTimeSecondToInt() )
+}
+
+func   (wsConn *WsConn)ReadBinary()(content []byte,err error){
+	messageType , dataByte  , err  := wsConn.Conn.ReadMessage()
+	if err != nil{
+		mynetWay.Option.Mylog.Error("wsConn.Conn.ReadMessage err: ",err.Error())
+		return content,err
+	}
+	mylog.Debug("WsConn.ReadMessage Binary messageType:",messageType , " len :",len(dataByte) , " data:" ,string(dataByte))
+	//content = string(dataByte)
+	return dataByte,nil
 }
 
 func   (wsConn *WsConn)Read()(content string,err error){
