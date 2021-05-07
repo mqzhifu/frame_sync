@@ -1,0 +1,14 @@
+中国移动    2.5G    GRPS    属 2G 网络，基于 GSM，理论峰值速率 172 Kbps (实际最高 115 Kbps)，图标“G”，时延 300 ~ 500ms;
+中国移动    2.75G   EDGE    属 2G 网络，基于 GSM，理论下行峰值速率 236 Kbps、上行峰值速率 118 Kbps，图标“E”，时延 200 ~ 400ms;
+中国移动    3G      TD-SCDMA    属 3G 网络，理论下行峰值速率 1.6 Mbps、上行峰 值速率 1.6 Mbps，图标“T”，时延 100ms;
+中国移动    3.5G    HSPA    属 3G 网络，基于 TD-SCDMA，包括 HSDPA 和 HSUPA，理论下行峰值速率 2.8 Mbps、上行峰值 速率 2.2 Mbps，图标“H”，时延 100ms;
+中国移动    4G      TD-LTE  属 4G 网络，理论下行峰值 100 Mbps，上行峰值 50Mbps，时延 10 ~ 50ms;
+中国电信    2G      CDMA 1X 属 2G 网络，基于 CDMA，理论下行峰值速率 153Kbps、上行峰值速率 153 Kbps，图标“1X”， 时延 500 ~ 600ms;
+中国电信    3G      EDVO    属 3G 网络，基于 CDMA 2000，理论峰值下行 3.1 Mbps、上行 1.8 Mbps，图标“3G”，时延 100ms;
+中国电信    4G      TD-LTE FDD- LTE 均属 4G 网络，TD-LTE 理论下行峰值速率 100 Mbps，上行峰值 速率 50Mbps，FDD-LTE 理论下 行峰值速率 150 Mbps，上行峰值速率 40 Mbps， 时延 10 ~ 50ms;
+中国联通    2.5G    GPRS    属 2G 网络，基于 GSM，理论峰值 114 Kbps，图 标“G”，时延 300 ~ 500ms;
+中国联通    2.75G   EDGE    属 2G 网络，基于 GSM，理论下行峰值速率 236 Kbps、上行峰值速率 118 Kbps，图标“E”，时延 200 ~ 400ms;
+中国联通    3G      HSPA    属 3G 网络，基于 WCDMA，包括 HSDPA 和 HSUPA，理论下行峰值速率 14.4 Mbps、上行峰值 速率 5.76 Mbps，图标“H”，时延 100ms;
+中国联通    4G      TD-LTE FDD- LTE 均属 4G 网络，TD-LTE 理论下行峰值速率 100 Mbps，上行峰值 速率 50Mbps，FDD-LTE 理论下 行峰值速率 150 Mbps，上行峰值速率 40 Mbps， 时延 10 ~ 50ms;
+N/A WIFI   WLAN     IEEE 802.11a/b/g   论峰值速率 54 Mbps，时延 10 ~ 50ms;
+N/A WIFI   WLAN     IEEE 802.11n   理论峰值速率<600 Mbps，时延 10 ~ 50ms;

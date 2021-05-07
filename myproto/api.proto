@@ -1,0 +1,193 @@
+syntax = "proto3";
+
+package main;
+option go_package ="./;main";
+
+message RequestLogin{
+    string token = 1;
+}
+
+message RequestClientPong{
+    int64 add_time               = 1;
+    int64 client_receive_time     = 2;
+    int64 server_response_time    = 3;
+}
+
+message RequestPlayerOperations{
+	int32 id 	                    = 1;
+	string room_id 		            = 2;
+	int32 sequence_number            = 3;
+	repeated Operation operations   = 4;
+}
+
+
+message Operation{
+	int32   id 	    = 1;
+	string  event 	= 2;
+	string  value 	= 3;
+	int32   player_id 	= 4;
+}
+
+
+message RequestClientPing{
+    int64 add_time               = 1;
+    int64 client_receive_time     = 2;
+    int64 server_response_time    = 3;
+}
+
+message RequestPlayerResumeGame{
+    int32 player_id        = 1;
+    string room_id       = 2;
+    int32 sequence_number  = 3;
+}
+
+message RequestPlayerMatchSign{
+    int32 player_id = 1;
+}
+
+message RequestPlayerReady{
+    int32 player_id  = 1;
+    string room_id = 2;
+}
+
+message RequestGetRoom{
+    int32 player_id  = 1;
+    string room_id = 2;
+}
+
+message RequestRoomHistory{
+    int32 player_id            = 1;
+    string room_id           = 2;
+    int32 sequence_numberStart = 3;
+    int32 sequence_numberEnd   = 4;
+}
+
+message RequestPlayerMatchSignCancel{
+    int32 player_id = 1;
+}
+
+message RequestClientHeartbeat{
+    int64 time = 1;
+}
+
+message RequestGameOver{
+    int32 player_id         = 1;
+    string room_id          = 2;
+    int32 sequence_number   = 3;
+    string result          = 4;
+}
+
+message RequestPlayerOver{
+    int32 player_id = 1;
+    int32 sequence_number   = 2;
+}
+
+message ResponseLoginRes{
+    int32 code        = 1;
+    string errMsg   = 2;
+    Player player   = 3;
+}
+
+message ResponsePlayerStatus{
+    int32 id          = 1;
+    string nickname = 2;
+    int32 status      = 3;
+    string room_id   = 4;
+    int32 add_time     = 5;
+    int32 up_time      = 6;
+}
+
+message ResponseOtherPlayerOffline{
+    int32 player_id = 1;
+}
+
+message ResponseKickOff{
+    int64 time = 1;
+}
+
+message ResponseStartBattle{
+    int32 sequence_number_start = 1;
+}
+
+message ResponseServerPing{
+    int64 add_time               = 1;
+    int64 client_receive_time     = 2;
+    int64 server_response_time    = 3;
+}
+
+message ResponseServerPong{
+    int64 add_time               = 1;
+    int64 client_receive_time     = 2;
+    int64 server_response_time    = 3;
+}
+
+
+message ResponseEnterBattle{
+    int32 rand_seek              = 1;
+    string room_id               = 2;
+    int32 sequence_number        = 3;
+    int32 status                = 4;
+    int32 add_time               = 5;
+    int64 time                  = 6;
+
+    repeated Player player_list  = 7;
+}
+
+message ResponsePushLogicFrame{
+	int32 id 	                    = 1;
+	string roomId 		            = 2;
+	int32 sequence_number            = 3;
+	repeated Operation operations   = 4;
+}
+
+
+message ResponseOtherPlayerOver{
+    int32 player_id = 1;
+    int32 sequence_number = 2;
+}
+
+message ResponseGameOver{
+    int32 player_id          = 1;
+    string room_id           = 2;
+    int32 sequence_number    = 3;
+    string result           = 4;
+}
+
+message ResponsePushRoomInfo{
+    string id 	                = 1;
+    int32 add_time               = 2;
+    int32 status                = 3;
+    int32 timeout 	            = 4;
+    int32 sequence_number        = 5;
+    int32 rand_seek              = 6;
+    repeated Player player_list  = 7;
+    string room_id               = 8;
+}
+
+message ResponsePushRoomHistory{
+    repeated ResponseRoomHistory list = 1;
+}
+
+message ResponseRoomHistory{
+	int32  id      = 1;
+	string action  = 2;
+	string content = 3;
+}
+
+message ResponseOtherPlayerResumeGame{
+    int32 player_id        = 1;
+    string room_id       = 2;
+    int32 sequence_number  = 3;
+}
+
+message Player{
+    int32 id          = 1;
+    int32 roleId      = 2;
+    string nickname   = 3;
+    int32 status      = 4;
+    int32 addTime     = 5;
+    int32 upTime      = 6;
+    string roomId     = 7;
+    int32 updPort     = 8;
+    string ip         = 9;
+}
