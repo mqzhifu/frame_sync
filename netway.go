@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"strconv"
+	"unicode"
 	"zlib"
 )
 
@@ -167,11 +170,11 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 		ErrMsg: "",
 		Player: &playerConnInfo,
 	}
-	netWay.SendMsgCompressByUid(jwtData.Payload.Uid,"loginRes",loginRes)
+	netWay.SendMsgCompressByUid(jwtData.Payload.Uid,"loginRes",&loginRes)
 	//初始化即登陆成功的响应均完成后，开始该连接的 读取协程
 	go NewWsConn.IOLoop()
 
-	netWay.pintRTT(jwtData.Payload.Uid)
+	//netWay.pintRTT(jwtData.Payload.Uid)
 
 	mylog.Info("wsHandler end ,player login success!!!")
 }
@@ -234,12 +237,12 @@ func(netWay *NetWay)login(requestLogin RequestLogin,wsConn *WsConn)(JwtData zlib
 func  (netWay *NetWay)pintRTT(playerId int32){
 	//ping 一下，测试下RTT
 	millisecond  := zlib.GetNowMillisecond()
-	PingRTT := ResponseServerPing{
+	responseServerPing := ResponseServerPing{
 		AddTime:millisecond,
 	}
 	//PingRTTJsonStr ,_:=json.Marshal(PingRTT)
 	//netWay.SendMsgByUid(playerId,"serverPing",string(PingRTTJsonStr))
-	netWay.SendMsgCompressByUid(playerId,"serverPing",PingRTT)
+	netWay.SendMsgCompressByUid(playerId,"serverPing",&responseServerPing)
 }
 
 func(netWay *NetWay) ClientPong(requestClientPong RequestClientPong,wsConn *WsConn){
@@ -254,7 +257,7 @@ func(netWay *NetWay)clientPing(pingRTT RequestClientPing,wsConn *WsConn){
 		ClientReceiveTime :pingRTT.ClientReceiveTime,
 		ServerResponseTime:zlib.GetNowMillisecond(),
 	}
-	netWay.SendMsgCompressByUid(wsConn.PlayerId,"serverPong",responseServerPong)
+	netWay.SendMsgCompressByUid(wsConn.PlayerId,"serverPong",&responseServerPong)
 }
 
 func(netWay *NetWay)heartbeat(requestClientHeartbeat RequestClientHeartbeat,wsConn *WsConn){
@@ -264,18 +267,44 @@ func(netWay *NetWay)heartbeat(requestClientHeartbeat RequestClientHeartbeat,wsCo
 //=================================
 //发送一条消息给一个玩家FD，同时将消息内容进行压缩
 func(netWay *NetWay)SendMsgCompressByUid(uid int32,action string , contentStruct interface{}){
-	mylog.Info("SendMsgCompressByUid",contentStruct)
+	mylog.Info("SendMsgCompressByUid uid:",uid , " action:",action)
 	contentByte ,_ := CompressContent(contentStruct)
-	netWay.SendMsgByUid(uid,action,string(contentByte))
+	netWay.SendMsgByUid(uid,action,contentByte)
 }
 //发送一条消息给一个玩家FD，
-func(netWay *NetWay)SendMsgByUid(uid int32,action string , content string){
+func(netWay *NetWay)SendMsgByUid(uid int32,action string , content []byte){
+	//zlib.MyPrint(content)
 	actionMapT,empty := netWay.ProtocolActions.GetActionId(action,"server")
-	mylog.Info("SendMsgByUid",actionMapT.Id,uid,action,content)
+	mylog.Info("SendMsgByUid",actionMapT.Id,uid,action)
 	if empty{
 		mylog.Error("GetActionId empty",action)
 	}
-	content = strconv.Itoa(actionMapT.Id) + content
+	//strid := strconv.Itoa(actionMapT.Id)
+	//au := StrToUnicode(strconv.Itoa(actionMapT.Id))
+	//arr := []byte(strid)
+	//bytecontent := []byte(content)
+	//zlib.MyPrint(string(bytecontent))
+	//nn := []byte(content)
+	//for _,v :=range arr{
+	//	ss := StrToUnicode(string(v))
+	//	bb := []byte(ss)
+	//	zlib.MyPrint(bb[0])
+	//	nn  = append( bytecontent,bb[0])
+	//}
+	//zlib.ExitPrint(string(nn))
+	//au = strings.Replace(au,`\\u`,`\u`,-1)
+
+	//au := StrToUnicode(strconv.Itoa(actionMapT.Id))
+	//zlib.MyPrint(au)
+	//unicode.
+	//content = au + content
+	//content = strings.Replace(content,`\u`,`\\u`,-1)
+	//mylog.Info("send content",content)
+	//zlib.ExitPrint(3333)
+	strId := strconv.Itoa(actionMapT.Id)
+	content = BytesCombine([]byte(strId),content)
+	//mylog.Info("send final content:",content)
+	//zlib.MyPrint(content)
 	wsConn,ok := wsConnManager.getConnPoolById(uid)
 	if !ok {
 		mylog.Error("wsConn not in pool,maybe del.")
@@ -285,8 +314,52 @@ func(netWay *NetWay)SendMsgByUid(uid int32,action string , content string){
 		mylog.Error("wsConn status =CONN_STATUS_CLOSE.")
 		return
 	}
-	wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
+	//wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
+	if mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{
+		wsConn.Conn.WriteMessage(websocket.BinaryMessage,content)
+	}else{
+		wsConn.Conn.WriteMessage(websocket.TextMessage,content)
+	}
+
 }
+
+//BytesCombine 多个[]byte数组合并成一个[]byte
+func BytesCombine(pBytes ...[]byte) []byte {
+	len := len(pBytes)
+	s := make([][]byte, len)
+	for index := 0; index < len; index++ {
+		s[index] = pBytes[index]
+	}
+	sep := []byte("")
+	return bytes.Join(s, sep)
+}
+
+func StrToUnicode(str string) (string) {
+	DD := []rune(str)  //需要分割的字符串内容，将它转为字符，然后取长度。
+	finallStr := ""
+	for i := 0; i < len(DD); i++ {
+		if unicode.Is(unicode.Scripts["Han"], DD[i]) {
+			textQuoted := strconv.QuoteToASCII(string(DD[i]))
+			finallStr += textQuoted[1 : len(textQuoted)-1]
+		} else {
+			h := fmt.Sprintf("%x",DD[i])
+			finallStr += `\u` + isFullFour(h)
+		}
+	}
+	return finallStr
+}
+
+func isFullFour(str string) (string) {
+	if len(str) == 1 {
+		str = "000" + str
+	} else if len(str) == 2 {
+		str = "00" + str
+	} else if len(str) == 3 {
+		str = "0" + str
+	}
+	return str
+}
+
 //给报名池添加用户，以快速成一局游戏
 func(netWay *NetWay)playerMatchSign(requestPlayerMatchSign RequestPlayerMatchSign ,wsConn *WsConn) {
 	err := myMatch.addOnePlayer(wsConn.PlayerId)
@@ -311,6 +384,9 @@ func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 		netWay.Option.Mylog.Error("wsConn.Status error")
 		return
 	}
+	//netWay.Players.delById(wsConn.PlayerId)//这个不能删除，用于玩家掉线恢复的记录
+	//先把玩家的在线状态给变更下，不然 mySync.close 里面获取房间在线人数，会有问题
+	netWay.Players.upPlayerStatus(wsConn.PlayerId,PLAYER_STATUS_OFFLINE)
 	//通知同步服务，先做构造处理
 	mySync.close(wsConn)
 
@@ -318,8 +394,7 @@ func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 	netWay.Option.Mylog.Info("wsConn.Conn.Close err:",err)
 
 	wsConnManager.delConnPool(wsConn.PlayerId)
-	//netWay.Players.delById(wsConn.PlayerId)//这个不能删除，用于玩家掉线恢复的记录
-	netWay.Players.upPlayerStatus(wsConn.PlayerId,PLAYER_STATUS_OFFLINE)
+
 	//处理掉-已报名的玩家
 	myMatch.delOnePlayer(wsConn.PlayerId)
 	//mySleepSecond(2,"CloseOneConn")

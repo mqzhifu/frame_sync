@@ -29,6 +29,10 @@ type ApiList struct {
 	JsonFormat 		map[int]string
 }
 
+type MyMetrics struct {
+	RoomList	map[string]Room		`json:"roomList"`
+}
+
 func  wwwHandler(w http.ResponseWriter, r *http.Request){
 	//parameter := r.URL.Query()//GET 方式URL 中的参数 转 结构体
 	uri := r.URL.RequestURI()
@@ -69,7 +73,27 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		ApiList.JsonFormat = formatStr
 		jsonStr,_ = json.Marshal(&ApiList)
 
-	}else if uri == "/www/actionMap"{
+	}else if uri == "/www/metrics"{
+		roomList := make(map[string]Room)
+		roomListPoint := mySyncRoomPool
+		//var emptyArr  []*ResponseRoomHistory
+		if len(roomListPoint) > 0 {
+			for k,v := range roomListPoint{
+				tt := *v
+				tt.LogicFrameHistory = nil
+				roomList[k] = tt
+				//responseRoomHistory := ResponseRoomHistory{}
+				//emptyArr := [...]*ResponseRoomHistory{}
+				//roomList[k].LogicFrameHistory = emptyArr
+			}
+		}
+		//mylog.Debug(roomList)
+		myMetrics := MyMetrics{
+			RoomList :	roomList,
+		}
+		jsonStr,_ = json.Marshal(&myMetrics)
+		//mylog.Debug("jsonStr:",jsonStr,err)
+	} else if uri == "/www/actionMap"{
 		info := mynetWay.ProtocolActions.getActionMap()
 		jsonStr,_ = json.Marshal(&info)
 	} else if uri == "/www/testCreateJwtToken"{
@@ -120,6 +144,7 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string)error{
 		uri == "/www/jquery.min.js"||
 		uri == "/www/sync.js"||
 		uri == "/www/api_web_pb.js"||
+		uri == "/www/metrics.html"||
 		uri == "/www/serverUpVersionMemo.html"||
 		uri == "/www/sync_frame_client_server.jpg" ||
 		uri == "/www/index.html" ||

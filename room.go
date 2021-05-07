@@ -8,19 +8,19 @@ import (
 )
 
 type Room struct {
-	Id			string
-	AddTime 	int32
-	Status 		int32
-	PlayerList	[]*Player
-	Timeout 	int32
-	SequenceNumber		int
-	PlayersAckList		map[int32]int32
-	PlayersAckStatus	int
-	PlayersReadyList	map[int32]int32
-	RandSeek			int32
-	LogicFrameHistory 	[]*ResponseRoomHistory
-	PlayersOperationQueue 		*list.List
-	CloseChan 	chan int
+	Id					string		`json:"id"`
+	AddTime 			int32		`json:"addTime"`
+	Status 				int32		`json:"status"`
+	PlayerList			[]*Player	`json:"playerList"`
+	Timeout 			int32		`json:"timeout"`
+	SequenceNumber		int			`json:"sequenceNumber"`
+	PlayersAckList		map[int32]int32	`json:"playersAckList"`
+	PlayersAckStatus	int				`json:"playersAckStatus"`
+	PlayersReadyList	map[int32]int32	`json:"playersReadyList"`
+	RandSeek			int32			`json:"randSeek"`
+	LogicFrameHistory 	[]*ResponseRoomHistory	`json:"logicFrameHistory"`
+	PlayersOperationQueue 		*list.List	`json:"-"`
+	CloseChan 	chan int	`json:"-"`
 }
 
 func NewRoom()*Room{

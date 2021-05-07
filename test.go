@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/golang/protobuf/proto"
-	"log"
 	"zlib"
 )
 
@@ -70,19 +69,29 @@ func testProtobuf2(content []byte , cls interface{}){
 }
 
 func testProtobuf(){
-	requestLogin := RequestLogin{
-		Token: "aaaa",
-	}
-	data, err := proto.Marshal(&requestLogin)
-	if err != nil {
-		log.Fatal("marshaling error: ", err)
-	}
+	//aaa := ResponseStartBattle{SequenceNumberStart: 0}
+	//bbb,err:=json.Marshal(aaa)
+	//zlib.ExitPrint(string(bbb),err)
 
-	rr := RequestLogin{}
-	zlib.MyPrint(rr)
+
+	//requestLogin := RequestLogin{
+	//	Token: "aaaa",
+	//}
+	//data, err := proto.Marshal(&requestLogin)
+	//zlib.MyPrint(data,err)
+	//if err != nil {
+	//	log.Fatal("marshaling error: ", err)
+	//}
+
+	//rr := RequestLogin{}
+	//zlib.MyPrint(rr)
+	//
+	//aa,err := proto.Marshal(&rr)
+	//zlib.ExitPrint(aa,err)
+
 	//proto.Unmarshal(data,&rr)
-	testProtobuf2(data,&rr)
-	zlib.ExitPrint(rr)
+	//testProtobuf2(data,&rr)
+	//zlib.ExitPrint(rr)
 
 	//requestLogin := main.RequestLoginNew{
 	//	Token: "aaaa",
@@ -95,7 +104,7 @@ func testProtobuf(){
 }
 
 func test(){
-
+	testProtobuf()
 
 
 	//queue := list.New()

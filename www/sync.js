@@ -7,30 +7,38 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
     this.hostUri = host +uri;//ws 连接地址
     this.playerId = playerId;//玩家ID
-    this.token = token;//玩家的凭证
     this.matchGroupPeople = matchGroupPeople;//一个副本的人数
     this.heartbeatLoopFunc = null;//心跳回调函数
+    this.offLineWaitTime = offLineWaitTime;//lockStep 玩家掉线后，其它玩家等待最长时间
+    //以上都是S端返回的一些配置值
+
+    this.token = token;//玩家的凭证
     this.tableMax = tableMax;//地址的表格大小
     this.otherPlayerOffline = 0;//其它玩家调线
-    this.pushLogicFrameLoopFunc = null;//定时推送玩家操作
-    this.playerOperationsQueue = [];
+    this.pushLogicFrameLoopFunc = null;//定时循环 - 推送玩家操作函数
+    this.playerOperationsQueue = [];//一个帧时间内，收集玩家的操作指令 队列
     this.closeFlag = 0;//关闭标识，0正常1手动关闭2后端关闭
-    this.domIdObj = DomIdObj ;
-    this.offLineWaitTime = offLineWaitTime;
-    this.playerLocation = new Object();
+
     this.tableId = "";
+    this.domIdObj = DomIdObj ;
+    this.playerLocation = new Object();//每个玩家的位置信息
     this.operationsInc = 0;//玩家操作指令自增ID
-    this.logicFrameLoopTimeMs = 0;
-    this.FPS = FPS;
+    this.logicFrameLoopTimeMs = 0;//毫秒，多少时间内收集一次玩家操作，推送到S端
+    this.FPS = FPS;//每秒多少逻辑帧
     this.playerCommandPushLock = 0;
-    //下面，是由S端供给
+    //下面是帧同步初始化信息，是由S端供给
     this.roomId = "";
     this.actionMap = actionMap;
     this.sequenceNumber = 0;
     this.randSeek = 0;
-
-    //入口函数，必须得建立连接后，都有后续的所有操作
+    this.communicationContentType = "protobuf";
+    // this.communicationContentType = "json";
+    //入口函数，必须得先建立连接后，都有后续的所有操作
     this.create  = function(){
+        console.log("this status :",self.status);
+        if (self.status != "init"){
+            return alert(" status !=  init");
+        }
         self.closeFlag = 0;
         self.logicFrameLoopTimeMs = parseInt( 1000 / this.FPS);
         console.log("create new WebSocket"+self.hostUri)
@@ -40,51 +48,50 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             self.onclose(ev)
         };
         self.wsObj.onmessage = function(ev){  //获取后端响应
+
             self.onmessage(ev)
         };
         self.wsObj.onopen = function(){
             self.wsOpen();
         };
         self.wsObj.onerror = function(ev){
-            self.wsError(ev);
+            // self.wsError(ev.);
+            for(let key  in ev){
+                console.log(key + '---' + ev[key])
+            }
         };
     };
     //连接成功后，会执行此函数
     this.wsOpen = function(){
         console.log("onOpen : ws link success  ")
-        this.status = "wsLInkSuccess";
-        var data = {"token":self.token}
-        // self.sendMsg("login",data)
+        this.upStatus("wsLInkSuccess");
 
-
-
-        var mainRequestLogin = new proto.main.RequestLogin();
-        mainRequestLogin.setToken("aaaa")
-        var bb = mainRequestLogin.serializeBinary();
-        self.sendMsg("login",bb);
-
+        var requestLoginObj = new proto.main.RequestLogin();
+        requestLoginObj.setToken(self.token) ;
+        this.sendNewMsg("login",requestLoginObj);
     };
+    this.upStatus = function(status){
+        this.status = status;
+    };
+    //两个玩家，位移碰撞了，触发了游戏结束
     this.gameOverAndClear = function(){
-        var operations ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"result": "aaaa"};
-        // var msg = {"action":"gameOver","content":JSON.stringify(commands)}
-        // var jsonStr = JSON.stringify(msg)
-        // self.sendById(jsonStr);
-        self.sendMsg("gameOver",operations,1)
+        this.upStatus("end")
 
-        this.status = "end";
+        var requestGameOver = new proto.main.RequestGameOver()
+        requestGameOver.setRoomId(self.roomId);
+        requestGameOver.setSequenceNumber(self.sequenceNumber);
+        requestGameOver.setResult(self.playerId);
+        this.sendNewMsg("gameOver", requestGameOver);
+
         window.clearInterval(self.pushLogicFrameLoopFunc);
         self.upOptBnt("游戏结束1",1)
+
         return alert("完犊子了，撞车了...这游戏得结束了....");
     };
-    // this.sendById =  function (id ,msg){
-    // this.sendById =  function ( msg ){
-    //     console.log(self.descPre + " sendById:"+msg)
-    //     self.wsObj.send(msg);
-    // };
     this.getActionId = function (action,category){
         // return alert(self.actionMap);
         var data = self.actionMap[category];
-        console.log(data);
+        // console.log(data);
         for(let key  in data){
             // console.log(data[key].Action);
             if (data[key].Action == action){
@@ -99,42 +106,77 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         // alert(data[actionId]);
         return data[actionId].Action;
     };
-
-    this.sendMsg =  function ( action,content,jsonEncode  ){
-        // if (jsonEncode == 1){
-        //     content = JSON.stringify(content)
-        // }
-        // var msg = {"action":action,"content":content};
-        // var jsonStr =  JSON.stringify(msg);
-        // var tmpcontent = content
-        // self.wsObj.send(content);
-        // return 111;
-
-        // content = JSON.stringify(content)
-
+    // this.sendMsgJson =  function ( action,content,jsonEncode  ){
+    //     // if (jsonEncode == 1){
+    //         content = JSON.stringify(content)
+    //     // }
+    //     var msg = {"action":action,"content":content};
+    //     // var jsonStr =  JSON.stringify(msg);
+    //     // var tmpcontent = content
+    //     self.wsObj.send(content);
+    //     return 111;
+    // }
+    this.sendNewMsg =  function ( action,contentObj  ){
+        console.log( " sendMsg:" + self.descPre ,contentObj.toObject());
         var id = self.getActionId(action,"client");
-        id = id + "";
-        var idBinary = stringToUint8Array(id);
+        var content = null;
+        if (self.communicationContentType == "json"){
+            content = contentObj.toObject();
+            content = JSON.stringify(content);
+            if(action == "playerOperations"){
+                console.log(content);
+                content = content.replace("operationsList","operations");
+                console.log(content);
+            }
+            content = id + content;
+            self.wsObj.send(content);
+        }else if (self.communicationContentType == "protobuf"){
+            content = contentObj.serializeBinary();
+            // console.log(content,content.length);
+            id = id + "";
+            var idBinary = stringToUint8Array(id);
+            var mergedArray = new Uint8Array(idBinary.length + content.length);
+            mergedArray.set(idBinary);
+            mergedArray.set(content, idBinary.length);
 
-        var mergedArray = new Uint8Array(idBinary.length + content.length);
-        mergedArray.set(idBinary);
-        mergedArray.set(content, idBinary.length);
-
-        // content = idBinary+content;
-        console.log( " sendMsg:" + self.descPre ,mergedArray)
-        self.wsObj.send(mergedArray);
-
-
-        // var buffer = new ArrayBuffer(tmpcontent.length + 4);
-        // var view = new DataView(buffer);
-        // view.setUint32(0, tmpcontent.length);
-        // for (var i = 0; i < tmpcontent.length; i++) {
-        //     view.setUint8(i + 4, tmpcontent[i]);
-        // }
-        // self.wsObj.send(view);
-
-
+            self.wsObj.send(mergedArray);
+        }
     };
+    // this.sendMsgProtobuf =  function ( action,contentObj  ){
+    //     // this.sendMsgProtobuf =  function ( action,protobufClass  ){
+    //     // var actionLow = action.substring(0, 1).toUpperCase() + action.substring(1)
+    //     // var className =  "proto.main.Request" + actionLow;
+    //     // var ProtobufNewClass = eval(" new "+ className + "()");
+    //     //
+    //     // console.log(ProtobufNewClass);
+    //     // for(let key  in contentObj){
+    //     //     var actionLow = key.substring(0, 1).toUpperCase() + key.substring(1)
+    //     //     var aaa = "set"+actionLow;
+    //     //     console.log(aaa)
+    //     //     eval(' ProtobufNewClass.'+ aaa + "('"+contentObj[key]+"')");
+    //     // }
+    //     // console.log(NewClass.getToken())
+    //     // return 11;
+    //
+    //     var id = self.getActionId(action,"client");
+    //     id = id + "";
+    //     // var content = protobufClass.serializeBinary();
+    //     var content = ProtobufNewClass.serializeBinary();
+    //     var idBinary = stringToUint8Array(id);
+    //     var mergedArray = new Uint8Array(idBinary.length + content.length);
+    //     mergedArray.set(idBinary);
+    //     mergedArray.set(content, idBinary.length);
+    //     // content = idBinary+content;
+    //     console.log( " sendMsg:" + self.descPre ,mergedArray)
+    //     self.wsObj.send(mergedArray);
+    //     // var buffer = new ArrayBuffer(tmpcontent.length + 4);
+    //     // var view = new DataView(buffer);
+    //     // view.setUint32(0, tmpcontent.length);
+    //     // for (var i = 0; i < tmpcontent.length; i++) {
+    //     //     view.setUint8(i + 4, tmpcontent[i]);
+    //     // }
+    //     // self.wsObj.send(view);
+    // };
     this.upOptBnt = function(content,clearClick){
         $("#"+self.domIdObj.optBntId).html(content);
         if(clearClick == 1){
@@ -168,71 +210,98 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         console.log("error:"+ev);
         alert(ev);
     };
+    //心跳执行函数
     this.heartbeat = function(){
-        // var msg = {"action":"heartbeat","content":""}
-        // self.sendById(JSON.stringify(msg));
-        var msg = {"time":Date.now()};
-        self.sendMsg("clientHeartbeat",msg)
+        var now = Date.now();
+        var requestClientHeartbeat = new proto.main.RequestClientHeartbeat();
+        requestClientHeartbeat.setTime(now);
+        this.sendNewMsg("clientHeartbeat",requestClientHeartbeat);
     };
-
-    this.sendPlayerLogicFrameAck = function ( SequenceNumber){
-        var logicFrame ={"roomId":this.roomId,"sequenceNumber":SequenceNumber};
-        // var msg = {"action":"playerLogicFrameAck","content":JSON.stringify(logicFrame)}
-        // var jsonStr = JSON.stringify(msg)
-        // this.sendById(jsonStr);
-        self.sendMsg("playerLogicFrameAck",logicFrame,1);
-    }
+    //接收S端WS消息
     this.onmessage = function(ev){
-        console.log(ev.data);
-        var reader = new FileReader();
-        reader.readAsArrayBuffer(ev.data);
-        reader.onloadend = function(e) {
-            console.info(reader.result);
-            var buf = new Uint8Array(reader.result);
-            console.info(buf);
-            var rs = proto.main.RequestLogin.deserializeBinary(reader.result);
-        };
-
-        return 1;
-
-
         var pre = self.descPre;
         console.log("onmessage:"+ pre + " " +ev.data);
-        var actionId = ev.data.substr(0,4);
-        var content = ev.data.substr(4);
-        var action = self.getActionName(actionId,"server")
-        console.log(pre +" actionId:"+actionId , " content:",content , " actionName:",action);
-        var logicFrame =  eval("("+content+")");
+
+        var actionId = "";
+        var content = "";
+        var action = "";
+
+        if (self.communicationContentType == 'protobuf'){
+            var reader = new FileReader();
+            reader.readAsArrayBuffer(ev.data);
+            reader.onloadend = function(e) {
+                // console.info(reader.result);
+                var buf = new Uint8Array(reader.result);
+                // console.info(buf);
+                var bbb = new ArrayBuffer((buf.length - 4 ) );
+                var ccc = new Uint8Array(bbb);
+                var j = 0;
+                for (var i = 0; i < buf.length; i++) {
+                    if (i < 4){
+                        actionId += String.fromCharCode(buf[i]);
+                    }else{
+                        ccc[j] = buf[i];
+                        j++;
+                    }
+                }
+                // console.log(ccc);
+                content = ccc;
+                action = self.getActionName(actionId,"server")
+                var actionLow = action.substring(0, 1).toUpperCase() + action.substring(1)
+                var className =  "proto.main.Response" + actionLow;
+                var responseProtoClass = eval(className);
+                content =  responseProtoClass.deserializeBinary(content).toObject();
+                // var responseLoginRes = proto.main.ResponseLoginRes.deserializeBinary(content).toObject();
+                console.log(pre +" actionId:"+actionId , " content:",content , " actionName:",action, " protobufClassName:",className);
+                self.router(action,content);
+                // var rs = proto.main.ResponseLoginRes.deserializeBinary(reader.result);
+                // console.log(rs)
+            };
+        }else if(self.communicationContentType == "json"){
+            actionId = ev.data.substr(0,4);
+            content = ev.data.substr(4);
+            action = self.getActionName(actionId,"server")
+            console.log(pre +" actionId:"+actionId , " content:",content , " actionName:",action);
+            var content =  eval("("+content+")");
+            self.router(action,content);
+        }else{
+            return alert("communicationContentType err");
+        }
+
+
+
+        // return alert(11);
+    };
+    this.router = function(action,content){
+        console.log("router:",action,content)
         if ( action == 'loginRes' ) {
-            console.log(logicFrame)
-            return alert("测试protobuf中，先断掉...");
-            self.rLoginRes(logicFrame);
+            self.rLoginRes(content);
         }else if( action == 'pushPlayerStatus'){//获取一个当前玩家的状态，如：是否有历史未结束的游戏
-            self.rPushPlayerStatus(logicFrame);
+            self.rPushPlayerStatus(content);
         }else if( action == 'serverPing'){//获取一个当前玩家的状态，如：是否有历史未结束的游戏
-            self.rPing(logicFrame);
+            self.rPing(content);
         }else if ( action == 'startBattle' ){
-            self.rStartBattle(logicFrame);
+            self.rStartBattle(content);
         }else if ( action == 'pushRoomInfo' ){
-            self.rPushRoomInfo(logicFrame);
+            self.rPushRoomInfo(content);
         }else if ( action == 'otherPlayerOffline' ){
-            self.rOtherPlayerOffline(logicFrame);
+            self.rOtherPlayerOffline(content);
         }else if ( action == 'enterBattle' ){
-            self.rEnterBattle(logicFrame);
+            self.rEnterBattle(content);
         }else if( "gameOver" == action){
             self.rOver(logicFrame);
         }else if( "pushLogicFrame" == action){
-            self.rPushLogicFrame(logicFrame)
+            self.rPushLogicFrame(content)
         }else if( "serverPong" == action){
-            self.rServerPong(logicFrame)
+            self.rServerPong(content)
         }else if( "otherPlayerResumeGame" == action){
-            if(logicFrame.playerId != self.playerId){
-                var tdId = self.tableId + "_" + self.playerLocation[logicFrame.playerId];
+            if(content.playerId != self.playerId){
+                var tdId = self.tableId + "_" + self.playerLocation[content.playerId];
                 var tdObj = $("#"+tdId)
                 tdObj.css("background", "red");
             }
         }else if( "pushRoomHistory" == action){
-            self.rPushRoomHistory(logicFrame);
+            self.rPushRoomHistory(content);
             alert("接收到，玩家-房间-历史操作记录~");
         }else{
             return alert("action error.");
@@ -247,9 +316,13 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
                 self.rPushLogicFrame(data);
             }
         }
+        var requestPlayerResumeGame = new proto.main.RequestPlayerResumeGame();
+        requestPlayerResumeGame.setRoomId(self.roomId);
+        requestPlayerResumeGame.setSequenceNumber(self.sequenceNumber);
+        requestPlayerResumeGame.setPlayerId(self.playerId);
+        self.sendNewMsg("playerResumeGame",requestPlayerResumeGame)
 
-        var commands ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"playerId":self.playerId };
-        self.sendMsg("playerResumeGame",commands)
+        //     var commands ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"playerId":self.playerId };
     };
     this.upOptBntHref = function(domId,value,clickCallback){
         var bntContent = "<a href='javascript:void(0);' onclick='' id='"+domId+"'>"+value+"</a>";
@@ -263,24 +336,24 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             return alert("loginRes failed!!!"+logicFrame.code + " , "+logicFrame.errMsg);
         }
         var now = Date.now();
-        var msg = {"addTime":now,"clientReceiveTime":0,"serverResponseTime":0};
-        self.sendMsg("clientPing",msg);
-
-        this.status = "loginSuccess";
+        var requestClientPing = new proto.main.RequestClientPing();
+        requestClientPing.setAddTime(now);
+        this.sendNewMsg("clientPing",requestClientPing);
+        this.upStatus("loginSuccess");
 
         var playerConnInfo = logicFrame.player
         if (playerConnInfo.roomId){
             alert("检测出，有未结束的一局游戏，开始恢复中...,先获取房间信息:rooId:"+playerConnInfo.roomId);
-            var msg = {"roomId":playerConnInfo.roomId,"playerId":playerId};
-            self.sendMsg("getRoomById",msg);
+            var requestGetRoom = new proto.main.RequestGetRoom();
+            requestGetRoom.setRoomId(playerConnInfo.roomId);
+            requestGetRoom.setPlayerId(playerId);
+            self.sendNewMsg("getRoom",requestGetRoom);
+            //     var msg = {"roomId":playerConnInfo.roomId,"playerId":playerId};
         }else{
             var matchSignBntId = "matchSign_"+self.playerId;
             var hrefBody = "连接成功，匹配报名";
 
             self.upOptBntHref(matchSignBntId,hrefBody,self.matchSign);
-            // var bntContent = "连接成功，<a href='javascript:void(0);' onclick='' id='"+readyBntId+"'>准备/报名</a>";
-            // self.upOptBnt(bntContent, 1);
-            // $("#"+readyBntId).click(self.ready);
         }
         // self.heartbeatLoopFunc = setInterval(self.heartbeat, 5000);
     };
@@ -289,11 +362,18 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     };
     this.rPing = function(logicFrame){
         var now = Date.now();
-        logicFrame.clientReceiveTime =  now
-        self.sendMsg("clientPong",logicFrame,1)
+
+        var requestClientPong = new proto.main.RequestClientPong();
+        requestClientPong.setClientReceiveTime(now);
+        requestClientPong.setAddTime(logicFrame.addTime);
+        this.sendNewMsg("clientPong",requestClientPong);
+        //     logicFrame.clientReceiveTime =  now
+
     };
     this.rStartBattle = function(logicFrame){
-        this.status = "startBattle";
+        // logicFrame.playerList = logicFrame.
+
+        self.upStatus("startBattle");
         self.pushLogicFrameLoopFunc = setInterval(self.playerCommandPush,self.logicFrameLoopTimeMs);
 
         var exceptionOffLineId = "exceptionOffLineId"+self.playerId;
@@ -305,12 +385,18 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     };
     this.rPushRoomInfo = function(logicFrame){
         self.initLocalGlobalVar(logicFrame);
-        var history ={"roomId":self.roomId,"sequenceNumber":0,"playerId":self.playerId };
-        self.sendMsg("getRoomHistory",history);
+        var requestRoomHistory = new proto.main.RequestRoomHistory();
+        requestRoomHistory.setRoomId(self.roomId);
+        requestRoomHistory.setSequenceNumberstart(0);
+        requestRoomHistory.setSequenceNumberend(-1);
+        requestRoomHistory.setPlayerId(self.playerId);
+        // var history ={"roomId":self.roomId,"sequenceNumber":0,"playerId":self.playerId };
+        // self.sendMsg("getRoomHistory",history);
+        self.sendNewMsg("roomHistory",requestRoomHistory);
     };
     this.rPushLogicFrame = function(logicFrame){//接收S端逻辑帧
         var pre = self.descPre;
-
+        logicFrame.operations = logicFrame.operationsList;
         var operations = logicFrame.operations;
         self.sequenceNumber  = logicFrame.sequenceNumber;
         $("#"+self.domIdObj.seqId).html(self.sequenceNumber);
@@ -319,7 +405,14 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
         console.log("rPushLogicFrame ,sequenceNumber:"+self.sequenceNumber+ ", operationsLen:" +  operations.length)
         for(var i=0;i<operations.length;i++){
-            var str = pre + " i=i , id: "+operations[i].id + " , event:"+operations[i].event + " , value:"+ operations[i].value + " , playerId:" + operations[i].playerId;
+            // var playerId = "";
+            // if (this.communicationContentType == "protobuf"){
+            //     playerId = operations[i].playerid;
+            // }else{
+                playerId= operations[i].playerId;
+            // }
+
+            var str = pre + " i=i , id: "+operations[i].id + " , event:"+operations[i].event + " , value:"+ operations[i].value + " , playerId:" + playerId;
             console.log(str);
             if (operations[i].event == "move"){
                 var LocationArr = operations[i].value.split(",");
@@ -330,24 +423,24 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
                 var lightTd =self.getMapTdId(self.tableId,LocationStart,LocationEnd);
                 console.log(pre+"  "+lightTd);
                 var tdObj = $("#"+lightTd);
-                if(operations[i].playerId == playerId){
+                if(playerId == self.playerId){
                     tdObj.css("background", "green");
                 }else{
                     tdObj.css("background", "red");
                 }
                 var playerLocation = self.playerLocation;
-                if (playerLocation[operations[i].playerId] == "empty"){
+                if (playerLocation[playerId] == "empty"){
                     //证明是第一次移动，没有之前的数据
                 }else{
                     // playerLocation = getPlayerLocation(playerId);
                     // alert(commands[i].playerId);
-                    var playerLocationArr = playerLocation[operations[i].playerId].split("_");
+                    var playerLocationArr = playerLocation[playerId].split("_");
                     //非首次移动，这次移动后，要把之前所有位置清掉
                     var lightTd = self.getMapTdId(self.tableId,playerLocationArr[0],playerLocationArr[1]);
                     var tdObj = $("#"+lightTd);
                     tdObj.css("background", "");
                 }
-                playerLocation[operations[i].playerId] = LocationStart + "_"+LocationEnd;
+                playerLocation[playerId] = LocationStart + "_"+LocationEnd;
             }else if(operations[i].event == "empty"){
 
             }
@@ -364,7 +457,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     // };
     this.rOtherPlayerOffline = function(logicFrame){
         //房间内有其它玩家掉线了
-        self.otherPlayerOffline = logicFrame;
+        console.log("in test:",logicFrame.playerId,logicFrame)
+        self.otherPlayerOffline = logicFrame.playerId;
         alert("其它玩家掉线了："+logicFrame.playerId +"，略等："+self.offLineWaitTime +"秒");
 
         var tdId = self.tableId + "_" + self.playerLocation[logicFrame.playerId];
@@ -381,6 +475,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     };
     this.initLocalGlobalVar = function(logicFrame){
         var pre = self.descPre;
+        console.log("initLocalGlobalVar:",logicFrame)
         for(var i=0;i<logicFrame.playerList.length;i++){
             self.playerLocation[""+logicFrame.playerList[i].id+""] = "empty"
         }
@@ -398,10 +493,14 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         // $("#rid").html(logicFrame.RoomId);
         $("#"+self.domIdObj.roomId).html(self.roomId);
 
-        var str =  pre+", RandSeek:"+    self.randSeek +" , SequenceNumber"+    self.sequenceNumber ;
+        var str =  pre+", roomId:" +logicFrame.roomId+ ", RandSeek:"+    self.randSeek +" , SequenceNumber"+    self.sequenceNumber ;
         console.log(str);
     };
     this.rEnterBattle = function(logicFrame){
+        if(this.communicationContentType =="protobuf"){
+            logicFrame.playerList = logicFrame.playerListList;
+        }
+
         self.initLocalGlobalVar(logicFrame);
 
         var readySignBntId = "ready_"+self.playerId;
@@ -409,8 +508,6 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
         self.upOptBntHref(readySignBntId,hrefBody,self.ready);
 
-        // self.pushLogicFrameLoopFunc = setInterval(self.playerCommandPush,100);
-        // self.sendPlayerLogicFrameAck( self.sequenceNumber)
     };
     this.rOver = function(ev){
         window.clearInterval(self.pushLogicFrameLoopFunc);
@@ -440,10 +537,12 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         }
     };
     this.ready = function(){
-        this.status = "ready";
-
-        var msg = {"playerId" :self.playerId};
-        self.sendMsg("playerReady",msg)
+        self.upStatus("ready");
+        var requestPlayerReady = new proto.main.RequestPlayerReady();
+        requestPlayerReady.setPlayerId(self.playerId)
+        self.sendNewMsg("playerReady",requestPlayerReady);
+        // var msg = {"playerId" :self.playerId};
+        // self.sendMsg("playerReady",msg)
 
         // var cancelBntId = "cancelSign_"+self.playerId;
         // var bntContent = "<a href='javascript:void(0);' onclick='' id='"+cancelBntId+"'>取消报名/准备</a>";
@@ -452,10 +551,13 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         self.upOptBntHref("","等待其它玩家准备",this.ready);
     };
     this.cancelSign = function(){
-        this.status = "cancelSign";
+        self.upStatus("cancelSign");
 
-        var msg = {"playerId" :self.playerId};
-        self.sendMsg("playerMatchSignCancel",msg)
+        var requestPlayerMatchSignCancel = new proto.main.RequestPlayerMatchSignCancel();
+        requestPlayerMatchSignCancel.setPlayerId(self.playerId);
+        self.sendNewMsg("playerMatchSignCancel",requestPlayerMatchSignCancel);
+        // var msg = {"playerId" :self.playerId};
+        // self.sendMsg("playerMatchSignCancel",msg)
 
         var matchSignBntId = "matchSign_"+self.playerId;
         var hrefBody = "连接成功，匹配报名";
@@ -468,10 +570,14 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         // $("#"+readyBntId).click(self.ready);
     };
     this.matchSign = function(){
-        this.status = "matchSign";
+        self.upStatus("matchSign")
 
-        var msg = {"playerId" :self.playerId};
-        self.sendMsg("playerMatchSign",msg);
+        var requestPlayerMatchSign = new proto.main.RequestPlayerMatchSign();
+        requestPlayerMatchSign.setPlayerId(self.playerId);
+        self.sendNewMsg("playerMatchSign",requestPlayerMatchSign);
+
+        // var msg = {"playerId" :self.playerId};
+        // self.sendMsg("playerMatchSign",msg);
 
         var cancelBntId = "cancelSign_"+self.playerId;
         var hrefBody = "取消匹配报名";
@@ -554,22 +660,50 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         tdObj.css("background", "");
     }
     this.playerCommandPush = function (){
-        var loginFrame ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"operations": []};
+        var requestPlayerOperations = new proto.main.RequestPlayerOperations();
+        requestPlayerOperations.setId(3);
+        requestPlayerOperations.setRoomId(self.roomId);
+        requestPlayerOperations.setSequenceNumber(self.sequenceNumber);
+
+        // var loginFrame ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"operations": []};
         if(self.playerCommandPushLock == 1){
-            console.log("lock...");
+            console.log("send msg lock...please wait server back login frame");
             return
         }
         if (self.playerOperationsQueue.length > 0){
-            loginFrame.operations = self.playerOperationsQueue;
-            self.playerOperationsQueue = [];
-            //
+            // {"id":self.operationsInc,"event":"move","value":newLocation,"playerId":self.playerId}
+            var operations = new Array(self.playerOperationsQueue.length)
+            for(var i=0;i<self.playerOperationsQueue.length;i++){
+                var operation = new proto.main.Operation();
+                operation.setId(self.playerOperationsQueue[i].id);
+                operation.setEvent(self.playerOperationsQueue[i].event);
+                operation.setValue(self.playerOperationsQueue[i].value);
+                operation.setPlayerId(self.playerId),
+                // operations.push(operation);
+                operations[i] = operation;
+            }
+            requestPlayerOperations.setOperationsList(operations);
+            // loginFrame.operations = self.playerOperationsQueue;
+            self.playerOperationsQueue = [];//将当前队列里的，当前帧的数据，清空
         }else{
-            var emptyCommand = [{"id":1,"event":"empty","value":"-1","playerId":self.playerId}];
-            loginFrame.operations = emptyCommand;
-        }
+            // window.clearInterval(self.pushLogicFrameLoopFunc);
 
+            var operations = new Array(1);
+            var operation = new proto.main.Operation();
+            operation.setId(1);
+            operation.setEvent("empty");
+            operation.setValue("-1");
+            operation.setPlayerId(self.playerId),
+            // operations.push(operation);
+            operations[0] = operation;
+            // console.log(operations)
+            requestPlayerOperations.setOperationsList(operations);
+            // var emptyCommand = [{"id":1,"event":"empty","value":"-1","playerId":self.playerId}];
+            // loginFrame.operations = emptyCommand;
+        }
+        self.sendNewMsg("playerOperations",requestPlayerOperations);
         self.playerCommandPushLock = 1;
-        self.sendMsg("playerOperations",loginFrame);
+        // self.sendMsg("playerOperations",loginFrame);
     };
 
 

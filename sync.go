@@ -31,6 +31,7 @@ type LogicFrame struct {
 //	Value 		string	`json:"value"`
 //	PlayerId 	int32		`json:"playerId"`
 //}
+var testLock int
 //集合 ：每个副本
 var mySyncRoomPool map[string]*Room
 //索引表，PlayerId=>RoomId
@@ -45,6 +46,8 @@ func NewSync()*Sync{
 
 	logicFrameMsgDefaultId = 16
 	operationDefaultId = 32
+
+	testLock = 0
 
 	return sync
 }
@@ -101,6 +104,7 @@ func (sync *Sync) addPoolElement(room 	*Room){
 //进入战后，场景渲染完后，进入准确状态
 func (sync *Sync)playerReady(requestPlayerReady RequestPlayerReady ,wsConn *WsConn) {
 	roomId := mySyncPlayerRoom[requestPlayerReady.PlayerId]
+	mylog.Debug("mySyncPlayerRoom:",mySyncPlayerRoom)
 	room,empty := mySync.getPoolElementById(roomId)
 	if empty{
 		mylog.Error("playerReady getPoolElementById empty",roomId)
@@ -124,7 +128,7 @@ func (sync *Sync)playerReady(requestPlayerReady RequestPlayerReady ,wsConn *WsCo
 	}
 	//jsonSTR,_ := json.Marshal(responseStartBattle)
 	//mySync.boardCastInRoom(room.Id,"startBattle",string(jsonSTR))
-	mySync.boardCastInRoom(room.Id,"startBattle",responseStartBattle)
+	mySync.boardCastInRoom(room.Id,"startBattle",&responseStartBattle)
 	room.upStatus(ROOM_STATUS_EXECING)
 	//初始结束后，这里方便测试，再补一帧，所有玩家的随机位置
 	if room.PlayerList[0].Id < 999{
@@ -147,7 +151,7 @@ func (sync *Sync)playerReady(requestPlayerReady RequestPlayerReady ,wsConn *WsCo
 		}
 		//logicFrameMsgJson ,_ := json.Marshal(logicFrameMsg)
 		//mySync.boardCastInRoom(room.Id,"pushLogicFrame",string(logicFrameMsgJson))
-		mySync.boardCastInRoom(room.Id,"pushLogicFrame",logicFrameMsg)
+		mySync.boardCastInRoom(room.Id,"pushLogicFrame",&logicFrameMsg)
 	}
 
 	go sync.logicFrameLoop(room)
@@ -159,6 +163,7 @@ func  (sync *Sync)start(roomId string){
 	mynetWay.Option.Mylog.Warning("start a new game:")
 
 	room,_ := sync.getPoolElementById(roomId)
+	mynetWay.Option.Mylog.Warning("roomInfo:",room)
 	room.upStatus(ROOM_STATUS_READY)
 	responseClientInitRoomData := ResponseEnterBattle{
 		Status 			:room.Status,
@@ -177,7 +182,7 @@ func  (sync *Sync)start(roomId string){
 	//zlib.MyPrint("old:",responseClientInitRoomData)
 	//jsonStrByte,_ := json.Marshal(responseClientInitRoomData)
 	//sync.boardCastInRoom(roomId,"enterBattle",string(jsonStrByte))
-	sync.boardCastInRoom(roomId,"enterBattle",responseClientInitRoomData)
+	sync.boardCastInRoom(roomId,"enterBattle",&responseClientInitRoomData)
 	room.CloseChan = make(chan int)
 }
 //有一个房间内，搜索一个用户
@@ -259,6 +264,7 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 	var operations []*Operation
 	i := 0
 	element := queue.Front()
+
 	for {
 		if i >= end {
 			break
@@ -270,9 +276,16 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 		if err != nil {
 			mylog.Error("queue json.Unmarshal err :", err.Error())
 		}
+		//mylog.Debug(operationsValue,"elementOperations",elementOperations)
 		for j := 0; j < len(elementOperations); j++ {
+			//if elementOperations[j].Event != "empty"{
+			//	mylog.Debug("elementOperations j :",elementOperations[j])
+			//	testLock = 1
+			//}
 			operations = append(operations, &elementOperations[j])
 		}
+
+
 
 		tmpElement := element.Next()
 		queue.Remove(element)
@@ -281,14 +294,20 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 		i++
 	}
 
+	//if testLock == 1{
+	//	zlib.MyPrint(logicFrame)
+	//}
+	mylog.Info("operations:",operations)
 	logicFrame.Operations = operations
+	//zlib.ExitPrint(logicFrame)
 	//logicFrameStr, _ := json.Marshal(logicFrame)
 	//sync.boardCastFrameInRoom(room.Id, "pushLogicFrame", string(logicFrameStr))
-	sync.boardCastFrameInRoom(room.Id, "pushLogicFrame",logicFrame)
+	sync.boardCastFrameInRoom(room.Id, "pushLogicFrame",&logicFrame)
 	return fpsTime
 }
 
 func  (sync *Sync)receivePlayerOperation(logicFrame RequestPlayerOperations,wsConn *WsConn){
+	//mylog.Debug(logicFrame)
 	room,empty := sync.getPoolElementById(logicFrame.RoomId)
 	if empty{
 		mynetWay.Option.Mylog.Error("getPoolElementById is empty",logicFrame.RoomId)
@@ -298,10 +317,17 @@ func  (sync *Sync)receivePlayerOperation(logicFrame RequestPlayerOperations,wsCo
 		mylog.Error("receivePlayerOperation check error:",err.Error())
 		return
 	}
-	room.PlayersAckList[wsConn.PlayerId] = 1
+	if len(logicFrame.Operations) <= 0{
+		mylog.Error("len(logicFrame.Operations) <= 0")
+		return
+	}
+	//zlib.ExitPrint(logicFrame)
+	//room.PlayersAckList[wsConn.PlayerId] = 1
 	logicFrameStr ,_ := json.Marshal(logicFrame.Operations)
 	room.PlayersOperationQueue.PushBack(string(logicFrameStr))
-	room.PlayersAckList[wsConn.PlayerId] = 1
+	if room.PlayersAckList[wsConn.PlayerId] == 0{
+		room.PlayersAckList[wsConn.PlayerId] = 1
+	}
 }
 func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame RequestPlayerOperations,wsConn *WsConn)error{
 	if room.Status != ROOM_STATUS_EXECING{
@@ -423,20 +449,21 @@ func  (sync *Sync)roomEnd(roomId string){
 }
 //玩家操作后，触发C端主动发送游戏结束事件
 func  (sync *Sync)gameOver(requestGameOver RequestGameOver,wsConn *WsConn){
-	sync.roomEnd(requestGameOver.RoomId)
-	//jsonStr ,_ := json.Marshal(requestGameOver)
 	responseGameOver := ResponseGameOver{
 		PlayerId : requestGameOver.PlayerId,
 		RoomId:requestGameOver.RoomId,
 		SequenceNumber: requestGameOver.SequenceNumber,
 		Result:requestGameOver.Result,
 	}
-	sync.boardCastInRoom(requestGameOver.RoomId,"gameOver",responseGameOver)
+	sync.boardCastInRoom(requestGameOver.RoomId,"gameOver",&responseGameOver)
+
+	sync.roomEnd(requestGameOver.RoomId)
+	//jsonStr ,_ := json.Marshal(requestGameOver)
 }
 func  (sync *Sync)playerOver(requestGameOver RequestPlayerOver ,wsConn *WsConn){
 	roomId := mySyncPlayerRoom[requestGameOver.PlayerId]
 	responseOtherPlayerOver := ResponseOtherPlayerOver{PlayerId: requestGameOver.PlayerId}
-	sync.boardCastInRoom(roomId,"otherPlayerOver",responseOtherPlayerOver)
+	sync.boardCastInRoom(roomId,"otherPlayerOver",&responseOtherPlayerOver)
 }
 
 func (sync *Sync)upSyncRoomPoolElementPlayersAckStatus(roomId string,status int){
@@ -470,24 +497,23 @@ func (sync *Sync)close(wsConn *WsConn){
 	if !ok || roomId == "" {
 		return
 	}
-
 	//判断下所有玩家是否均下线了
 	room, _ := sync.getPoolElementById(roomId)
 	if room.Status == ROOM_STATUS_EXECING{
 		playerOnLine := sync.roomOnlinePlayers(room)
 		playerOnLineCount := len(playerOnLine)
 		playerOnLineCount-- //这里因为，已有一个玩家关闭中，但是还未处理
-		mylog.Info("playerOnLineCount : ", playerOnLineCount)
+		mylog.Info("ROOM_STATUS_EXECING ,has check roomEnd , playerOnLineCount : ", playerOnLineCount)
 		if playerOnLineCount <= 0 {
 			sync.roomEnd(roomId)
+		}else{
+			responseOtherPlayerOffline := ResponseOtherPlayerOffline{
+				PlayerId: wsConn.PlayerId,
+			}
+			//jsonStr,_ := json.Marshal(responseOtherPlayerOffline)
+			sync.boardCastInRoom(roomId,"otherPlayerOffline",&responseOtherPlayerOffline)
 		}
 	}
-
-	responseOtherPlayerOffline := ResponseOtherPlayerOffline{
-		PlayerId: wsConn.PlayerId,
-	}
-	jsonStr,_ := json.Marshal(responseOtherPlayerOffline)
-	sync.boardCastInRoom(roomId,"otherPlayerOffline",string(jsonStr))
 }
 //单纯的给一个房间里的人发消息，不考虑是否有顺序号的情况
 func  (sync *Sync)boardCastInRoom(roomId string,action string ,contentStruct interface{}){
@@ -536,6 +562,11 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,contentStruc
 	}
 	content,_ := json.Marshal(contentStruct)
 	sync.addOneRoomHistory(syncRoomPoolElement,action,string(content))
+
+	//if testLock == 1{
+	//	zlib.MyPrint(contentStruct)
+	//	zlib.ExitPrint(3333)
+	//}
 }
 func (sync *Sync)addOneRoomHistory(room *Room,action,content string){
 	logicFrameHistory := ResponseRoomHistory{
@@ -566,7 +597,7 @@ func  (sync *Sync)playerResumeGame(requestPlayerResumeGame RequestPlayerResumeGa
 		SequenceNumber:requestPlayerResumeGame.SequenceNumber,
 		RoomId:requestPlayerResumeGame.RoomId,
 	}
-	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"otherPlayerResumeGame",responseOtherPlayerResumeGame)
+	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"otherPlayerResumeGame",&responseOtherPlayerResumeGame)
 
 }
 //C端获取一个房间的信息
@@ -581,34 +612,7 @@ func  (sync *Sync)GetRoom(requestGetRoom RequestGetRoom,wsConn *WsConn){
 		Status :room.Status,
 		Timeout: room.Timeout,
 		RandSeek:room.RandSeek,
+		RoomId: room.Id,
 	}
-	//responseClientInitRoomData := ResponseEnterBattle{
-	//	Status 			:room.Status,
-	//	AddTime 		:room.AddTime,
-	//	RoomId			:roomId,
-	//	SequenceNumber	: 0,
-	//	PlayerList		:room.PlayerList,
-	//	RandSeek		:room.RandSeek,
-	//	Time			:time.Now().UnixNano() / 1e6,
-	//}
-	//str,_ := json.Marshal(responseClientInitRoomData)
-	//mynetWay.SendMsgByUid(wsConn.PlayerId,"pushRoomInfo",string(str))
-	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"pushRoomInfo",ResponsePushRoomInfo)
+	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"pushRoomInfo",&ResponsePushRoomInfo)
 }
-
-
-//func  (sync *Sync)receiveCommandOld(logicFrame LogicFrame,wsConn *WsConn){
-//	room,empty := sync.getPoolElementById(logicFrame.RoomId)
-//	if empty{
-//		mynetWay.Option.Mylog.Error("getPoolElementById is empty",logicFrame.RoomId)
-//	}
-//	err := sync.checkReceiveCommand(room,logicFrame,wsConn)
-//	if err != nil{
-//		mylog.Error(err.Error())
-//		return
-//	}
-//	logicFrame.SequenceNumber = room.SequenceNumber
-//	//logicFrameMsgJson ,_ := json.Marshal(logicFrame)
-//	//sync.boardCastFrameInRoom(logicFrame.RoomId,"pushLogicFrame",string(logicFrameMsgJson))
-//	sync.boardCastFrameInRoom(logicFrame.RoomId,"pushLogicFrame",logicFrame)
-//}

@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gorilla/websocket"
-	"github.com/golang/protobuf/proto"
 	"strconv"
 	"time"
 	"zlib"
+	"github.com/golang/protobuf/proto"
 )
 
 
@@ -85,18 +85,36 @@ func  (wsConnManager *WsConnManager)delConnPool(uid int32  ){
 
 func CompressContent(contentStruct interface{})(content []byte  ,err error){
 	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON{
+		//zlib.MyPrint("in json:",contentStruct)
 		content,err = json.Marshal(contentStruct)
+		//mylog.Info("CompressContent json:",string(content),err )
+		//zlib.ExitPrint(111)
 	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{
+		mylog.Info("contentStruct:",contentStruct)
+		//responseLoginRes := ResponseLoginRes{Code: 200}
+		//content, err = proto.Marshal(&responseLoginRes)
+
 		contentStruct := contentStruct.(proto.Message)
 		content, err = proto.Marshal(contentStruct)
+		//zlib.MyPrint(content)
+		//mylog.Info("proto.Marshal:",content,err)
+		//zlib.ExitPrint(3333)
 	}else{
 		err = errors.New(" switch err")
 	}
 	if err != nil{
-		mylog.Error("Compress err :",err.Error())
+		mylog.Error("CompressContent err :",err.Error())
 	}
+	//zlib.ExitPrint(content)
 	return content,err
 }
+
+//func assertionsProtobufClass(class interface{},&out){
+//	aClass ,ok := class.(RequestLogin)
+//	if ok {
+//
+//	}
+//}
 
 //发送一条消息，此方法是给:UID还未注册到池里的情况 ，主要是首次登陆验证出错 的时候
 func   (wsConn *WsConn)SendMsg(contentStruct interface{}){

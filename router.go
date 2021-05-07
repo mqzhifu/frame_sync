@@ -35,6 +35,8 @@ func  (netWay *NetWay)parserContent(content string)(message Message,err error){
 
 
 func (netWay *NetWay)parserMsgContent(content string ,out interface{})error{
+	//mylog.Debug("netWay parserMsgContent start :",content," out ",out)
+	//zlib.MyPrint("out:",out)
 	var err error
 	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON{
 		err = json.Unmarshal([]byte(content),out)
@@ -46,9 +48,11 @@ func (netWay *NetWay)parserMsgContent(content string ,out interface{})error{
 	}
 
 	if err != nil{
-		mylog.Error("playerReady",err.Error())
+		mylog.Error("parserMsgContent:",err.Error())
 		return err
 	}
+
+	mylog.Debug("netWay parserMsgContent:",out)
 
 	return nil
 }
@@ -76,43 +80,32 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 	switch msg.Action {
 		case "login"://
 			err = netWay.parserMsgContent(msg.Content,&requestLogin)
-		//netWay.ClientPong(PingRTT,wsConn)
 		case "clientPong"://
 			err = netWay.parserMsgContent(msg.Content,&requestClientPong)
-			//netWay.ClientPong(PingRTT,wsConn)
 		case "playerResumeGame"://恢复未结束的游戏
 			err = netWay.parserMsgContent(msg.Content,&requestPlayerResumeGame)
-			//mySync.playerResumeGame(requestPlayerResumeGame,wsConn )
 		//case "playerStatus"://玩家检测是否有未结束的游戏
 		//	err = parserMsgContent(msg.Content,&requestPlayerStatus)
 			//netWay.Players.getPlayerStatus(requestPlayerStatus,wsConn)
 		case "playerOperations"://玩家推送操作指令
 			err = netWay.parserMsgContent(msg.Content,&requestPlayerOperations)
-			//mySync.receiveCommand(logicFrame,wsConn)
 		case "playerLogicFrameAck":
 			//err = parserMsgContent(msg.Content,&logicFrame)
 			//mySync.playerLogicFrameAck(logicFrame,wsConn)
 		case "playerCancelReady"://玩家取消报名等待
 			err = netWay.parserMsgContent(msg.Content,&requestPlayerMatchSignCancel)
-			//mySync.cancelSign(RequestCancelSign,wsConn)
 		case "gameOver"://游戏结束
 			err = netWay.parserMsgContent(msg.Content,&requestGameOver)
-			//mySync.gameOver(requestGameOver,wsConn)
 		case "clientHeartbeat"://心跳
 			err = netWay.parserMsgContent(msg.Content,&requestClientHeartbeat)
-			//netWay.heartbeat(requestClientHeartbeat,wsConn)
 		case "playerMatchSign"://
 			err = netWay.parserMsgContent(msg.Content,&requestPlayerMatchSign)
-			//netWay.playerMatchSign(requestPlayerMatchSign,wsConn)
 		case "playerReady"://玩家进入状态状态
 			err = netWay.parserMsgContent(msg.Content,&requestPlayerReady)
-			//netWay.playerReady(requestPlayerReady,wsConn)
 		case "roomHistory"://一局副本的，所有历史操作记录
 			err = netWay.parserMsgContent(msg.Content,&requestRoomHistory)
-			//mySync.RoomHistory(requestRoomHistory,wsConn)
-		case "getRoomById"://
+		case "getRoom"://
 			err = netWay.parserMsgContent(msg.Content,&requestGetRoom)
-			//mySync.GetRoom(requestGetRoom,wsConn)
 		case "clientPing":
 			err = netWay.parserMsgContent(msg.Content,&requestClientPing)
 		case "playerOver":
@@ -140,6 +133,8 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 		case "playerResumeGame"://恢复未结束的游戏
 			mySync.playerResumeGame(requestPlayerResumeGame,wsConn )
 		case "playerOperations"://玩家推送操作指令
+		//zlib.MyPrint(requestPlayerOperations.Operations)
+		//zlib.ExitPrint(requestPlayerOperations)
 			mySync.receivePlayerOperation(requestPlayerOperations,wsConn)
 		case "playerCancelReady"://玩家取消报名等待
 			mySync.cancelSign(requestPlayerMatchSignCancel,wsConn)
@@ -149,7 +144,7 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 			mySync.playerReady(requestPlayerReady,wsConn)
 		case "roomHistory"://一局副本的，所有历史操作记录
 			mySync.RoomHistory(requestRoomHistory,wsConn)
-		case "getRoomById"://
+		case "getRoom"://
 			mySync.GetRoom(requestGetRoom,wsConn)
 		case "playerOver":
 			mySync.playerOver(requestPlayerOver,wsConn)

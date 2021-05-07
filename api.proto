@@ -8,15 +8,15 @@ message RequestLogin{
 }
 
 message RequestClientPong{
-    int64 addTime               = 1;
-    int64 clientReceiveTime     = 2;
-    int64 serverResponseTime    = 3;
+    int64 add_time               = 1;
+    int64 client_receive_time     = 2;
+    int64 server_response_time    = 3;
 }
 
 message RequestPlayerOperations{
 	int32 id 	                    = 1;
-	string roomId 		            = 2;
-	int32 sequenceNumber            = 3;
+	string room_id 		            = 2;
+	int32 sequence_number            = 3;
 	repeated Operation operations   = 4;
 }
 
@@ -25,45 +25,45 @@ message Operation{
 	int32   id 	    = 1;
 	string  event 	= 2;
 	string  value 	= 3;
-	int32   playerId 	= 4;
+	int32   player_id 	= 4;
 }
 
 
 message RequestClientPing{
-    int64 addTime               = 1;
-    int64 clientReceiveTime     = 2;
-    int64 serverResponseTime    = 3;
+    int64 add_time               = 1;
+    int64 client_receive_time     = 2;
+    int64 server_response_time    = 3;
 }
 
 message RequestPlayerResumeGame{
-    int32 playerId        = 1;
-    string roomId       = 2;
-    int32 sequenceNumber  = 3;
+    int32 player_id        = 1;
+    string room_id       = 2;
+    int32 sequence_number  = 3;
 }
 
 message RequestPlayerMatchSign{
-    int32 playerId = 1;
+    int32 player_id = 1;
 }
 
 message RequestPlayerReady{
-    int32 playerId  = 1;
-    string roomId = 2;
+    int32 player_id  = 1;
+    string room_id = 2;
 }
 
 message RequestGetRoom{
-    int32 playerId  = 1;
-    string roomId = 2;
+    int32 player_id  = 1;
+    string room_id = 2;
 }
 
 message RequestRoomHistory{
-    int32 playerId            = 1;
-    string roomId           = 2;
-    int32 sequenceNumberStart = 3;
-    int32 sequenceNumberEnd   = 4;
+    int32 player_id            = 1;
+    string room_id           = 2;
+    int32 sequence_numberStart = 3;
+    int32 sequence_numberEnd   = 4;
 }
 
 message RequestPlayerMatchSignCancel{
-    int32 playerId = 1;
+    int32 player_id = 1;
 }
 
 message RequestClientHeartbeat{
@@ -71,15 +71,15 @@ message RequestClientHeartbeat{
 }
 
 message RequestGameOver{
-    int32 playerId         = 1;
-    string roomId          = 2;
-    int32 sequenceNumber   = 3;
+    int32 player_id         = 1;
+    string room_id          = 2;
+    int32 sequence_number   = 3;
     string result          = 4;
 }
 
 message RequestPlayerOver{
-    int32 playerId = 1;
-    int32 sequenceNumber   = 2;
+    int32 player_id = 1;
+    int32 sequence_number   = 2;
 }
 
 message ResponseLoginRes{
@@ -92,13 +92,13 @@ message ResponsePlayerStatus{
     int32 id          = 1;
     string nickname = 2;
     int32 status      = 3;
-    string roomId   = 4;
-    int32 addTime     = 5;
-    int32 upTime      = 6;
+    string room_id   = 4;
+    int32 add_time     = 5;
+    int32 up_time      = 6;
 }
 
 message ResponseOtherPlayerOffline{
-    int32 playerId = 1;
+    int32 player_id = 1;
 }
 
 message ResponseKickOff{
@@ -106,61 +106,62 @@ message ResponseKickOff{
 }
 
 message ResponseStartBattle{
-    int32 sequenceNumberStart = 1;
+    int32 sequence_number_start = 1;
 }
 
 message ResponseServerPing{
-    int64 addTime               = 1;
-    int64 clientReceiveTime     = 2;
-    int64 serverResponseTime    = 3;
+    int64 add_time               = 1;
+    int64 client_receive_time     = 2;
+    int64 server_response_time    = 3;
 }
 
 message ResponseServerPong{
-    int64 addTime               = 1;
-    int64 clientReceiveTime     = 2;
-    int64 serverResponseTime    = 3;
+    int64 add_time               = 1;
+    int64 client_receive_time     = 2;
+    int64 server_response_time    = 3;
 }
 
 
 message ResponseEnterBattle{
-    int32 randSeek              = 1;
-    string roomId               = 2;
-    int32 sequenceNumber        = 3;
+    int32 rand_seek              = 1;
+    string room_id               = 2;
+    int32 sequence_number        = 3;
     int32 status                = 4;
-    int32 addTime               = 5;
+    int32 add_time               = 5;
     int64 time                  = 6;
 
-    repeated Player playerList  = 7;
+    repeated Player player_list  = 7;
 }
 
 message ResponsePushLogicFrame{
 	int32 id 	                    = 1;
 	string roomId 		            = 2;
-	int32 sequenceNumber            = 3;
+	int32 sequence_number            = 3;
 	repeated Operation operations   = 4;
 }
 
 
 message ResponseOtherPlayerOver{
-    int32 playerId = 1;
-    int32 sequenceNumber = 2;
+    int32 player_id = 1;
+    int32 sequence_number = 2;
 }
 
 message ResponseGameOver{
-    int32 playerId          = 1;
-    string roomId           = 2;
-    int32 sequenceNumber    = 3;
+    int32 player_id          = 1;
+    string room_id           = 2;
+    int32 sequence_number    = 3;
     string result           = 4;
 }
 
 message ResponsePushRoomInfo{
-    string Id 	                = 1;
-    int32 addTime               = 2;
+    string id 	                = 1;
+    int32 add_time               = 2;
     int32 status                = 3;
-    int32 Timeout 	            = 4;
-    int32 sequenceNumber        = 5;
-    int32 randSeek              = 6;
-    repeated Player playerList  = 7;
+    int32 timeout 	            = 4;
+    int32 sequence_number        = 5;
+    int32 rand_seek              = 6;
+    repeated Player player_list  = 7;
+    string room_id               = 8;
 }
 
 message ResponsePushRoomHistory{
@@ -174,9 +175,9 @@ message ResponseRoomHistory{
 }
 
 message ResponseOtherPlayerResumeGame{
-    int32 playerId        = 1;
-    string roomId       = 2;
-    int32 sequenceNumber  = 3;
+    int32 player_id        = 1;
+    string room_id       = 2;
+    int32 sequence_number  = 3;
 }
 
 message Player{
