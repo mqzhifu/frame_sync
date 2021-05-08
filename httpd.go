@@ -128,7 +128,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		info := mynetWay.testCreateJwtToken()
 		jsonStr,_ = json.Marshal(&info)
 	}else if uri == "/www/getProtoFile"{
-		filePath := "/api.proto"
+		filePath := "/myproto/api.proto"
 		fileContent, err := getStaticFileContent(filePath)
 		if err != nil{
 			mylog.Error("/www/getProtoFile:",err.Error())
