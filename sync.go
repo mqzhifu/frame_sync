@@ -193,7 +193,6 @@ func  (sync *Sync)checkReadyTimeout(room *Room){
 	}
 end:
 	mylog.Warning("checkReadyTimeout loop routine close")
-	zlib.ExitPrint(1111)
 }
 //创建一个新的房间
 func  (sync *Sync)start(roomId string){
