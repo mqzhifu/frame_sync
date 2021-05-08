@@ -184,8 +184,8 @@ func   (wsConn *WsConn)Read()(content string,err error){
 		mynetWay.Option.Mylog.Error("wsConn.Conn.ReadMessage err: ",err.Error())
 		return content,err
 	}
-	myMetrics.IncNode("input_num")
-	myMetrics.PlusNode("input_size",len(dataByte))
+	//myMetrics.IncNode("input_num")
+	//myMetrics.PlusNode("input_size",len(dataByte))
 
 	mylog.Debug("WsConn.ReadMessage messageType:",messageType , " len :",len(dataByte) , " data:" ,string(dataByte))
 	content = string(dataByte)

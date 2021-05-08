@@ -358,11 +358,9 @@ func  (sync *Sync)receivePlayerOperation(logicFrame RequestPlayerOperations,wsCo
 		mylog.Error("len(logicFrame.Operations) <= 0")
 		return
 	}
-	//zlib.ExitPrint(logicFrame)
-	//room.PlayersAckList[wsConn.PlayerId] = 1
-	roomSyncMetrics := roomSyncMetricsPool[logicFrame.RoomId]
-	roomSyncMetrics.InputNum ++
-	roomSyncMetrics.InputSize = roomSyncMetrics.InputSize + len(content)
+	//roomSyncMetrics := roomSyncMetricsPool[logicFrame.RoomId]
+	//roomSyncMetrics.InputNum ++
+	//roomSyncMetrics.InputSize = roomSyncMetrics.InputSize + len(content)
 
 	logicFrameStr ,_ := json.Marshal(logicFrame.Operations)
 	room.PlayersOperationQueue.PushBack(string(logicFrameStr))
