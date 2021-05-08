@@ -135,7 +135,7 @@ message ResponseEnterBattle{
 
 message ResponsePushLogicFrame{
 	int32 id 	                    = 1;
-	string roomId 		            = 2;
+	string room_id 		            = 2;
 	int32 sequence_number            = 3;
 	repeated Operation operations   = 4;
 }
@@ -153,15 +153,21 @@ message ResponseGameOver{
     string result           = 4;
 }
 
+message ResponseReadyTimeout{
+    string room_id      = 1;
+}
+
 message ResponsePushRoomInfo{
-    string id 	                = 1;
-    int32 add_time               = 2;
-    int32 status                = 3;
-    int32 timeout 	            = 4;
-    int32 sequence_number        = 5;
-    int32 rand_seek              = 6;
-    repeated Player player_list  = 7;
-    string room_id               = 8;
+    string  id 	                = 1;
+    int32   add_time            = 2;
+    int32   status              = 3;
+    int32   timeout 	        = 4;
+    int32   sequence_number     = 5;
+    int32   rand_seek           = 6;
+    repeated Player player_list = 7;
+    string  room_id             = 8;
+    int32   start_time          = 9;
+    int32   end_time 	        =10;
 }
 
 message ResponsePushRoomHistory{
@@ -182,12 +188,12 @@ message ResponseOtherPlayerResumeGame{
 
 message Player{
     int32 id          = 1;
-    int32 roleId      = 2;
+    int32 role_id      = 2;
     string nickname   = 3;
     int32 status      = 4;
-    int32 addTime     = 5;
+    int32 add_time     = 5;
     int32 upTime      = 6;
-    string roomId     = 7;
-    int32 updPort     = 8;
+    string room_id     = 7;
+    int32 upd_port     = 8;
     string ip         = 9;
 }

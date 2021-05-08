@@ -30,9 +30,16 @@ type ApiList struct {
 }
 
 type MyMetrics struct {
-	RoomList	map[string]Room		`json:"roomList"`
+	Rooms	int `json:"room"`
+	Players	int `json:"players"`
+	Conns 	int `json:"conns"`
+	InputNum int `json:"inputNum"`
+	InputSize int `json:"inputSize"`
+	OutputNum int `json:"outputNum"`
+	OutputSize int `json:"outputSize"`
+	InputErrNum int `json:"inputErrNum"`
 }
-
+var RoomList	map[string]Room
 func  wwwHandler(w http.ResponseWriter, r *http.Request){
 	//parameter := r.URL.Query()//GET 方式URL 中的参数 转 结构体
 	uri := r.URL.RequestURI()
@@ -73,25 +80,46 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		ApiList.JsonFormat = formatStr
 		jsonStr,_ = json.Marshal(&ApiList)
 
-	}else if uri == "/www/metrics"{
-		roomList := make(map[string]Room)
+	}else if uri == "/www/getMetrics"{
+
+		//mylog.Debug(roomList)
+		myMetrics := MyMetrics{
+			Rooms :	len(mySyncRoomPool),
+			Players: len(PlayerPool),
+			Conns: len(wsConnManager.Pool),
+			InputNum: myMetrics.GetOneNode("input_num"),
+			InputSize: myMetrics.GetOneNode("input_size"),
+			OutputNum: myMetrics.GetOneNode("output_num"),
+			OutputSize: myMetrics.GetOneNode("output_size"),
+			InputErrNum: myMetrics.GetOneNode("input_err_num"),
+
+		}
+		jsonStr,_ = json.Marshal(&myMetrics)
+	}else if uri == "/www/getRoomList"{
+		type RoomList struct {
+			Rooms map[string]Room `json:"rooms"`
+			Metrics map[string]RoomSyncMetrics `json:"metrics"`
+		}
+
+		myroomList := make(map[string]Room)
 		roomListPoint := mySyncRoomPool
+		myRoomMetrics := make(map[string]RoomSyncMetrics)
 		//var emptyArr  []*ResponseRoomHistory
 		if len(roomListPoint) > 0 {
 			for k,v := range roomListPoint{
 				tt := *v
 				tt.LogicFrameHistory = nil
-				roomList[k] = tt
-				//responseRoomHistory := ResponseRoomHistory{}
-				//emptyArr := [...]*ResponseRoomHistory{}
-				//roomList[k].LogicFrameHistory = emptyArr
+				myroomList[k] = tt
+				myRoomMetrics[k] = roomSyncMetricsPool[k]
 			}
 		}
-		//mylog.Debug(roomList)
-		myMetrics := MyMetrics{
-			RoomList :	roomList,
+
+		roomList := RoomList{
+			Rooms: myroomList,
+			Metrics: myRoomMetrics,
 		}
-		jsonStr,_ = json.Marshal(&myMetrics)
+		
+		jsonStr,_ = json.Marshal(&roomList)
 		//mylog.Debug("jsonStr:",jsonStr,err)
 	} else if uri == "/www/actionMap"{
 		info := mynetWay.ProtocolActions.getActionMap()
@@ -144,6 +172,7 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string)error{
 		uri == "/www/jquery.min.js"||
 		uri == "/www/sync.js"||
 		uri == "/www/api_web_pb.js"||
+		uri == "/www/roomlist.html"||
 		uri == "/www/metrics.html"||
 		uri == "/www/serverUpVersionMemo.html"||
 		uri == "/www/sync_frame_client_server.jpg" ||

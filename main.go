@@ -40,7 +40,7 @@ func main(){
 		OutFilePath : log_base_path,
 		OutFileName: "frame_sync.log",
 		Level : 511,
-		Target : 7,
+		Target : 1,
 	}
 	newlog,errs  := zlib.NewLog(logOption)
 	if errs != nil{
@@ -62,16 +62,16 @@ func main(){
 		IOTimeout			:3,
 		Cxt 				:rootCtx,
 		ConnTimeout			: 60,
-		Protocol: PROTOCOL_WEBSOCKET,
-		WsUri: "/ws",
+		Protocol			: PROTOCOL_WEBSOCKET,
+		WsUri				: "/ws",
 		MaxClientConnNum	:65535,
-		//MainChan			:mainChan,
 		RoomPeople			:4,
 		RoomTimeout 		:120,
+		RoomReadyTimeout 	:10,
+		OffLineWaitTime		:20,//玩家掉线后，等待多久
 		MapSize				:10,
-		OffLineWaitTime		:20,
-		LockMode: LOCK_MODE_PESSIMISTIC,
-		FPS					:10,
+		LockMode			: LOCK_MODE_PESSIMISTIC,
+		FPS					:15,
 	}
 	newNetWay := NewNetWay(newNetWayOption)
 	go newNetWay.Startup()

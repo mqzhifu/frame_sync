@@ -76,6 +76,8 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 				newRoom := NewRoom()
 				timeout := int32(zlib.GetNowTimeSecondToInt()) + mynetWay.Option.RoomTimeout
 				newRoom.Timeout = int32(timeout)
+				readyTimeout := int32(zlib.GetNowTimeSecondToInt()) + mynetWay.Option.RoomReadyTimeout
+				newRoom.ReadyTimeout = readyTimeout
 				for i:=0;i < len(signPlayerPool);i++{
 					player,empty := mynetWay.Players.getById(signPlayerPool[i].PlayerId)
 					if empty{

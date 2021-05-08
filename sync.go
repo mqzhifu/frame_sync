@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -18,12 +17,12 @@ type Sync struct {
 //	Content string
 //}
 //逻辑帧
-type LogicFrame struct {
-	Id 				int 		`json:"id"`
-	RoomId 			string		`json:"roomId"`
-	SequenceNumber 	int			`json:"sequenceNumber"`
-	Operations 		[]Operation	`json:"operations"`
-}
+//type LogicFrame struct {
+//	Id 				int 		`json:"id"`
+//	RoomId 			string		`json:"roomId"`
+//	SequenceNumber 	int			`json:"sequenceNumber"`
+//	Operations 		[]Operation	`json:"operations"`
+//}
 //玩家操作指令集
 //type Operation struct {
 //	Id 			int 	`json:"id"`
@@ -31,6 +30,13 @@ type LogicFrame struct {
 //	Value 		string	`json:"value"`
 //	PlayerId 	int32		`json:"playerId"`
 //}
+type RoomSyncMetrics struct{
+	InputNum	int `json:"inputNum"`
+	InputSize	int `json:"inputSize"`
+	OutputNum	int `json:"outputNum"`
+	OutputSize	int `json:"outputSize"`
+
+}
 var testLock int
 //集合 ：每个副本
 var mySyncRoomPool map[string]*Room
@@ -38,6 +44,7 @@ var mySyncRoomPool map[string]*Room
 var mySyncPlayerRoom map[int32]string
 var logicFrameMsgDefaultId int32
 var operationDefaultId int32
+var roomSyncMetricsPool map[string]RoomSyncMetrics
 func NewSync()*Sync{
 	mylog.Info("NewSync instance")
 	mySyncRoomPool = make(map[string]*Room)
@@ -51,35 +58,35 @@ func NewSync()*Sync{
 
 	return sync
 }
-func (sync *Sync)checkRoomTimeoutLoop(ctx context.Context){
-	for{
-		select {
-		case <- ctx.Done():
-			mylog.Warning("checkRoomTimeoutLoop done.")
-			return
-		default:
-			sync.checkRoomTimeout()
-			time.Sleep(1 * time.Second)
-		}
-	}
-}
-func (sync *Sync)checkRoomTimeout(){
-	roomLen := len(mySyncRoomPool)
-	if roomLen <= 0{
-		return
-	}
-
-	now := int32( zlib.GetNowTimeSecondToInt())
-	for _,v:=range mySyncRoomPool{
-		if v.Status != ROOM_STATUS_EXECING{
-			continue
-		}
-
-		if now > v.Timeout{
-			sync.roomEnd(v.Id)
-		}
-	}
-}
+//func (sync *Sync)checkRoomTimeoutLoop(ctx context.Context){
+//	for{
+//		select {
+//		case <- ctx.Done():
+//			mylog.Warning("checkRoomTimeoutLoop done.")
+//			return
+//		default:
+//			sync.checkRoomTimeout()
+//			time.Sleep(1 * time.Second)
+//		}
+//	}
+//}
+//func (sync *Sync)checkRoomTimeout(){
+//	roomLen := len(mySyncRoomPool)
+//	if roomLen <= 0{
+//		return
+//	}
+//
+//	now := int32( zlib.GetNowTimeSecondToInt())
+//	for _,v:=range mySyncRoomPool{
+//		if v.Status != ROOM_STATUS_EXECING{
+//			continue
+//		}
+//
+//		if now > v.Timeout{
+//			sync.roomEnd(v.Id)
+//		}
+//	}
+//}
 
 //给集合添加一个新的 游戏副本
 func (sync *Sync) addPoolElement(room 	*Room){
@@ -126,10 +133,13 @@ func (sync *Sync)playerReady(requestPlayerReady RequestPlayerReady ,wsConn *WsCo
 	responseStartBattle := ResponseStartBattle{
 		SequenceNumberStart: int32(0),
 	}
-	//jsonSTR,_ := json.Marshal(responseStartBattle)
-	//mySync.boardCastInRoom(room.Id,"startBattle",string(jsonSTR))
 	mySync.boardCastInRoom(room.Id,"startBattle",&responseStartBattle)
 	room.upStatus(ROOM_STATUS_EXECING)
+	room.StartTime = int32(zlib.GetNowTimeSecondToInt())
+
+
+	roomSyncMetricsPool[roomId] = RoomSyncMetrics{}
+
 	//初始结束后，这里方便测试，再补一帧，所有玩家的随机位置
 	if room.PlayerList[0].Id < 999{
 		var operations []*Operation
@@ -153,12 +163,26 @@ func (sync *Sync)playerReady(requestPlayerReady RequestPlayerReady ,wsConn *WsCo
 		//mySync.boardCastInRoom(room.Id,"pushLogicFrame",string(logicFrameMsgJson))
 		mySync.boardCastInRoom(room.Id,"pushLogicFrame",&logicFrameMsg)
 	}
-
+	//开启定时器，推送逻辑帧
 	go sync.logicFrameLoop(room)
 
 }
-
-//一个新的房间，开始同步
+func  (sync *Sync)checkReadyTimeout(room *Room){
+	for{
+		now := zlib.GetNowTimeSecondToInt()
+		if now > int(room.ReadyTimeout){
+			mylog.Error("room ready timeout id :",room.Id)
+			requestReadyTimeout := ResponseReadyTimeout{
+				RoomId: room.Id,
+			}
+			sync.boardCastInRoom(room.Id,"readyTimeout",&requestReadyTimeout)
+			sync.roomEnd(room.Id,0)
+			break
+		}
+		time.Sleep(time.Second * 1)
+	}
+}
+//创建一个新的房间
 func  (sync *Sync)start(roomId string){
 	mynetWay.Option.Mylog.Warning("start a new game:")
 
@@ -184,6 +208,8 @@ func  (sync *Sync)start(roomId string){
 	//sync.boardCastInRoom(roomId,"enterBattle",string(jsonStrByte))
 	sync.boardCastInRoom(roomId,"enterBattle",&responseClientInitRoomData)
 	room.CloseChan = make(chan int)
+	//room.ReadyCloseChan = make(chan int)
+	go sync.checkReadyTimeout(room)
 }
 //有一个房间内，搜索一个用户
 func (sync *Sync)getPlayerByIdInRoom(playerId int32 ,room *Room,)(myplayer *Player,empty bool){
@@ -293,7 +319,6 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 
 		i++
 	}
-
 	//if testLock == 1{
 	//	zlib.MyPrint(logicFrame)
 	//}
@@ -306,7 +331,7 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 	return fpsTime
 }
 
-func  (sync *Sync)receivePlayerOperation(logicFrame RequestPlayerOperations,wsConn *WsConn){
+func  (sync *Sync)receivePlayerOperation(logicFrame RequestPlayerOperations,wsConn *WsConn,content string){
 	//mylog.Debug(logicFrame)
 	room,empty := sync.getPoolElementById(logicFrame.RoomId)
 	if empty{
@@ -323,6 +348,10 @@ func  (sync *Sync)receivePlayerOperation(logicFrame RequestPlayerOperations,wsCo
 	}
 	//zlib.ExitPrint(logicFrame)
 	//room.PlayersAckList[wsConn.PlayerId] = 1
+	roomSyncMetrics := roomSyncMetricsPool[logicFrame.RoomId]
+	roomSyncMetrics.InputNum ++
+	roomSyncMetrics.InputSize = roomSyncMetrics.InputSize + len(content)
+
 	logicFrameStr ,_ := json.Marshal(logicFrame.Operations)
 	room.PlayersOperationQueue.PushBack(string(logicFrameStr))
 	if room.PlayersAckList[wsConn.PlayerId] == 0{
@@ -433,7 +462,7 @@ func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame RequestPlayerOpera
 //	return
 //
 //}
-func  (sync *Sync)roomEnd(roomId string){
+func  (sync *Sync)roomEnd(roomId string,sendCloseChan int){
 	mylog.Info("roomEnd")
 	room,empty := sync.getPoolElementById(roomId)
 	if empty{
@@ -441,11 +470,15 @@ func  (sync *Sync)roomEnd(roomId string){
 		return
 	}
 	room.upStatus(ROOM_STATUS_END)
+	room.EndTime = int32(zlib.GetNowTimeSecondToInt())
 	for _,v:= range room.PlayerList{
 		mynetWay.Players.upPlayerRoomId(v.Id,"")
 		delete(mySyncPlayerRoom,v.Id)
 	}
-	room.CloseChan <- 1
+	if sendCloseChan == 1{
+		room.CloseChan <- 1
+	}
+
 }
 //玩家操作后，触发C端主动发送游戏结束事件
 func  (sync *Sync)gameOver(requestGameOver RequestGameOver,wsConn *WsConn){
@@ -457,7 +490,7 @@ func  (sync *Sync)gameOver(requestGameOver RequestGameOver,wsConn *WsConn){
 	}
 	sync.boardCastInRoom(requestGameOver.RoomId,"gameOver",&responseGameOver)
 
-	sync.roomEnd(requestGameOver.RoomId)
+	sync.roomEnd(requestGameOver.RoomId,1)
 	//jsonStr ,_ := json.Marshal(requestGameOver)
 }
 func  (sync *Sync)playerOver(requestGameOver RequestPlayerOver ,wsConn *WsConn){
@@ -505,8 +538,9 @@ func (sync *Sync)close(wsConn *WsConn){
 		playerOnLineCount-- //这里因为，已有一个玩家关闭中，但是还未处理
 		mylog.Info("ROOM_STATUS_EXECING ,has check roomEnd , playerOnLineCount : ", playerOnLineCount)
 		if playerOnLineCount <= 0 {
-			sync.roomEnd(roomId)
+			sync.roomEnd(roomId,1)
 		}else{
+			room.upStatus(ROOM_STATUS_PAUSE)
 			responseOtherPlayerOffline := ResponseOtherPlayerOffline{
 				PlayerId: wsConn.PlayerId,
 			}
@@ -592,6 +626,18 @@ func  (sync *Sync)playerResumeGame(requestPlayerResumeGame RequestPlayerResumeGa
 	//str,_ := json.Marshal(requestPlayerResumeGame)
 	//mynetWay.SendMsgByUid(wsConn.PlayerId,"otherPlayerResumeGame",string(str))
 	//sync.boardCastInRoom(roomId,"otherPlayerResumeGame",string(str))
+	room ,empty := sync.getPoolElementById(requestPlayerResumeGame.RoomId)
+	if empty{
+		mylog.Error("playerResumeGame get room empty")
+		return
+	}
+	if room.Status == ROOM_STATUS_PAUSE{
+		playerOnlineNum := sync.roomOnlinePlayers(room)
+		if  len(playerOnlineNum) == len(room.PlayerList){
+			room.upStatus(ROOM_STATUS_EXECING)
+		}
+	}
+
 	responseOtherPlayerResumeGame := ResponseOtherPlayerResumeGame{
 		PlayerId:requestPlayerResumeGame.PlayerId,
 		SequenceNumber:requestPlayerResumeGame.SequenceNumber,

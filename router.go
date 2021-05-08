@@ -133,9 +133,7 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 		case "playerResumeGame"://恢复未结束的游戏
 			mySync.playerResumeGame(requestPlayerResumeGame,wsConn )
 		case "playerOperations"://玩家推送操作指令
-		//zlib.MyPrint(requestPlayerOperations.Operations)
-		//zlib.ExitPrint(requestPlayerOperations)
-			mySync.receivePlayerOperation(requestPlayerOperations,wsConn)
+			mySync.receivePlayerOperation(requestPlayerOperations,wsConn,msg.Content)
 		case "playerCancelReady"://玩家取消报名等待
 			mySync.cancelSign(requestPlayerMatchSignCancel,wsConn)
 		case "gameOver"://游戏结束
@@ -151,16 +149,7 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 		default:
 			mylog.Error("Router err:",msg)
 
-		//case "playerStatus"://玩家检测是否有未结束的游戏
-		//	netWay.Players.getPlayerStatus(requestPlayerStatus,wsConn)
-		//case "playerLogicFrameAck":
-		//mySync.playerLogicFrameAck(logicFrame,wsConn)
-		//case "netClose"://网络异常断开，也可能是主动断开
-		//case "clientPreClose"://C端主动断开连接前，提前通知
-		//	netWay.CloseOneConn(wsConn,CLOSE_SOURCE_CLIENT_PRE)
-		//case "playerGameOver"://玩家的某些操作，触发了该玩家挂了
 		//case "playerAddRoom"://玩家进入房间
-		//case "gameStart"://所有-玩家均进入准备状态，点击'开始按钮'，触发游戏开始事件
 	}
 
 	return data,nil

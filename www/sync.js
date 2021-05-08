@@ -36,8 +36,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     //入口函数，必须得先建立连接后，都有后续的所有操作
     this.create  = function(){
         console.log("this status :",self.status);
-        if (self.status != "init"){
-            return alert(" status !=  init");
+        if (self.status != "init" && self.status != "close"){
+            return alert(" status !=  init or close");
         }
         self.closeFlag = 0;
         self.logicFrameLoopTimeMs = parseInt( 1000 / this.FPS);
@@ -193,6 +193,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.onclose = function(ev){//接收到服务端关闭
         alert("receive server close:" +ev.code);
         window.clearInterval(self.pushLogicFrameLoopFunc);
+        self.upStatus("close")
         // window.clearInterval(self.heartbeatLoopFunc);
         if (self.myClose == 1){
             var reConnBntId = "reconn_"+self.playerId;
@@ -292,6 +293,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             self.rOver(logicFrame);
         }else if( "pushLogicFrame" == action){
             self.rPushLogicFrame(content)
+        }else if( "readyTimeout" == action){
+            self.rReadyTimeout(content)
         }else if( "serverPong" == action){
             self.rServerPong(content)
         }else if( "otherPlayerResumeGame" == action){
@@ -306,6 +309,9 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         }else{
             return alert("action error.");
         }
+    };
+    this.rReadyTimeout= function(logicFrame){
+        console.log("rReadyTimeout:",logicFrame);
     };
     this.rPushRoomHistory = function(logicFrame){
         console.log(logicFrame)
@@ -341,7 +347,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         this.sendNewMsg("clientPing",requestClientPing);
         this.upStatus("loginSuccess");
 
-        var playerConnInfo = logicFrame.player
+        var playerConnInfo = logicFrame.player;
         if (playerConnInfo.roomId){
             alert("检测出，有未结束的一局游戏，开始恢复中...,先获取房间信息:rooId:"+playerConnInfo.roomId);
             var requestGetRoom = new proto.main.RequestGetRoom();
@@ -384,6 +390,9 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         self.upOptBntHref(exceptionOffLineId,msg,self.closeFD);
     };
     this.rPushRoomInfo = function(logicFrame){
+        if(this.communicationContentType =="protobuf"){
+            logicFrame.playerList = logicFrame.playerListList;
+        }
         self.initLocalGlobalVar(logicFrame);
         var requestRoomHistory = new proto.main.RequestRoomHistory();
         requestRoomHistory.setRoomId(self.roomId);
@@ -393,6 +402,11 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         // var history ={"roomId":self.roomId,"sequenceNumber":0,"playerId":self.playerId };
         // self.sendMsg("getRoomHistory",history);
         self.sendNewMsg("roomHistory",requestRoomHistory);
+
+        var readySignBntId = "ready_"+self.playerId;
+        var hrefBody = "匹配成功，准备";
+
+        self.upOptBntHref(readySignBntId,hrefBody,self.ready);
     };
     this.rPushLogicFrame = function(logicFrame){//接收S端逻辑帧
         var pre = self.descPre;

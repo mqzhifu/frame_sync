@@ -90,7 +90,7 @@ func CompressContent(contentStruct interface{})(content []byte  ,err error){
 		//mylog.Info("CompressContent json:",string(content),err )
 		//zlib.ExitPrint(111)
 	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{
-		mylog.Info("contentStruct:",contentStruct)
+		//mylog.Info("contentStruct:",contentStruct)
 		//responseLoginRes := ResponseLoginRes{Code: 200}
 		//content, err = proto.Marshal(&responseLoginRes)
 
@@ -146,9 +146,13 @@ func   (wsConn *WsConn)Read()(content string,err error){
 	//wsConn.Conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(mynetWay.Option.IOTimeout)))
 	messageType , dataByte  , err  := wsConn.Conn.ReadMessage()
 	if err != nil{
+		myMetrics.IncNode("input_err_num")
 		mynetWay.Option.Mylog.Error("wsConn.Conn.ReadMessage err: ",err.Error())
 		return content,err
 	}
+	myMetrics.IncNode("input_num")
+	myMetrics.PlusNode("input_size",len(dataByte))
+
 	mylog.Debug("WsConn.ReadMessage messageType:",messageType , " len :",len(dataByte) , " data:" ,string(dataByte))
 	content = string(dataByte)
 	return content,nil

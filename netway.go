@@ -43,6 +43,7 @@ type NetWayOption struct {
 	OffLineWaitTime		int32		`json:"offLineWaitTime"`//lockStep 玩家掉线后，其它玩家等待最长时间
 	LockMode  			int32 		`json:"lockMode"`		//锁模式，乐观|悲观
 	FPS 				int32 		`json:"fps"`			//frame pre second
+	RoomReadyTimeout	int32		`json:"roomReadyTimeout"`//一个房间的，玩家的准备，超时时间
 }
 
 type Message struct {
@@ -64,7 +65,7 @@ var mynetWay	*NetWay
 var mySync 		*Sync
 var myMatch		*Match
 var wsConnManager *WsConnManager
-
+var myMetrics *zlib.Metrics
 func NewNetWay(option NetWayOption)*NetWay{
 	option.Mylog.Info("New NetWay instance :")
 	zlib.PrintStruct(option," : ")
@@ -80,6 +81,16 @@ func NewNetWay(option NetWayOption)*NetWay{
 	netWay.Option = option
 	netWay.Players = PlayersNew()
 	netWay.ProtocolActions = ProtocolActionsNew()
+
+	myMetrics = zlib.NewMetrics()
+	myMetrics.CreateOneNode("input_num")
+	myMetrics.CreateOneNode("output_num")
+
+	myMetrics.CreateOneNode("input_size")
+	myMetrics.CreateOneNode("output_size")
+
+	myMetrics.CreateOneNode("input_err_num")
+	myMetrics.CreateOneNode("output_err_num")
 
 	mynetWay = netWay
 	return netWay
@@ -313,6 +324,15 @@ func(netWay *NetWay)SendMsgByUid(uid int32,action string , content []byte){
 	if wsConn.Status == CONN_STATUS_CLOSE{
 		mylog.Error("wsConn status =CONN_STATUS_CLOSE.")
 		return
+	}
+	myMetrics.IncNode("output_num")
+	myMetrics.PlusNode("output_size",len(content))
+
+	if action =="pushLogicFrame"{
+		roomId := mySyncPlayerRoom[uid]
+		roomSyncMetrics := roomSyncMetricsPool[roomId]
+		roomSyncMetrics.OutputNum++
+		roomSyncMetrics.OutputSize = roomSyncMetrics.OutputSize + len(content)
 	}
 	//wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
 	if mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{

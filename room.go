@@ -8,19 +8,23 @@ import (
 )
 
 type Room struct {
-	Id					string		`json:"id"`
-	AddTime 			int32		`json:"addTime"`
-	Status 				int32		`json:"status"`
-	PlayerList			[]*Player	`json:"playerList"`
-	Timeout 			int32		`json:"timeout"`
-	SequenceNumber		int			`json:"sequenceNumber"`
-	PlayersAckList		map[int32]int32	`json:"playersAckList"`
-	PlayersAckStatus	int				`json:"playersAckStatus"`
-	PlayersReadyList	map[int32]int32	`json:"playersReadyList"`
-	RandSeek			int32			`json:"randSeek"`
-	LogicFrameHistory 	[]*ResponseRoomHistory	`json:"logicFrameHistory"`
+	Id					string				`json:"id"`
+	AddTime 			int32				`json:"addTime"`
+	Timeout 			int32				`json:"timeout"`
+	StartTime 			int32 				`json:"startTime"`
+	EndTime 			int32				`json:"endTime"`
+	ReadyTimeout 		int32				`json:"readyTimeout"`
+	Status 				int32				`json:"status"`
+	PlayerList			[]*Player			`json:"playerList"`
+	SequenceNumber		int					`json:"sequenceNumber"`
+	PlayersAckList		map[int32]int32		`json:"playersAckList"`
+	PlayersAckStatus	int					`json:"playersAckStatus"`
+	PlayersReadyList	map[int32]int32		`json:"playersReadyList"`
+	RandSeek			int32				`json:"randSeek"`
 	PlayersOperationQueue 		*list.List	`json:"-"`
-	CloseChan 	chan int	`json:"-"`
+	CloseChan 			chan int			`json:"-"`
+	//ReadyCloseChan 		chan int			`json:"-"`
+	LogicFrameHistory 	[]*ResponseRoomHistory	`json:"logicFrameHistory"`
 }
 
 func NewRoom()*Room{
@@ -34,7 +38,6 @@ func NewRoom()*Room{
 	room.RandSeek = int32(zlib.GetRandIntNum(100))
 	room.PlayersOperationQueue = list.New()
 	room.PlayersReadyList =  make(map[int32]int32)
-
 	//mynetWay.Option.Mylog.Info("addPoolElement")
 	//_ ,exist := mySyncRoomPool[room.Id]
 	//if exist{
