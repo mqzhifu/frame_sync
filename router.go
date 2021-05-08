@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"github.com/golang/protobuf/proto"
+	"regexp"
 	"strconv"
 )
 //解析C端发送的数据，这一层只解析前4个字节，找到对应的action
@@ -33,13 +35,45 @@ func  (netWay *NetWay)parserContent(content string)(message Message,err error){
 	return msg,nil
 }
 
+func unTrunVarJson(marshalled []byte)[]byte{
+	var keyMatchRegex = regexp.MustCompile(`\"(\w+)\":`)
+	var wordBarrierRegex = regexp.MustCompile(`(\w)([A-Z])`)
+	converted := keyMatchRegex.ReplaceAllFunc(
+		marshalled,
+		func(match []byte) []byte {
+			return bytes.ToLower(wordBarrierRegex.ReplaceAll(
+				match,
+				[]byte(`${1}_${2}`),
+			))
+		},
+	)
+	return converted
+}
+
+func trunVarJson(marshalled []byte)string{
+	var keyMatchRegex = regexp.MustCompile(`\"(\w+)\":`)
+	//marshalled, err := json.Marshal(room)
+	converted := keyMatchRegex.ReplaceAllFunc(
+		marshalled,
+		func(match []byte) []byte {
+			matchStr := string(match)
+			key := matchStr[1 : len(matchStr)-2]
+			resKey := Lcfirst(Case2Camel(key))
+			return []byte(`"` + resKey + `":`)
+		},
+	)
+
+	return string(converted)
+}
 
 func (netWay *NetWay)parserMsgContent(content string ,out interface{})error{
 	//mylog.Debug("netWay parserMsgContent start :",content," out ",out)
 	//zlib.MyPrint("out:",out)
 	var err error
 	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON{
-		err = json.Unmarshal([]byte(content),out)
+		unTrunVarJsonContent := unTrunVarJson([]byte(content))
+		//err = json.Unmarshal([]byte(content),out)
+		err = json.Unmarshal(unTrunVarJsonContent,out)
 	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{
 		aaa := out.(proto.Message)
 		err = proto.Unmarshal([]byte(content),aaa)

@@ -102,10 +102,13 @@ func testProtobuf(){
 	//}
 	//zlib.ExitPrint(data)
 }
+func testVar(){
 
+}
 func test(){
-	testProtobuf()
+	//testProtobuf()
 
+	testVar()
 
 	//queue := list.New()
 	//queue.PushBack("aaaa")

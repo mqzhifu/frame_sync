@@ -31,8 +31,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.actionMap = actionMap;
     this.sequenceNumber = 0;
     this.randSeek = 0;
-    this.communicationContentType = "protobuf";
-    // this.communicationContentType = "json";
+    // this.communicationContentType = "protobuf";
+    this.communicationContentType = "json";
     //入口函数，必须得先建立连接后，都有后续的所有操作
     this.create  = function(){
         console.log("this status :",self.status);
@@ -142,41 +142,6 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             self.wsObj.send(mergedArray);
         }
     };
-    // this.sendMsgProtobuf =  function ( action,contentObj  ){
-    //     // this.sendMsgProtobuf =  function ( action,protobufClass  ){
-    //     // var actionLow = action.substring(0, 1).toUpperCase() + action.substring(1)
-    //     // var className =  "proto.main.Request" + actionLow;
-    //     // var ProtobufNewClass = eval(" new "+ className + "()");
-    //     //
-    //     // console.log(ProtobufNewClass);
-    //     // for(let key  in contentObj){
-    //     //     var actionLow = key.substring(0, 1).toUpperCase() + key.substring(1)
-    //     //     var aaa = "set"+actionLow;
-    //     //     console.log(aaa)
-    //     //     eval(' ProtobufNewClass.'+ aaa + "('"+contentObj[key]+"')");
-    //     // }
-    //     // console.log(NewClass.getToken())
-    //     // return 11;
-    //
-    //     var id = self.getActionId(action,"client");
-    //     id = id + "";
-    //     // var content = protobufClass.serializeBinary();
-    //     var content = ProtobufNewClass.serializeBinary();
-    //     var idBinary = stringToUint8Array(id);
-    //     var mergedArray = new Uint8Array(idBinary.length + content.length);
-    //     mergedArray.set(idBinary);
-    //     mergedArray.set(content, idBinary.length);
-    //     // content = idBinary+content;
-    //     console.log( " sendMsg:" + self.descPre ,mergedArray)
-    //     self.wsObj.send(mergedArray);
-    //     // var buffer = new ArrayBuffer(tmpcontent.length + 4);
-    //     // var view = new DataView(buffer);
-    //     // view.setUint32(0, tmpcontent.length);
-    //     // for (var i = 0; i < tmpcontent.length; i++) {
-    //     //     view.setUint8(i + 4, tmpcontent[i]);
-    //     // }
-    //     // self.wsObj.send(view);
-    // };
     this.upOptBnt = function(content,clearClick){
         $("#"+self.domIdObj.optBntId).html(content);
         if(clearClick == 1){
@@ -410,7 +375,9 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     };
     this.rPushLogicFrame = function(logicFrame){//接收S端逻辑帧
         var pre = self.descPre;
-        logicFrame.operations = logicFrame.operationsList;
+        if(this.communicationContentType =="protobuf"){
+            logicFrame.operations = logicFrame.operationsList;
+        }
         var operations = logicFrame.operations;
         self.sequenceNumber  = logicFrame.sequenceNumber;
         $("#"+self.domIdObj.seqId).html(self.sequenceNumber);
@@ -419,13 +386,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
         console.log("rPushLogicFrame ,sequenceNumber:"+self.sequenceNumber+ ", operationsLen:" +  operations.length)
         for(var i=0;i<operations.length;i++){
-            // var playerId = "";
-            // if (this.communicationContentType == "protobuf"){
-            //     playerId = operations[i].playerid;
-            // }else{
-                playerId= operations[i].playerId;
-            // }
-
+            playerId= operations[i].playerId;
             var str = pre + " i=i , id: "+operations[i].id + " , event:"+operations[i].event + " , value:"+ operations[i].value + " , playerId:" + playerId;
             console.log(str);
             if (operations[i].event == "move"){
@@ -553,7 +514,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.ready = function(){
         self.upStatus("ready");
         var requestPlayerReady = new proto.main.RequestPlayerReady();
-        requestPlayerReady.setPlayerId(self.playerId)
+        requestPlayerReady.setPlayerId(self.playerId);
+        requestPlayerReady.setRoomId(self.roomId);
         self.sendNewMsg("playerReady",requestPlayerReady);
         // var msg = {"playerId" :self.playerId};
         // self.sendMsg("playerReady",msg)

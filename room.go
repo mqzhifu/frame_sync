@@ -23,7 +23,7 @@ type Room struct {
 	RandSeek			int32				`json:"randSeek"`
 	PlayersOperationQueue 		*list.List	`json:"-"`
 	CloseChan 			chan int			`json:"-"`
-	//ReadyCloseChan 		chan int			`json:"-"`
+	ReadyCloseChan 		chan int			`json:"-"`
 	LogicFrameHistory 	[]*ResponseRoomHistory	`json:"logicFrameHistory"`
 }
 

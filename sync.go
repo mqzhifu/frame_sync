@@ -54,6 +54,8 @@ func NewSync()*Sync{
 	logicFrameMsgDefaultId = 16
 	operationDefaultId = 32
 
+	roomSyncMetricsPool = make(map[string]RoomSyncMetrics)
+
 	testLock = 0
 
 	return sync
@@ -110,8 +112,10 @@ func (sync *Sync) addPoolElement(room 	*Room){
 }
 //进入战后，场景渲染完后，进入准确状态
 func (sync *Sync)playerReady(requestPlayerReady RequestPlayerReady ,wsConn *WsConn) {
+	//zlib.MyPrint(requestPlayerReady.PlayerId)
+	//zlib.ExitPrint(requestPlayerReady)
 	roomId := mySyncPlayerRoom[requestPlayerReady.PlayerId]
-	mylog.Debug("mySyncPlayerRoom:",mySyncPlayerRoom)
+	mylog.Debug("mySyncPlayerRoom:",mySyncPlayerRoom , " , id :",roomId)
 	room,empty := mySync.getPoolElementById(roomId)
 	if empty{
 		mylog.Error("playerReady getPoolElementById empty",roomId)
@@ -163,24 +167,33 @@ func (sync *Sync)playerReady(requestPlayerReady RequestPlayerReady ,wsConn *WsCo
 		//mySync.boardCastInRoom(room.Id,"pushLogicFrame",string(logicFrameMsgJson))
 		mySync.boardCastInRoom(room.Id,"pushLogicFrame",&logicFrameMsg)
 	}
+	room.ReadyCloseChan <- 1
 	//开启定时器，推送逻辑帧
 	go sync.logicFrameLoop(room)
 
 }
 func  (sync *Sync)checkReadyTimeout(room *Room){
 	for{
-		now := zlib.GetNowTimeSecondToInt()
-		if now > int(room.ReadyTimeout){
-			mylog.Error("room ready timeout id :",room.Id)
-			requestReadyTimeout := ResponseReadyTimeout{
-				RoomId: room.Id,
+		select {
+		case   <-room.ReadyCloseChan:
+			goto end
+		default:
+			now := zlib.GetNowTimeSecondToInt()
+			if now > int(room.ReadyTimeout){
+				mylog.Error("room ready timeout id :",room.Id)
+				requestReadyTimeout := ResponseReadyTimeout{
+					RoomId: room.Id,
+				}
+				sync.boardCastInRoom(room.Id,"readyTimeout",&requestReadyTimeout)
+				sync.roomEnd(room.Id,0)
+				goto end
 			}
-			sync.boardCastInRoom(room.Id,"readyTimeout",&requestReadyTimeout)
-			sync.roomEnd(room.Id,0)
-			break
+			time.Sleep(time.Second * 1)
 		}
-		time.Sleep(time.Second * 1)
 	}
+end:
+	mylog.Warning("checkReadyTimeout loop routine close")
+	zlib.ExitPrint(1111)
 }
 //创建一个新的房间
 func  (sync *Sync)start(roomId string){
@@ -208,7 +221,7 @@ func  (sync *Sync)start(roomId string){
 	//sync.boardCastInRoom(roomId,"enterBattle",string(jsonStrByte))
 	sync.boardCastInRoom(roomId,"enterBattle",&responseClientInitRoomData)
 	room.CloseChan = make(chan int)
-	//room.ReadyCloseChan = make(chan int)
+	room.ReadyCloseChan = make(chan int)
 	go sync.checkReadyTimeout(room)
 }
 //有一个房间内，搜索一个用户

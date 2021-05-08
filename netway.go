@@ -251,8 +251,6 @@ func  (netWay *NetWay)pintRTT(playerId int32){
 	responseServerPing := ResponseServerPing{
 		AddTime:millisecond,
 	}
-	//PingRTTJsonStr ,_:=json.Marshal(PingRTT)
-	//netWay.SendMsgByUid(playerId,"serverPing",string(PingRTTJsonStr))
 	netWay.SendMsgCompressByUid(playerId,"serverPing",&responseServerPing)
 }
 

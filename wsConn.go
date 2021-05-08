@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/gorilla/websocket"
-	"strconv"
-	"time"
-	"zlib"
 	"github.com/golang/protobuf/proto"
+	"github.com/gorilla/websocket"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+	"unicode"
+	"zlib"
 )
 
 
@@ -83,12 +86,43 @@ func  (wsConnManager *WsConnManager)delConnPool(uid int32  ){
 }
 
 
+func Case2Camel(name string) string {
+	name = strings.Replace(name, "_", " ", -1)
+	name = strings.Title(name)
+	return strings.Replace(name, " ", "", -1)
+}
+type JsonCamelCase struct {
+	Value interface{}
+}
+
+func (c JsonCamelCase) MarshalJSON() ([]byte, error) {
+	var keyMatchRegex = regexp.MustCompile(`\"(\w+)\":`)
+	marshalled, err := json.Marshal(c.Value)
+	converted := keyMatchRegex.ReplaceAllFunc(
+		marshalled,
+		func(match []byte) []byte {
+			matchStr := string(match)
+			key := matchStr[1 : len(matchStr)-2]
+			resKey := Lcfirst(Case2Camel(key))
+			return []byte(`"` + resKey + `":`)
+		},
+	)
+	return converted, err
+}
+// 首字母小写
+func Lcfirst(str string) string {
+	for i, v := range str {
+		return string(unicode.ToLower(v)) + str[i+1:]
+	}
+	return ""
+}
+
+
 func CompressContent(contentStruct interface{})(content []byte  ,err error){
 	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON{
-		//zlib.MyPrint("in json:",contentStruct)
-		content,err = json.Marshal(contentStruct)
+		//content,err = json.Marshal(contentStruct)
+		content, err = json.Marshal(JsonCamelCase{contentStruct})
 		//mylog.Info("CompressContent json:",string(content),err )
-		//zlib.ExitPrint(111)
 	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{
 		//mylog.Info("contentStruct:",contentStruct)
 		//responseLoginRes := ResponseLoginRes{Code: 200}
