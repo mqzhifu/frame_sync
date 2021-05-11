@@ -31,8 +31,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.actionMap = actionMap;
     this.sequenceNumber = 0;
     this.randSeek = 0;
-    this.communicationContentType = "protobuf";
-    // this.communicationContentType = "json";
+    // this.communicationContentType = "protobuf";
+    this.communicationContentType = "json";
     //入口函数，必须得先建立连接后，都有后续的所有操作
     this.create  = function(){
         console.log("this status :",self.status);
