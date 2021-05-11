@@ -55,8 +55,8 @@ func main(){
 		Mylog 				:mylog,
 		Host				:ip,
 		Port				:port,
-		ContentType			:CONTENT_TYPE_JSON,
-		//ContentType			:CONTENT_TYPE_PROTOBUF,
+		//ContentType			:CONTENT_TYPE_JSON,
+		ContentType			:CONTENT_TYPE_PROTOBUF,
 		LoginAuthType		:"jwt",
 		LoginAuthSecretKey	:"chukong",
 		IOTimeout			:3,
@@ -71,7 +71,7 @@ func main(){
 		OffLineWaitTime		:20,//玩家掉线后，等待多久
 		MapSize				:10,
 		LockMode			: LOCK_MODE_PESSIMISTIC,
-		FPS					:15,
+		FPS					:5,
 	}
 	newNetWay := NewNetWay(newNetWayOption)
 	go newNetWay.Startup()

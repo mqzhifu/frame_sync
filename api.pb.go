@@ -1095,7 +1095,7 @@ type ResponseStartBattle struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SequenceNumberStart int32 `protobuf:"varint,1,opt,name=sequence_number_start,json=sequenceNumberStart,proto3" json:"sequence_number_start,omitempty"`
+	SequenceNumberStart int32 `protobuf:"varint,1,opt,name=sequence_number_start,json=sequenceNumberStart,proto3" json:"sequence_number_start"`
 }
 
 func (x *ResponseStartBattle) Reset() {

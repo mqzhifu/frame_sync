@@ -208,13 +208,14 @@ func  (wsConn *WsConn)ReadLoop(ctx context.Context){
 	for{
 		select{
 		case <-ctx.Done():
+			mylog.Warning("WsConnReadLoop receive signal: ctx.Done.")
 			goto end
 		default:
 			//从ws 读取 数据
 			content,err :=  wsConn.Read()
 			if err != nil{
-				IsUnexpectedCloseError := websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure)
-				mylog.Warning("WsConnReadLoop WsConnRead err:",err.Error(),"IsUnexpectedCloseError:",IsUnexpectedCloseError)
+				IsUnexpectedCloseError := websocket.IsUnexpectedCloseError(err)
+				mylog.Warning("WsConnReadLoop WsConnRead err:",err,"IsUnexpectedCloseError:",IsUnexpectedCloseError)
 				if IsUnexpectedCloseError{
 					mynetWay.CloseOneConn(wsConn,CLOSE_SOURCE_CLIENT_WS_FD_GONE)
 					goto end

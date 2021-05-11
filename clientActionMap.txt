@@ -1,6 +1,6 @@
 |1000|login|登陆||
-|1002|clientPong|测试RTT||
-|1004|clientPing|测试RTT||
+|1002|clientPong|C端响应S端PIN||
+|1004|clientPing|C端主动PING||
 |1006|clientHeartbeat|心跳||
 |1008|playerResumeGame|掉线恢复游戏||
 |1012|playerOperations|推送玩家操作指令||

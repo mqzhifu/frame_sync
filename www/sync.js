@@ -31,8 +31,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.actionMap = actionMap;
     this.sequenceNumber = 0;
     this.randSeek = 0;
-    // this.communicationContentType = "protobuf";
-    this.communicationContentType = "json";
+    this.communicationContentType = "protobuf";
+    // this.communicationContentType = "json";
     //入口函数，必须得先建立连接后，都有后续的所有操作
     this.create  = function(){
         console.log("this status :",self.status);
@@ -80,7 +80,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         var requestGameOver = new proto.main.RequestGameOver()
         requestGameOver.setRoomId(self.roomId);
         requestGameOver.setSequenceNumber(self.sequenceNumber);
-        requestGameOver.setResult(self.playerId);
+        requestGameOver.setResult("ccccccWin");
         this.sendNewMsg("gameOver", requestGameOver);
 
         window.clearInterval(self.pushLogicFrameLoopFunc);
@@ -277,13 +277,26 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     };
     this.rReadyTimeout= function(logicFrame){
         console.log("rReadyTimeout:",logicFrame);
+
+        this.upStatus("loginSuccess");
+
+        var matchSignBntId = "matchSign_"+self.playerId;
+        var hrefBody = "连接成功，匹配报名";
+
+        self.upOptBntHref(matchSignBntId,hrefBody,self.matchSign);
+
+        return alert("抱歉，准确时间已超时");
     };
     this.rPushRoomHistory = function(logicFrame){
-        console.log(logicFrame)
-        for(var i=0;i<logicFrame.length;i++){
-            console.log( "rPushRoomHistory:" + logicFrame[i].Action);
-            if (  logicFrame[i].Action == "pushLogicFrame"){
-                var data = eval( "(" + logicFrame[i].Content + ")" )
+        console.log("rPushRoomHistory:");
+        if(self.communicationContentType =="protobuf"){
+            logicFrame.list = logicFrame.listList;
+        }
+        var list = logicFrame.list;
+        for(var i=0;i<list.length;i++){
+            // console.log( "rPushRoomHistory:" + logicFrame[i].Action);
+            if (  list[i].action == "pushLogicFrame"){
+                var data = eval( "(" + list[i].content + ")" )
                 self.rPushLogicFrame(data);
             }
         }
@@ -291,9 +304,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         requestPlayerResumeGame.setRoomId(self.roomId);
         requestPlayerResumeGame.setSequenceNumber(self.sequenceNumber);
         requestPlayerResumeGame.setPlayerId(self.playerId);
-        self.sendNewMsg("playerResumeGame",requestPlayerResumeGame)
-
-        //     var commands ={"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"playerId":self.playerId };
+        self.sendNewMsg("playerResumeGame",requestPlayerResumeGame);
     };
     this.upOptBntHref = function(domId,value,clickCallback){
         var bntContent = "<a href='javascript:void(0);' onclick='' id='"+domId+"'>"+value+"</a>";

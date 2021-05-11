@@ -624,11 +624,11 @@ func (sync *Sync)addOneRoomHistory(room *Room,action,content string){
 func  (sync *Sync)RoomHistory(requestRoomHistory RequestRoomHistory,wsConn *WsConn){
 	roomId := requestRoomHistory.RoomId
 	room,_ := sync.getPoolElementById(roomId)
-	responsepushRoomHistory := ResponsePushRoomHistory{}
-	responsepushRoomHistory.List = room.LogicFrameHistory
+	responsePushRoomHistory := ResponsePushRoomHistory{}
+	responsePushRoomHistory.List = room.LogicFrameHistory
 	//responseRoomHistory := room.LogicFrameHistory
 	//str,_ := json.Marshal(responseRoomHistory)
-	//mynetWay.SendMsgByUid(wsConn.PlayerId,"pushRoomHistory",string(str))
+	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"pushRoomHistory",&responsePushRoomHistory)
 }
 //玩家掉线了，重新连接后，恢复游戏了~这个时候，要通知另外的玩家
 func  (sync *Sync)playerResumeGame(requestPlayerResumeGame RequestPlayerResumeGame,wsConn *WsConn){
