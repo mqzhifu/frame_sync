@@ -1,9 +1,10 @@
-package main
+package netway
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	myprotocol "frame_sync/myprotocol"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -18,14 +19,14 @@ type MyServer struct {
 	RoomPeople 		int32
 	Uri				string
 	OffLineWaitTime int32
-	ActionMap		map[string]map[int]ActionMap
+	ActionMap		map[string]map[int]myprotocol.ActionMap
 	ContentType		int32
 	LoginAuthType	string
 	FPS 			int32
 }
 
 type ApiList struct {
-	ActionMap		map[string]map[int]ActionMap
+	ActionMap		map[string]map[int]myprotocol.ActionMap
 	JsonFormat 		map[int]string
 }
 
@@ -57,7 +58,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		jsonStr,_ = json.Marshal(&options)
 	}else if uri == "/www/apilist"{
 		ApiList := ApiList{
-			ActionMap : mynetWay.ProtocolActions.getActionMap(),
+			ActionMap : mynetWay.ProtocolActions.GetActionMap(),
 		}
 		formatStr := make(map[int]string)
 		for k,v := range ApiList.ActionMap["client"]{
@@ -84,25 +85,25 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 
 		//mylog.Debug(roomList)
 		myMetrics := MyMetrics{
-			Rooms :	len(mySyncRoomPool),
-			Players: len(PlayerPool),
-			Conns: len(wsConnManager.Pool),
-			InputNum: myMetrics.GetOneNode("input_num"),
-			InputSize: myMetrics.GetOneNode("input_size"),
-			OutputNum: myMetrics.GetOneNode("output_num"),
-			OutputSize: myMetrics.GetOneNode("output_size"),
+			Rooms :      len(MySyncRoomPool),
+			Players:     len(PlayerPool),
+			Conns:       len(wsConnManager.Pool),
+			InputNum:    myMetrics.GetOneNode("input_num"),
+			InputSize:   myMetrics.GetOneNode("input_size"),
+			OutputNum:   myMetrics.GetOneNode("output_num"),
+			OutputSize:  myMetrics.GetOneNode("output_size"),
 			InputErrNum: myMetrics.GetOneNode("input_err_num"),
 
 		}
 		jsonStr,_ = json.Marshal(&myMetrics)
 	}else if uri == "/www/getRoomList"{
 		type RoomList struct {
-			Rooms map[string]Room `json:"rooms"`
+			Rooms map[string]Room              `json:"rooms"`
 			Metrics map[string]RoomSyncMetrics `json:"metrics"`
 		}
 
 		myroomList := make(map[string]Room)
-		roomListPoint := mySyncRoomPool
+		roomListPoint := MySyncRoomPool
 		myRoomMetrics := make(map[string]RoomSyncMetrics)
 		//var emptyArr  []*ResponseRoomHistory
 		if len(roomListPoint) > 0 {
@@ -110,7 +111,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 				tt := *v
 				tt.LogicFrameHistory = nil
 				myroomList[k] = tt
-				myRoomMetrics[k] = roomSyncMetricsPool[k]
+				myRoomMetrics[k] = RoomSyncMetricsPool[k]
 			}
 		}
 
@@ -122,11 +123,11 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		jsonStr,_ = json.Marshal(&roomList)
 		//mylog.Debug("jsonStr:",jsonStr,err)
 	} else if uri == "/www/actionMap"{
-		info := mynetWay.ProtocolActions.getActionMap()
+		info := mynetWay.ProtocolActions.GetActionMap()
 		jsonStr,_ = json.Marshal(&info)
 	} else if uri == "/www/testCreateJwtToken"{
-		info := mynetWay.testCreateJwtToken()
-		jsonStr,_ = json.Marshal(&info)
+		//info := mynetWay.testCreateJwtToken()
+		//jsonStr,_ = json.Marshal(&info)
 	}else if uri == "/www/getProtoFile"{
 		filePath := "/myproto/api.proto"
 		fileContent, err := getStaticFileContent(filePath)

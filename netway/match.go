@@ -1,4 +1,4 @@
-package main
+package netway
 
 import (
 	"context"
@@ -21,7 +21,7 @@ type PlayerSign struct {
 }
 
 var signPlayerPool []PlayerSign
-func NewMatch(matchOption MatchOption)*Match{
+func NewMatch(matchOption MatchOption)*Match {
 	mylog.Info("NewMatch instance")
 	match  := new(Match)
 	match.Option = matchOption
@@ -29,7 +29,7 @@ func NewMatch(matchOption MatchOption)*Match{
 }
 
 func (match *Match)getOneSignPlayerById(playerId int32 ) (playerSign PlayerSign,empty bool){
-	for _,v := range signPlayerPool{
+	for _,v := range signPlayerPool {
 		if v.PlayerId == playerId {
 			return v,false
 		}
@@ -49,9 +49,9 @@ func (match *Match) addOnePlayer(playerId int32)error{
 
 func (match *Match) delOnePlayer(playerId int32){
 	mylog.Info("cancel : delOnePlayer ",playerId)
-	for k,v:=range signPlayerPool{
+	for k,v:=range signPlayerPool {
 		if v.PlayerId == playerId{
-			if len(signPlayerPool ) == 1{
+			if len(signPlayerPool) == 1{
 				signPlayerPool = []PlayerSign{}
 			}else{
 				signPlayerPool = append(signPlayerPool[:k], signPlayerPool[k+1:]...)
@@ -62,7 +62,7 @@ func (match *Match) delOnePlayer(playerId int32){
 	mylog.Warning("no match playerId",playerId)
 }
 
-func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
+func (match *Match) matchingPlayerCreateRoom(ctx context.Context,matchSuccessChan chan *Room){
 	mylog.Info("matchingPlayerCreateRoom:start")
 	for{
 		select {
@@ -79,9 +79,9 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 				readyTimeout := int32(zlib.GetNowTimeSecondToInt()) + mynetWay.Option.RoomReadyTimeout
 				newRoom.ReadyTimeout = readyTimeout
 				for i:=0;i < len(signPlayerPool);i++{
-					player,empty := mynetWay.Players.getById(signPlayerPool[i].PlayerId)
+					player,empty := mynetWay.Players.GetById(signPlayerPool[i].PlayerId)
 					if empty{
-						mylog.Error("match Players.getById empty , ",signPlayerPool[i].PlayerId)
+						mylog.Error("match Players.getById empty , ", signPlayerPool[i].PlayerId)
 					}
 					player.RoomId = newRoom.Id
 					newRoom.AddPlayer(player)
@@ -91,8 +91,9 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context){
 				signPlayerPool = append(signPlayerPool[match.Option.RoomPeople:])
 				mylog.Info("create a room :",newRoom)
 				//将该房间添加到容器中
-				mySync.addPoolElement(newRoom)
-				mySync.start(newRoom.Id)
+				matchSuccessChan <- newRoom
+
+
 			}
 			time.Sleep(time.Second * 1)
 			//mySleepSecond(1,"matching player")

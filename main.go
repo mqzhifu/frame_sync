@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"frame_sync/netway"
 	"os"
 	"os/signal"
 	"strconv"
@@ -14,7 +15,7 @@ var mylog *zlib.Log
 func main(){
 	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
 
-	test()
+	//test()
 
 	if len(os.Args) < 4{
 		msg := "os.Args len < 4 , ex :  env=dev , ip=127.0.0.1 , port=2222 , log_base_path=/data/www/golang/src/logs"
@@ -28,8 +29,8 @@ func main(){
 
 	msg := "os.Args: env= "+env +" ,ip= "+ip +" ,port=" + port+ " ,log_base_path= " +log_base_path
 	zlib.MyPrint(msg)
-	if !CheckEnvExist(env){
-		list := GetEnvList()
+	if !zlib.CheckEnvExist(env){
+		list := zlib.GetEnvList()
 		zlib.ExitPrint("env is err , list:",list)
 	}
 
@@ -49,31 +50,31 @@ func main(){
 	mylog = newlog
 
 	//mainChan := make(chan int )
-	newNetWayOption := NetWayOption{
+	newNetWayOption := netway.NetWayOption{
 		//Host 				:"192.168.192.125",
 		//Port 				:"2222",
 		Mylog 				:mylog,
 		Host				:ip,
 		Port				:port,
-		ContentType			:CONTENT_TYPE_JSON,
-		//ContentType			:CONTENT_TYPE_PROTOBUF,
+		//ContentType			:CONTENT_TYPE_JSON,
+		ContentType			:netway.CONTENT_TYPE_PROTOBUF,
 		LoginAuthType		:"jwt",
 		LoginAuthSecretKey	:"chukong",
 		IOTimeout			:3,
 		Cxt 				:rootCtx,
 		ConnTimeout			: 60,
-		Protocol			: PROTOCOL_WEBSOCKET,
+		Protocol			: netway.PROTOCOL_WEBSOCKET,
 		WsUri				: "/ws",
 		MaxClientConnNum	:65535,
-		RoomPeople			:4,
+		RoomPeople			:2,
 		RoomTimeout 		:120,
 		RoomReadyTimeout 	:10,
 		OffLineWaitTime		:20,//玩家掉线后，等待多久
 		MapSize				:10,
-		LockMode			: LOCK_MODE_PESSIMISTIC,
+		LockMode			: netway.LOCK_MODE_PESSIMISTIC,
 		FPS					:5,
 	}
-	newNetWay := NewNetWay(newNetWayOption)
+	newNetWay := netway.NewNetWay(newNetWayOption)
 	go newNetWay.Startup()
 
 	mainCtx,mainCancel := context.WithCancel(rootCtx)
@@ -95,7 +96,7 @@ func main(){
 	time.Sleep(2 * time.Second)
 }
 //信号 处理
-func  DemonSignal(newNetWay *NetWay,mainCtx context.Context,mainCancel context.CancelFunc){
+func  DemonSignal(newNetWay *netway.NetWay,mainCtx context.Context,mainCancel context.CancelFunc){
 	mylog.Warning("SIGNAL init : ")
 	c := make(chan os.Signal)
 	//syscall.SIGHUP :ssh 挂断会造成这个信号被捕获，先注释掉吧

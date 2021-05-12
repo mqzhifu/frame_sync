@@ -1,5 +1,5 @@
 var self = null;
-function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineWaitTime,actionMap,FPS){
+function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineWaitTime,actionMap,FPS,contentType){
     var self = this;
 
     this.status = "init";//1初始化 2等待准备 3运行中  4结束
@@ -32,7 +32,8 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.sequenceNumber = 0;
     this.randSeek = 0;
     // this.communicationContentType = "protobuf";
-    this.communicationContentType = "json";
+    // this.communicationContentType = "json";
+    this.communicationContentType = contentType;
     //入口函数，必须得先建立连接后，都有后续的所有操作
     this.create  = function(){
         console.log("this status :",self.status);
@@ -66,7 +67,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         console.log("onOpen : ws link success  ")
         this.upStatus("wsLInkSuccess");
 
-        var requestLoginObj = new proto.main.RequestLogin();
+        var requestLoginObj = new proto.myproto.RequestLogin();
         requestLoginObj.setToken(self.token) ;
         this.sendNewMsg("login",requestLoginObj);
     };
@@ -77,7 +78,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.gameOverAndClear = function(){
         this.upStatus("end")
 
-        var requestGameOver = new proto.main.RequestGameOver()
+        var requestGameOver = new proto.myproto.RequestGameOver()
         requestGameOver.setRoomId(self.roomId);
         requestGameOver.setSequenceNumber(self.sequenceNumber);
         requestGameOver.setResult("ccccccWin");
@@ -179,7 +180,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     //心跳执行函数
     this.heartbeat = function(){
         var now = Date.now();
-        var requestClientHeartbeat = new proto.main.RequestClientHeartbeat();
+        var requestClientHeartbeat = new proto.myproto.RequestClientHeartbeat();
         requestClientHeartbeat.setTime(now);
         this.sendNewMsg("clientHeartbeat",requestClientHeartbeat);
     };
@@ -214,13 +215,13 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
                 content = ccc;
                 action = self.getActionName(actionId,"server")
                 var actionLow = action.substring(0, 1).toUpperCase() + action.substring(1)
-                var className =  "proto.main.Response" + actionLow;
+                var className =  "proto.myproto.Response" + actionLow;
                 var responseProtoClass = eval(className);
                 content =  responseProtoClass.deserializeBinary(content).toObject();
-                // var responseLoginRes = proto.main.ResponseLoginRes.deserializeBinary(content).toObject();
+                // var responseLoginRes = proto.myproto.ResponseLoginRes.deserializeBinary(content).toObject();
                 console.log(pre +" actionId:"+actionId , " content:",content , " actionName:",action, " protobufClassName:",className);
                 self.router(action,content);
-                // var rs = proto.main.ResponseLoginRes.deserializeBinary(reader.result);
+                // var rs = proto.myproto.ResponseLoginRes.deserializeBinary(reader.result);
                 // console.log(rs)
             };
         }else if(self.communicationContentType == "json"){
@@ -300,7 +301,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
                 self.rPushLogicFrame(data);
             }
         }
-        var requestPlayerResumeGame = new proto.main.RequestPlayerResumeGame();
+        var requestPlayerResumeGame = new proto.myproto.RequestPlayerResumeGame();
         requestPlayerResumeGame.setRoomId(self.roomId);
         requestPlayerResumeGame.setSequenceNumber(self.sequenceNumber);
         requestPlayerResumeGame.setPlayerId(self.playerId);
@@ -318,7 +319,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             return alert("loginRes failed!!!"+logicFrame.code + " , "+logicFrame.errMsg);
         }
         var now = Date.now();
-        var requestClientPing = new proto.main.RequestClientPing();
+        var requestClientPing = new proto.myproto.RequestClientPing();
         requestClientPing.setAddTime(now);
         this.sendNewMsg("clientPing",requestClientPing);
         this.upStatus("loginSuccess");
@@ -326,7 +327,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         var playerConnInfo = logicFrame.player;
         if (playerConnInfo.roomId){
             alert("检测出，有未结束的一局游戏，开始恢复中...,先获取房间信息:rooId:"+playerConnInfo.roomId);
-            var requestGetRoom = new proto.main.RequestGetRoom();
+            var requestGetRoom = new proto.myproto.RequestGetRoom();
             requestGetRoom.setRoomId(playerConnInfo.roomId);
             requestGetRoom.setPlayerId(playerId);
             self.sendNewMsg("getRoom",requestGetRoom);
@@ -345,7 +346,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.rPing = function(logicFrame){
         var now = Date.now();
 
-        var requestClientPong = new proto.main.RequestClientPong();
+        var requestClientPong = new proto.myproto.RequestClientPong();
         requestClientPong.setClientReceiveTime(now);
         requestClientPong.setAddTime(logicFrame.addTime);
         this.sendNewMsg("clientPong",requestClientPong);
@@ -370,7 +371,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             logicFrame.playerList = logicFrame.playerListList;
         }
         self.initLocalGlobalVar(logicFrame);
-        var requestRoomHistory = new proto.main.RequestRoomHistory();
+        var requestRoomHistory = new proto.myproto.RequestRoomHistory();
         requestRoomHistory.setRoomId(self.roomId);
         requestRoomHistory.setSequenceNumberstart(0);
         requestRoomHistory.setSequenceNumberend(-1);
@@ -524,7 +525,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     };
     this.ready = function(){
         self.upStatus("ready");
-        var requestPlayerReady = new proto.main.RequestPlayerReady();
+        var requestPlayerReady = new proto.myproto.RequestPlayerReady();
         requestPlayerReady.setPlayerId(self.playerId);
         requestPlayerReady.setRoomId(self.roomId);
         self.sendNewMsg("playerReady",requestPlayerReady);
@@ -540,7 +541,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.cancelSign = function(){
         self.upStatus("cancelSign");
 
-        var requestPlayerMatchSignCancel = new proto.main.RequestPlayerMatchSignCancel();
+        var requestPlayerMatchSignCancel = new proto.myproto.RequestPlayerMatchSignCancel();
         requestPlayerMatchSignCancel.setPlayerId(self.playerId);
         self.sendNewMsg("playerMatchSignCancel",requestPlayerMatchSignCancel);
         // var msg = {"playerId" :self.playerId};
@@ -559,7 +560,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.matchSign = function(){
         self.upStatus("matchSign")
 
-        var requestPlayerMatchSign = new proto.main.RequestPlayerMatchSign();
+        var requestPlayerMatchSign = new proto.myproto.RequestPlayerMatchSign();
         requestPlayerMatchSign.setPlayerId(self.playerId);
         self.sendNewMsg("playerMatchSign",requestPlayerMatchSign);
 
@@ -647,7 +648,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         tdObj.css("background", "");
     }
     this.playerCommandPush = function (){
-        var requestPlayerOperations = new proto.main.RequestPlayerOperations();
+        var requestPlayerOperations = new proto.myproto.RequestPlayerOperations();
         requestPlayerOperations.setId(3);
         requestPlayerOperations.setRoomId(self.roomId);
         requestPlayerOperations.setSequenceNumber(self.sequenceNumber);
@@ -661,7 +662,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             // {"id":self.operationsInc,"event":"move","value":newLocation,"playerId":self.playerId}
             var operations = new Array(self.playerOperationsQueue.length)
             for(var i=0;i<self.playerOperationsQueue.length;i++){
-                var operation = new proto.main.Operation();
+                var operation = new proto.myproto.Operation();
                 operation.setId(self.playerOperationsQueue[i].id);
                 operation.setEvent(self.playerOperationsQueue[i].event);
                 operation.setValue(self.playerOperationsQueue[i].value);
@@ -676,7 +677,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
             // window.clearInterval(self.pushLogicFrameLoopFunc);
 
             var operations = new Array(1);
-            var operation = new proto.main.Operation();
+            var operation = new proto.myproto.Operation();
             operation.setId(1);
             operation.setEvent("empty");
             operation.setValue("-1");
@@ -706,7 +707,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
 
 if ("WebSocket" in window) {
-    console.log("browser has websocket lib.");
+    console.log("browser has websocket netway.");
 }else {
     // 浏览器不支持 WebSocket
     alert("您的浏览器不支持 WebSocket!");

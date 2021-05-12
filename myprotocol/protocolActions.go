@@ -1,6 +1,9 @@
-package main
+package myprotocol
 
 import (
+	"fmt"
+	"path"
+	"runtime"
 	"strings"
 	"zlib"
 )
@@ -17,25 +20,44 @@ type ActionMap struct {
 }
 
 //var actionMap  	map[string]map[int]ActionMap
-func ProtocolActionsNew()*ProtocolActions{
-	mylog.Info("New ProtocolAction instance")
+func ProtocolActionsNew()*ProtocolActions {
+	//netway.mylog.Info("New ProtocolAction instance")
 	protocolActions := new(ProtocolActions)
 	protocolActions.initProtocolActionMap()
 	return protocolActions
 }
 
 func (protocolActions *ProtocolActions)initProtocolActionMap(){
-	mylog.Info("initActionMap")
-	actionMap := make( 	map[string]map[int]ActionMap )
+	//netway.mylog.Info("initActionMap")
+	actionMap := make( 	map[string]map[int]ActionMap)
 
 	actionMap["client"] = loadingActionMapConfigFile("clientActionMap.txt")
 	actionMap["server"] = loadingActionMapConfigFile("serverActionMap.txt")
 
 	protocolActions.ActionMaps = actionMap
 }
+func getInfo(skip int) (funcName, fileName string, lineNo int ,dir string) {
+	pc, file, lineNo, ok := runtime.Caller(skip)
+	if !ok {
+		fmt.Println("runtime.Caller() failed")
+		return
+	}
+	funcName = runtime.FuncForPC(pc).Name()
+	fileName = path.Base(file) // Base函数返回路径的最后一个元素
 
-func loadingActionMapConfigFile(fileName string)map[int]ActionMap{
-	client,err := zlib.ReadLine(fileName)
+	i := strings.LastIndex(file, "/")
+	//if i < 0 {
+	//	i = strings.LastIndex(path, "\\")
+	//}
+	//if i < 0 {
+	//	return "", errors.New(`error: Can't find "/" or "\".`)
+	//}
+	dir = string(file[0 : i+1])
+	return
+}
+func loadingActionMapConfigFile(fileName string)map[int]ActionMap {
+	_, _,_,dir  := getInfo(1)
+	client,err := zlib.ReadLine(dir +"/"+fileName)
 	if err != nil{
 		zlib.ExitPrint("initActionMap ReadLine err :",err.Error())
 	}
@@ -56,7 +78,7 @@ func loadingActionMapConfigFile(fileName string)map[int]ActionMap{
 }
 
 
-func(protocolActions *ProtocolActions)getActionMap()map[string]map[int]ActionMap{
+func(protocolActions *ProtocolActions)GetActionMap()map[string]map[int]ActionMap {
 	return protocolActions.ActionMaps
 }
 
@@ -71,7 +93,7 @@ func(protocolActions *ProtocolActions)GetActionName(id int,category string)(acti
 }
 
 func  (protocolActions *ProtocolActions)GetActionId(action string,category string)(actionMapT ActionMap,empty bool){
-	mylog.Info("GetActionId ",action , " ",category)
+	//netway.mylog.Info("GetActionId ",action , " ",category)
 	am := protocolActions.ActionMaps[category]
 	for _,v:=range am{
 		if v.Action == action {

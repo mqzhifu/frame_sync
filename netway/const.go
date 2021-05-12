@@ -1,12 +1,6 @@
-package main
+package netway
 
 const (
-	ENV_LOCAL					= "local"//开发环境
-	ENV_DEV					= "dev"//开发环境
-	ENV_TEST				= "test"//测试环境
-	ENV_PRE					= "pre"//预发布环境
-	ENV_ONLINE				= "online"//线上环境
-
 
 	CLOSE_SOURCE_CLIENT = 1			//客户端断开连接
 	CLOSE_SOURCE_AUTH_FAILED = 2	//服务端验证失败
@@ -20,7 +14,6 @@ const (
 	CLOSE_SOURCE_FD_READ_ERR = 10	//首次建立连接时，read出错
 	CLOSE_SOURCE_FD_PARSE_CONTENT = 11	//首次建立连接时，解析内容时出错
 	CLOSE_SOURCE_FIRST_NO_LOGIN = 12	//
-
 
 
 	CONTENT_TYPE_JSON = 1			//内容类型 json
@@ -57,16 +50,3 @@ const (
 	LOCK_MODE_OPTIMISTIC = 2
 )
 
-func GetEnvList()[]string{
-	list := []string{ENV_LOCAL,ENV_DEV,ENV_TEST,ENV_PRE,ENV_ONLINE}
-	return list
-}
-func CheckEnvExist(env string)bool{
-	list := []string{ENV_LOCAL,ENV_DEV,ENV_TEST,ENV_PRE,ENV_ONLINE}
-	for _,v :=range list{
-		if v == env{
-			return true
-		}
-	}
-	return false
-}

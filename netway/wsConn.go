@@ -1,4 +1,4 @@
-package main
+package netway
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 
 
 type WsConnManager struct {
-	Pool map[int32]*WsConn	//ws 连接池
+	Pool map[int32]*WsConn //ws 连接池
 }
 
 type WsConn struct {
@@ -31,7 +31,7 @@ type WsConn struct {
 	//outChan 	chan []byte
 }
 
-func NewWsConnManager()*WsConnManager{
+func NewWsConnManager()*WsConnManager {
 	wsConnManager :=  new(WsConnManager)
 	//全局变量
 	wsConnManager.Pool = make(map[int32]*WsConn)
@@ -119,11 +119,11 @@ func Lcfirst(str string) string {
 
 
 func CompressContent(contentStruct interface{})(content []byte  ,err error){
-	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON{
+	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON {
 		//content,err = json.Marshal(contentStruct)
 		content, err = json.Marshal(JsonCamelCase{contentStruct})
 		//mylog.Info("CompressContent json:",string(content),err )
-	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{
+	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF {
 		//mylog.Info("contentStruct:",contentStruct)
 		//responseLoginRes := ResponseLoginRes{Code: 200}
 		//content, err = proto.Marshal(&responseLoginRes)
@@ -194,7 +194,7 @@ func   (wsConn *WsConn)Read()(content string,err error){
 
 func  (wsConn *WsConn)IOLoop(){
 	mynetWay.Option.Mylog.Info("IOLoop:")
-	mynetWay.Option.Mylog.Info("set wsConn status :",CONN_STATUS_EXECING, " make close chan")
+	mynetWay.Option.Mylog.Info("set wsConn status :", CONN_STATUS_EXECING, " make close chan")
 	wsConn.Status = CONN_STATUS_EXECING
 	wsConn.CloseChan = make(chan int)
 	ctx,cancel := context.WithCancel(mynetWay.Option.Cxt)
@@ -217,7 +217,7 @@ func  (wsConn *WsConn)ReadLoop(ctx context.Context){
 				IsUnexpectedCloseError := websocket.IsUnexpectedCloseError(err)
 				mylog.Warning("WsConnReadLoop WsConnRead err:",err,"IsUnexpectedCloseError:",IsUnexpectedCloseError)
 				if IsUnexpectedCloseError{
-					mynetWay.CloseOneConn(wsConn,CLOSE_SOURCE_CLIENT_WS_FD_GONE)
+					mynetWay.CloseOneConn(wsConn, CLOSE_SOURCE_CLIENT_WS_FD_GONE)
 					goto end
 				}else{
 					continue
@@ -268,7 +268,7 @@ func (wsConnManager *WsConnManager)checkConnPoolTimeout(ctx context.Context){
 				now := int32 (zlib.GetNowTimeSecondToInt())
 				x := v.UpTime + mynetWay.Option.ConnTimeout
 				if now  > x {
-					mynetWay.CloseOneConn(v,CLOSE_SOURCE_TIMEOUT)
+					mynetWay.CloseOneConn(v, CLOSE_SOURCE_TIMEOUT)
 				}
 			}
 			time.Sleep(time.Second * 1)

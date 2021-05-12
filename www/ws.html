@@ -114,7 +114,7 @@ S端配置信息
 
         var DomIdPreObj = getPlayerDomIdPreObj(player.id);
         DomIdPreObj.playerId = player.id;
-        var wsObj = new ws(player.id,player.token,host,hostUri,matchGroupPeople,tableMax,DomIdPreObj,offLineWaitTime,data.ActionMap,data.fps);
+        var wsObj = new ws(player.id,player.token,host,hostUri,matchGroupPeople,tableMax,DomIdPreObj,offLineWaitTime,data.ActionMap,data.fps,data.contentTypeStr);
         var html = getTemplateHtml();
         html = ReplaceTemplateHtml(html,DomIdPreObj);
         $("#"+divId).html(html);
@@ -136,13 +136,22 @@ S端配置信息
         var tableMax = data.mapSize;
         var offLineWaitTime = data.offLineWaitTime;
 
-        var html = "<tr><td>host</td><td>"+host+"</td></tr>";
+        var html = "<tr><td>hostUri</td><td>"+host + hostUri+"</td></tr>";
         // html += "<tr><td>hostUri</td><td>"+hostUri+"</td></tr>";
-        // html += "<tr><td>matchGroupPeople</td><td>"+matchGroupPeople+"</td></tr>";
+        html += "<tr><td>matchGroupPeople</td><td>"+matchGroupPeople+"</td></tr>";
         // html += "<tr><td>tableMax</td><td>"+tableMax+"</td></tr>";
         // html += "<tr><td>OffLineWaitTime</td><td>"+OffLineWaitTime+"</td></tr>";
         html += "<tr><td>FPS</td><td>"+ data.fps+"</td></tr>";
         html += "<tr><td>FPS-MS</td><td>"+ 1000 /  data.fps+"</td></tr>";
+
+
+        if (data.contentType == 1){
+            data.contentTypeStr = "json";
+        }else{
+            data.contentTypeStr = "protobuf";
+        }
+
+        html += "<tr><td>contentType</td><td>"+ data.contentTypeStr+"</td></tr>";
 
         serverConfigTable.html(html);
 

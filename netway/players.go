@@ -1,7 +1,8 @@
-package main
+package netway
 
 import (
 	"errors"
+	"frame_sync/myproto"
 	"zlib"
 )
 
@@ -21,41 +22,41 @@ type Players struct {
 //	Ip 			string 	`json:"ip"`
 //}
 
-var PlayerPool map[int32]*Player	//玩家 状态池
-func PlayersNew()*Players{
+var PlayerPool map[int32]*myproto.Player //玩家 状态池
+func PlayersNew()*Players {
 	mylog.Info("new Players instance")
 	players := new(Players)
-	PlayerPool = make(map[int32]*Player)
+	PlayerPool = make(map[int32]*myproto.Player)
 	return players
 }
-func  (players *Players)addPlayerPool(id int32)(existPlayer Player,err error){
+func  (players *Players)addPlayerPool(id int32)(existPlayer myproto.Player,err error){
 	mylog.Info("addPlayerPool :",id)
-	hasPlayer,empty  := players.getById(id)
+	hasPlayer,empty  := players.GetById(id)
 	if !empty{
 		mylog.Notice("this player id has exist pool",id)
-		if hasPlayer.Status == PLAYER_STATUS_ONLINE{
+		if hasPlayer.Status == PLAYER_STATUS_ONLINE {
 			errMsg := "hasPlayer.Status = PLAYER_STATUS_ONLINE "
 			mylog.Error(errMsg)
 			err = errors.New(errMsg)
 			return *hasPlayer,err
 		}else{
-			players.upPlayerStatus(id,PLAYER_STATUS_ONLINE)
+			players.upPlayerStatus(id, PLAYER_STATUS_ONLINE)
 			return *hasPlayer,nil
 		}
 	}else{
 		mylog.Info("new player add")
-		player := Player{
-			Id: id,
-			AddTime: int32(zlib.GetNowTimeSecondToInt()),
+		player := myproto.Player{
+			Id:       id,
+			AddTime:  int32(zlib.GetNowTimeSecondToInt()),
 			Nickname: "",
-			Status: PLAYER_STATUS_ONLINE,
+			Status:   PLAYER_STATUS_ONLINE,
 		}
 		PlayerPool[id] = &player
 		return player,nil
 	}
 	return existPlayer,nil
 }
-func  (players *Players)getById(playerId int32)(player *Player,empty bool){
+func  (players *Players)GetById(playerId int32)(player *myproto.Player,empty bool){
 	myPlayer ,ok := PlayerPool[playerId]
 	if ok {
 		return myPlayer ,false
@@ -90,7 +91,7 @@ func   (players *Players)upPlayerStatus(id int32,status int32){
 
 }
 
-func   (players *Players)upPlayerRoomId(playerId int32,roomId string){
+func   (players *Players)UpPlayerRoomId(playerId int32,roomId string){
 	player := PlayerPool[playerId]
 
 	mylog.Info("upPlayerRoomId" , " old : ",player.RoomId," new:",roomId)

@@ -1,9 +1,10 @@
-package main
+package netway
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"frame_sync/myproto"
 	"github.com/golang/protobuf/proto"
 	"regexp"
 	"strconv"
@@ -70,11 +71,11 @@ func (netWay *NetWay)parserMsgContent(content string ,out interface{})error{
 	//mylog.Debug("netWay parserMsgContent start :",content," out ",out)
 	//zlib.MyPrint("out:",out)
 	var err error
-	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON{
+	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON {
 		unTrunVarJsonContent := unTrunVarJson([]byte(content))
 		//err = json.Unmarshal([]byte(content),out)
 		err = json.Unmarshal(unTrunVarJsonContent,out)
-	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF{
+	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF {
 		aaa := out.(proto.Message)
 		err = proto.Unmarshal([]byte(content),aaa)
 	}else{
@@ -93,20 +94,20 @@ func (netWay *NetWay)parserMsgContent(content string ,out interface{})error{
 
 func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err error){
 
-	requestLogin := RequestLogin{}
-	requestClientPong :=RequestClientPong{}
-	requestClientPing := RequestClientPing{}
-	requestPlayerResumeGame := RequestPlayerResumeGame{}
+	requestLogin := myproto.RequestLogin{}
+	requestClientPong := myproto.RequestClientPong{}
+	requestClientPing := myproto.RequestClientPing{}
+	requestPlayerResumeGame := myproto.RequestPlayerResumeGame{}
 	//requestPlayerStatus := RequestPlayerStatus{}
-	requestPlayerOperations := RequestPlayerOperations{}
-	requestPlayerMatchSign := RequestPlayerMatchSign{}
-	requestPlayerMatchSignCancel := RequestPlayerMatchSignCancel{}
-	requestGameOver := RequestGameOver{}
-	requestClientHeartbeat := RequestClientHeartbeat{}
-	requestPlayerReady := RequestPlayerReady{}
-	requestRoomHistory := RequestRoomHistory{}
-	requestGetRoom := RequestGetRoom{}
-	requestPlayerOver := RequestPlayerOver{}
+	requestPlayerOperations := myproto.RequestPlayerOperations{}
+	requestPlayerMatchSign := myproto.RequestPlayerMatchSign{}
+	requestPlayerMatchSignCancel := myproto.RequestPlayerMatchSignCancel{}
+	requestGameOver := myproto.RequestGameOver{}
+	requestClientHeartbeat := myproto.RequestClientHeartbeat{}
+	requestPlayerReady := myproto.RequestPlayerReady{}
+	requestRoomHistory := myproto.RequestRoomHistory{}
+	requestGetRoom := myproto.RequestGetRoom{}
+	requestPlayerOver := myproto.RequestPlayerOver{}
 
 	//这里有个BUG，LOGIN 函数只能在第一次调用，回头加个限定
 
@@ -165,21 +166,21 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 		case "clientPing"://
 			netWay.clientPing(requestClientPing,wsConn)
 		case "playerResumeGame"://恢复未结束的游戏
-			mySync.playerResumeGame(requestPlayerResumeGame,wsConn )
+			netWay.mySync.PlayerResumeGame(requestPlayerResumeGame,wsConn )
 		case "playerOperations"://玩家推送操作指令
-			mySync.receivePlayerOperation(requestPlayerOperations,wsConn,msg.Content)
+			netWay.mySync.ReceivePlayerOperation(requestPlayerOperations,wsConn,msg.Content)
 		case "playerCancelReady"://玩家取消报名等待
-			mySync.cancelSign(requestPlayerMatchSignCancel,wsConn)
+			netWay.cancelSign(requestPlayerMatchSignCancel,wsConn)
 		case "gameOver"://游戏结束
-			mySync.gameOver(requestGameOver,wsConn)
+			netWay.mySync.GameOver(requestGameOver,wsConn)
 		case "playerReady"://玩家进入状态状态
-			mySync.playerReady(requestPlayerReady,wsConn)
+			netWay.mySync.PlayerReady(requestPlayerReady,wsConn)
 		case "roomHistory"://一局副本的，所有历史操作记录
-			mySync.RoomHistory(requestRoomHistory,wsConn)
+			netWay.mySync.RoomHistory(requestRoomHistory,wsConn)
 		case "getRoom"://
-			mySync.GetRoom(requestGetRoom,wsConn)
+			netWay.mySync.GetRoom(requestGetRoom,wsConn)
 		case "playerOver":
-			mySync.playerOver(requestPlayerOver,wsConn)
+			netWay.mySync.PlayerOver(requestPlayerOver,wsConn)
 		default:
 			mylog.Error("Router err:",msg)
 
