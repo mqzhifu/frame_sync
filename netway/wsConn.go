@@ -122,7 +122,7 @@ func CompressContent(contentStruct interface{})(content []byte  ,err error){
 	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON {
 		//content,err = json.Marshal(contentStruct)
 		content, err = json.Marshal(JsonCamelCase{contentStruct})
-		//mylog.Info("CompressContent json:",string(content),err )
+		mylog.Info("CompressContent json:",string(content),err )
 	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF {
 		//mylog.Info("contentStruct:",contentStruct)
 		//responseLoginRes := ResponseLoginRes{Code: 200}
