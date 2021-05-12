@@ -150,7 +150,7 @@ func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,wsCon
 	responseStartBattle := myproto.ResponseStartBattle{
 		SequenceNumberStart: int32(0),
 	}
-	sync.boardCastInRoom(room.Id,"startBattle",&responseStartBattle)
+	sync.boardCastFrameInRoom(room.Id,"startBattle",&responseStartBattle)
 	room.UpStatus(ROOM_STATUS_EXECING)
 	room.StartTime = int32(zlib.GetNowTimeSecondToInt())
 
@@ -396,12 +396,12 @@ func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPla
 		//此时，房间已进入暂停状态，如果直接拒掉该条消息，会导致A恢复后，发送当前帧数据是正常的
 		//而，其它玩家因为消息被拒，导致此条消息只有A发送成功，但是迟迟等不到其它玩家再未发送消息，该帧进入死锁
 		//固，这里做出改变，暂停状态下：正常玩家可以多发一帧，等待掉线玩家重新上线
-		if int(logicFrame.SequenceNumber) == room.SequenceNumber - 1{
+		if int(logicFrame.SequenceNumber) == room.SequenceNumber{
 
 		}else{
 			c_n := strconv.Itoa(int(logicFrame.SequenceNumber))
 			r_n := strconv.Itoa(int( room.SequenceNumber))
-			msg := "room status is ROOM_STATUS_PAUSE ,on receive num - 1  c_n"+c_n + " ,r_n : "+r_n
+			msg := "room status is ROOM_STATUS_PAUSE ,on receive num   c_n"+c_n + " ,r_n : "+r_n
 			return errors.New( msg )
 		}
 
@@ -547,7 +547,7 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,contentStruc
 	if sync.Options.LockMode == LOCK_MODE_PESSIMISTIC {
 		if syncRoomPoolElement.PlayersAckStatus == PLAYERS_ACK_STATUS_WAIT {
 			mylog.Error("syncRoomPoolElement PlayersAckStatus = ", PLAYERS_ACK_STATUS_WAIT,syncRoomPoolElement.PlayersAckList)
-			zlib.ExitPrint(11111)
+			return
 		}
 	}
 	PlayersAckList := make(map[int32]int32)

@@ -495,6 +495,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
         self.upOptBntHref(readySignBntId,hrefBody,self.ready);
 
+
     };
     this.rOver = function(ev){
         window.clearInterval(self.pushLogicFrameLoopFunc);
