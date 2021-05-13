@@ -600,7 +600,7 @@ func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayer
 		SequenceNumber:requestPlayerResumeGame.SequenceNumber,
 		RoomId:requestPlayerResumeGame.RoomId,
 	}
-	sync.boardCastFrameInRoom(room.Id,"otherPlayerResumeGame",&responseOtherPlayerResumeGame)
+	sync.boardCastInRoom(room.Id,"otherPlayerResumeGame",&responseOtherPlayerResumeGame)
 	//mynetWay.SendMsgCompressByUid(wsConn.PlayerId,)
 
 }
