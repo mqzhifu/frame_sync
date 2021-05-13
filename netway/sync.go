@@ -176,8 +176,6 @@ func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,wsCon
 			SequenceNumber :    int32(room.SequenceNumber),
 			Operations 		: operations,
 		}
-		//logicFrameMsgJson ,_ := json.Marshal(logicFrameMsg)
-		//mySync.boardCastInRoom(room.Id,"pushLogicFrame",string(logicFrameMsgJson))
 		sync.boardCastInRoom(room.Id,"pushLogicFrame",&logicFrameMsg)
 	}
 	room.ReadyCloseChan <- 1
@@ -232,9 +230,6 @@ func  (sync *Sync)Start(roomId string){
 		mySyncPlayerRoom[v.Id] = roomId
 	}
 
-	//zlib.MyPrint("old:",responseClientInitRoomData)
-	//jsonStrByte,_ := json.Marshal(responseClientInitRoomData)
-	//sync.boardCastInRoom(roomId,"enterBattle",string(jsonStrByte))
 	sync.boardCastInRoom(roomId,"enterBattle",&responseClientInitRoomData)
 	room.CloseChan = make(chan int)
 	room.ReadyCloseChan = make(chan int)
@@ -348,14 +343,8 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 
 		i++
 	}
-	//if testLock == 1{
-	//	zlib.MyPrint(logicFrame)
-	//}
 	mylog.Info("operations:",operations)
 	logicFrame.Operations = operations
-	//zlib.ExitPrint(logicFrame)
-	//logicFrameStr, _ := json.Marshal(logicFrame)
-	//sync.boardCastFrameInRoom(room.Id, "pushLogicFrame", string(logicFrameStr))
 	sync.boardCastFrameInRoom(room.Id, "pushLogicFrame",&logicFrame)
 	return fpsTime
 }
@@ -371,8 +360,8 @@ func  (sync *Sync)ReceivePlayerOperation(logicFrame myproto.RequestPlayerOperati
 		mylog.Error("receivePlayerOperation check error:",err.Error())
 		return
 	}
-	if len(logicFrame.Operations) <= 0{
-		mylog.Error("len(logicFrame.Operations) <= 0")
+	if len(logicFrame.Operations) < 0{
+		mylog.Error("len(logicFrame.Operations) < 0")
 		return
 	}
 	//roomSyncMetrics := roomSyncMetricsPool[logicFrame.RoomId]
@@ -458,7 +447,6 @@ func  (sync *Sync)GameOver(requestGameOver myproto.RequestGameOver,wsConn *WsCon
 	sync.boardCastInRoom(requestGameOver.RoomId,"gameOver",&responseGameOver)
 
 	sync.roomEnd(requestGameOver.RoomId,1)
-	//jsonStr ,_ := json.Marshal(requestGameOver)
 }
 func  (sync *Sync)PlayerOver(requestGameOver myproto.RequestPlayerOver,wsConn *WsConn){
 	roomId := mySyncPlayerRoom[requestGameOver.PlayerId]
@@ -514,7 +502,6 @@ func (sync *Sync)Close(wsConn *WsConn){
 				responseOtherPlayerOffline := myproto.ResponseOtherPlayerOffline{
 					PlayerId: wsConn.PlayerId,
 				}
-				//jsonStr,_ := json.Marshal(responseOtherPlayerOffline)
 				sync.boardCastInRoom(roomId,"otherPlayerOffline",&responseOtherPlayerOffline)
 			}
 		}
@@ -534,7 +521,8 @@ func  (sync *Sync)boardCastInRoom(roomId string,action string ,contentStruct int
 		//mynetWay.SendMsgByUid(player.Id,action,content)
 		mynetWay.SendMsgCompressByUid(player.Id,action,contentStruct)
 	}
-	content ,_:= json.Marshal(contentStruct)
+	//content ,_:= json.Marshal(contentStruct)
+	content ,_ := json.Marshal(JsonCamelCase{contentStruct})
 	sync.addOneRoomHistory(room,action,string(content))
 }
 //给一个副本里的所有玩家广播数据，且该数据必须得有C端ACK
@@ -565,7 +553,8 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,contentStruc
 		syncRoomPoolElement.PlayersAckList = PlayersAckList
 		sync.upSyncRoomPoolElementPlayersAckStatus(roomId, PLAYERS_ACK_STATUS_WAIT)
 	}
-	content,_ := json.Marshal(contentStruct)
+	//content,_ := json.Marshal(contentStruct)
+	content ,_ := json.Marshal(JsonCamelCase{contentStruct})
 	sync.addOneRoomHistory(syncRoomPoolElement,action,string(content))
 
 	//if testLock == 1{
@@ -587,16 +576,11 @@ func  (sync *Sync)RoomHistory(requestRoomHistory myproto.RequestRoomHistory,wsCo
 	room,_ := sync.getPoolElementById(roomId)
 	responsePushRoomHistory := myproto.ResponsePushRoomHistory{}
 	responsePushRoomHistory.List = room.LogicFrameHistory
-	//responseRoomHistory := room.LogicFrameHistory
-	//str,_ := json.Marshal(responseRoomHistory)
 	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"pushRoomHistory",&responsePushRoomHistory)
+	zlib.ExitPrint(332323)
 }
 //玩家掉线了，重新连接后，恢复游戏了~这个时候，要通知另外的玩家
 func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayerResumeGame,wsConn *WsConn){
-	//roomId := requestPlayerResumeGame.RoomId
-	//str,_ := json.Marshal(requestPlayerResumeGame)
-	//mynetWay.SendMsgByUid(wsConn.PlayerId,"otherPlayerResumeGame",string(str))
-	//sync.boardCastInRoom(roomId,"otherPlayerResumeGame",string(str))
 	room ,empty := sync.getPoolElementById(requestPlayerResumeGame.RoomId)
 	if empty{
 		mylog.Error("playerResumeGame get room empty")
