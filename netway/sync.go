@@ -577,7 +577,6 @@ func  (sync *Sync)RoomHistory(requestRoomHistory myproto.RequestRoomHistory,wsCo
 	responsePushRoomHistory := myproto.ResponsePushRoomHistory{}
 	responsePushRoomHistory.List = room.LogicFrameHistory
 	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"pushRoomHistory",&responsePushRoomHistory)
-	zlib.ExitPrint(332323)
 }
 //玩家掉线了，重新连接后，恢复游戏了~这个时候，要通知另外的玩家
 func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayerResumeGame,wsConn *WsConn){
@@ -598,7 +597,8 @@ func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayer
 		SequenceNumber:requestPlayerResumeGame.SequenceNumber,
 		RoomId:requestPlayerResumeGame.RoomId,
 	}
-	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"otherPlayerResumeGame",&responseOtherPlayerResumeGame)
+	sync.boardCastFrameInRoom(room.Id,"otherPlayerResumeGame",&responseOtherPlayerResumeGame)
+	//mynetWay.SendMsgCompressByUid(wsConn.PlayerId,)
 
 }
 //C端获取一个房间的信息
