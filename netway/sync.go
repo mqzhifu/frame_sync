@@ -386,7 +386,9 @@ func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPla
 		//而，其它玩家因为消息被拒，导致此条消息只有A发送成功，但是迟迟等不到其它玩家再未发送消息，该帧进入死锁
 		//固，这里做出改变，暂停状态下：正常玩家可以多发一帧，等待掉线玩家重新上线
 		if int(logicFrame.SequenceNumber) == room.SequenceNumber{
-
+			//只有第一帧才会出现这种情况
+				msg := "logicFrame.SequenceNumber  == room.SequenceNumber"
+				mylog.Error(msg)
 		}else{
 			c_n := strconv.Itoa(int(logicFrame.SequenceNumber))
 			r_n := strconv.Itoa(int( room.SequenceNumber))
@@ -540,13 +542,14 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,contentStruc
 	}
 	PlayersAckList := make(map[int32]int32)
 	for _,player:= range syncRoomPoolElement.PlayerList {
+		PlayersAckList[player.Id] = 0
 		if player.Status == PLAYER_STATUS_OFFLINE {
 			mylog.Error("player offline")
 			continue
 		}
 		//mynetWay.SendMsgByUid(player.Id,action,content)
 		mynetWay.SendMsgCompressByUid(player.Id,action,contentStruct)
-		PlayersAckList[player.Id] = 0
+
 	}
 
 	if sync.Options.LockMode == LOCK_MODE_PESSIMISTIC {
