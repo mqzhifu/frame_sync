@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>roomlist</title>
+</head>
+
+<script src="jquery.min.js" type="text/javascript"></script>
+
+<body>
+
+
+<div id="sockFDDom">
+
+</div>
+
+roomInfo list<br/>
+status:1 初始化 2 游戏中 3 已结束 4 等待玩家准备 5 暂停<br/>
+<div id="roomDom">
+
+</div>
+<br/>
+wait...
+<div id="">
+
+</div>
+
+<script>
+
+    function isUndefined(value){
+        if (typeof(value) == "undefined") {
+            return true;
+        }
+        return false;
+    }
+
+    function GetQueryString(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null)
+            return unescape(r[2]);
+        return "";
+    }
+
+
+    function init(){
+        var serverHostUri = "/www/getRoomOne";
+        var roomId = GetQueryString("id");
+        if (roomId == "" || isUndefined(roomId) || roomId == null){
+            return alert("id is null");
+        }
+        $.ajax({
+            // data: {username:$("#username").val(), content:$("#content").val()},
+            // dataType: "json",
+            type: "GET",
+            // url: "http://192.168.192.91:2222/www/getServer",
+            // url: "http://127.0.0.1:2222/www/getServer",
+            url:serverHostUri + "?id="+roomId,
+            success: function(data){
+                initData(data);
+            }
+        });
+    }
+
+
+    function initData(data){
+        var roomHtml = initRoom(data);
+        $("#roomDom").html(roomHtml);
+        // var serverHtml = initActionMap(data.ActionMap.server,data.JsonFormat)
+        // $("#server").html(serverHtml);
+    }
+
+    function initRoom(data){
+        if (JSON.stringify(data) == "{}" || data.length <= 0){
+            return "暂无";
+        }
+        var html = "<table border='1'>";
+        var roomInfo = data;
+        var historyList = roomInfo.logicFrameHistory;
+
+        html += "<table>";
+        for(let key2  in roomInfo){
+            if (key2 == "logicFrameHistory"){
+                continue;
+            }
+            if (key2 == "playerList"){
+                html += "<tr><td>"+key2+"</td><td><table>" ;
+                for(let inc  in roomInfo[key2]){
+                    html += "<tr><td>pid:"+roomInfo [key2][inc]['id']+"</td></tr>";
+                }
+                html += "</table></td></tr>";
+            }else{
+
+                if(key2 == "addTime" || key2 == "timeout"){
+                    var unixTimestamp = new Date(roomInfo[key2]*1000);
+                    var commonTime = unixTimestamp.toLocaleString()
+                    html += "<tr><td>"+key2+"</td><td>"+commonTime+"</td></tr>";
+                }else{
+                    html += "<tr><td>"+key2+"</td><td>"+roomInfo[key2]+"</td></tr>";
+                }
+            }
+        }
+        html += "</table>";
+
+        html += "<table>";
+        for(var i=0;i<historyList.length;i++){
+            html += "<tr><td>"+historyList[i].action+"</td><td>"+historyList[i].content+"</td><table>" ;
+        }
+        html += "</table>";
+        return html;
+    }
+    init();
+
+</script>
+</body>
+</html>

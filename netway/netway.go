@@ -70,7 +70,7 @@ var mynetWay	*NetWay
 //var mySync 		*Sync
 var myMatch		*Match
 var wsConnManager *WsConnManager
-var myMetrics *zlib.Metrics
+var myMetrics *Metrics
 var mylog *zlib.Log
 func NewNetWay(option NetWayOption)*NetWay {
 	option.Mylog.Info("New NetWay instance :")
@@ -98,7 +98,7 @@ func NewNetWay(option NetWayOption)*NetWay {
 	netWay.Players = PlayersNew()
 	netWay.ProtocolActions = myprotocol.ProtocolActionsNew()
 
-	myMetrics = zlib.NewMetrics()
+	myMetrics = MetricsNew()
 
 	mynetWay = netWay
 	return netWay
@@ -110,15 +110,16 @@ func (netWay *NetWay)Startup(){
 	netWay.MyCtx = startupCtx
 	netWay.MyCtxCancel = cancel
 
-
 	netWay.MatchSuccessChan = make(chan *Room)
 	//开启匹配服务
 	go myMatch.matchingPlayerCreateRoom  (startupCtx,netWay.MatchSuccessChan)
 	//监听超时的WS连接
 	go wsConnManager.checkConnPoolTimeout(startupCtx)
+	//接收<匹配成功>的房间信息，并分发
+	go netWay.recviceMatchSuccess(startupCtx)
 	//清理，房间到期后，未回收的情况
 	//go mySync.checkRoomTimeoutLoop(startupCtx)
-	go netWay.recviceMatchSuccess(startupCtx)
+	go myMetrics.start(startupCtx)
 
 	netWay.startHttpServer()
 }
@@ -194,19 +195,9 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 		Player: &playerConnInfo,
 	}
 	netWay.SendMsgCompressByUid(jwtData.Payload.Uid,"loginRes",&loginRes)
+	myMetrics.input <- MetricsChanMsg{Key: "total.FDNum",Opt: 2}
 	//初始化即登陆成功的响应均完成后，开始该连接的 读取协程
 	go NewWsConn.IOLoop()
-
-
-	//myMetrics.CreateOneNode("input_num")
-	//myMetrics.CreateOneNode("output_num")
-	//
-	//myMetrics.CreateOneNode("input_size")
-	//myMetrics.CreateOneNode("output_size")
-	//
-	//myMetrics.CreateOneNode("input_err_num")
-	//myMetrics.CreateOneNode("output_err_num")
-
 
 	//netWay.pintRTT(jwtData.Payload.Uid)
 
@@ -458,6 +449,7 @@ func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 	//处理掉-已报名的玩家
 	myMatch.delOnePlayer(wsConn.PlayerId)
 	//mySleepSecond(2,"CloseOneConn")
+	myMetrics.input <- MetricsChanMsg{Key: "total.FDNum",Opt: 4}
 }
 //退出
 func  (netWay *NetWay)Quit() {
@@ -475,3 +467,32 @@ func  (netWay *NetWay)Quit() {
 	}
 	netWay.Option.Mylog.Warning("quit finish")
 }
+//func (sync *Sync)checkRoomTimeoutLoop(ctx context.Context){
+//	for{
+//		select {
+//		case <- ctx.Done():
+//			mylog.Warning("checkRoomTimeoutLoop done.")
+//			return
+//		default:
+//			sync.checkRoomTimeout()
+//			time.Sleep(1 * time.Second)
+//		}
+//	}
+//}
+//func (sync *Sync)checkRoomTimeout(){
+//	roomLen := len(mySyncRoomPool)
+//	if roomLen <= 0{
+//		return
+//	}
+//
+//	now := int32( zlib.GetNowTimeSecondToInt())
+//	for _,v:=range mySyncRoomPool{
+//		if v.Status != ROOM_STATUS_EXECING{
+//			continue
+//		}
+//
+//		if now > v.Timeout{
+//			sync.roomEnd(v.Id)
+//		}
+//	}
+//}

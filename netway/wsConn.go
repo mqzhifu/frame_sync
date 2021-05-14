@@ -54,9 +54,7 @@ func (wsConnManager *WsConnManager)CreateOneWsConn(conn *websocket.Conn)(myWsCon
 	myWsConn.UpTime 	= now
 	myWsConn.Status  	= CONN_STATUS_WAITING
 	myWsConn.MsgInChan  = make(chan Message,5000)
-	//myWsConn.inChan =  make(chan []byte, 1000)
 	//myWsConn.outChan=  make(chan []byte,1000)
-	//ConnPollNoAuth[ConnPollNoAuthLen] = myWsConn
 
 	mylog.Info("reg wsConn callback CloseHandler")
 	conn.SetCloseHandler(myWsConn.CloseHandler)
@@ -120,36 +118,19 @@ func Lcfirst(str string) string {
 
 func CompressContent(contentStruct interface{})(content []byte  ,err error){
 	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON {
-		//content,err = json.Marshal(contentStruct)
 		content, err = json.Marshal(JsonCamelCase{contentStruct})
 		mylog.Info("CompressContent json:",string(content),err )
 	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF {
-		//mylog.Info("contentStruct:",contentStruct)
-		//responseLoginRes := ResponseLoginRes{Code: 200}
-		//content, err = proto.Marshal(&responseLoginRes)
-
 		contentStruct := contentStruct.(proto.Message)
 		content, err = proto.Marshal(contentStruct)
-		//zlib.MyPrint(content)
-		//mylog.Info("proto.Marshal:",content,err)
-		//zlib.ExitPrint(3333)
 	}else{
 		err = errors.New(" switch err")
 	}
 	if err != nil{
 		mylog.Error("CompressContent err :",err.Error())
 	}
-	//zlib.ExitPrint(content)
 	return content,err
 }
-
-//func assertionsProtobufClass(class interface{},&out){
-//	aClass ,ok := class.(RequestLogin)
-//	if ok {
-//
-//	}
-//}
-
 //发送一条消息，此方法是给:UID还未注册到池里的情况 ，主要是首次登陆验证出错 的时候
 func   (wsConn *WsConn)SendMsg(contentStruct interface{}){
 	contentByte ,_ := CompressContent(contentStruct)
@@ -157,6 +138,9 @@ func   (wsConn *WsConn)SendMsg(contentStruct interface{}){
 }
 
 func   (wsConn *WsConn)Write(content []byte){
+	myMetrics.input <- MetricsChanMsg{Key: "total.output_num",Opt: 2}
+	myMetrics.input <- MetricsChanMsg{Key: "total.output_size",Opt: 1,Value: len(content)}
+
 	wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
 	//go NewWsConn.outChan
 }
@@ -180,12 +164,12 @@ func   (wsConn *WsConn)Read()(content string,err error){
 	//wsConn.Conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(mynetWay.Option.IOTimeout)))
 	messageType , dataByte  , err  := wsConn.Conn.ReadMessage()
 	if err != nil{
-		myMetrics.IncNode("input_err_num")
+		myMetrics.input <- MetricsChanMsg{Key: "total.input_err_num",Opt: 2}
 		mynetWay.Option.Mylog.Error("wsConn.Conn.ReadMessage err: ",err.Error())
 		return content,err
 	}
-	//myMetrics.IncNode("input_num")
-	//myMetrics.PlusNode("input_size",len(dataByte))
+	myMetrics.input <- MetricsChanMsg{Key: "total.input_num",Opt: 2}
+	myMetrics.input <- MetricsChanMsg{Key: "total.input_size",Opt: 1,Value: len(dataByte)}
 
 	mylog.Debug("WsConn.ReadMessage messageType:",messageType , " len :",len(dataByte) , " data:" ,string(dataByte))
 	content = string(dataByte)

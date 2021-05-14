@@ -37,40 +37,6 @@
         $("#list").html(html)
     }
 
-    function initRoom(data){
-        if (JSON.stringify(data) == "{}" || data.length <= 0){
-            return "暂无";
-        }
-        var html = "<table border='1'>";
-        for(let key1  in data){
-            html += "<tr><td><table>";
-            for(let key2  in data[key1]){
-                if (key2 == "playerList"){
-                    html += "<tr><td>"+key2+"</td><td><table>" ;
-                    for(let inc  in data[key1][key2]){
-                        html += "<tr><td>pid:"+data[key1][key2][inc]['id']+"</td></tr>";
-                    }
-                    html += "</table></td></tr>";
-                }else{
-
-                    if(key2 == "addTime" || key2 == "timeout"){
-                        var unixTimestamp = new Date(data[key1][key2]*1000);
-                        var commonTime = unixTimestamp.toLocaleString()
-                        html += "<tr><td>"+key2+"</td><td>"+commonTime+"</td></tr>";
-                    }else{
-                        html += "<tr><td>"+key2+"</td><td>"+data[key1][key2]+"</td></tr>";
-                    }
-
-                }
-
-            }
-            html += "</table></td></tr>";
-            // html += "<tr><td>"+data[key].Id+"</td><td>"+data[key].Action+"</td><td>"+data[key].Desc+"</td><td>"+JsonFormat[key]+"</td></tr>"
-        }
-        html += "</table>";
-        return html;
-    }
-
 </script>
 </body>
 </html>

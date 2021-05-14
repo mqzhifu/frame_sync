@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"zlib"
 )
 
 type MyServer struct {
@@ -41,6 +42,15 @@ type MyMetrics struct {
 	InputErrNum int `json:"inputErrNum"`
 }
 var RoomList	map[string]Room
+func uriTurnPath (uri string)string{
+	n := strings.Index(uri,"?")
+	if  n ==  - 1{
+		return uri
+	}
+	uriByte := []byte(uri)
+	path := uriByte[0:n]
+	return string(path)
+}
 func  wwwHandler(w http.ResponseWriter, r *http.Request){
 	//parameter := r.URL.Query()//GET 方式URL 中的参数 转 结构体
 	uri := r.URL.RequestURI()
@@ -49,7 +59,8 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		ResponseStatusCode(w,500,"RequestURI is null or uir is :  '/'")
 		return
 	}
-
+	uri = uriTurnPath(uri)
+	query := r.URL.Query()
 	var jsonStr []byte
 	//var err error
 	if uri == "/www/getServer"{
@@ -82,20 +93,21 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		jsonStr,_ = json.Marshal(&ApiList)
 
 	}else if uri == "/www/getMetrics"{
-
-		//mylog.Debug(roomList)
-		myMetrics := MyMetrics{
-			Rooms :      len(MySyncRoomPool),
-			Players:     len(PlayerPool),
-			Conns:       len(wsConnManager.Pool),
-			InputNum:    myMetrics.GetOneNode("input_num"),
-			InputSize:   myMetrics.GetOneNode("input_size"),
-			OutputNum:   myMetrics.GetOneNode("output_num"),
-			OutputSize:  myMetrics.GetOneNode("output_size"),
-			InputErrNum: myMetrics.GetOneNode("input_err_num"),
-
-		}
-		jsonStr,_ = json.Marshal(&myMetrics)
+		//myMetrics := MyMetrics{
+		//	Rooms :      len(MySyncRoomPool),
+		//	Players:     len(PlayerPool),
+		//	Conns:       len(wsConnManager.Pool),
+		//	InputNum:    myMetrics.GetOneNode("input_num"),
+		//	InputSize:   myMetrics.GetOneNode("input_size"),
+		//	OutputNum:   myMetrics.GetOneNode("output_num"),
+		//	OutputSize:  myMetrics.GetOneNode("output_size"),
+		//	InputErrNum: myMetrics.GetOneNode("input_err_num"),
+		//
+		//}
+		//jsonStr,_ = json.Marshal(&myMetrics)
+		pool:= myMetrics.Pool
+		jsonStr,_ = json.Marshal(&pool)
+		zlib.MyPrint(string(jsonStr))
 	}else if uri == "/www/getRoomList"{
 		type RoomList struct {
 			Rooms map[string]Room              `json:"rooms"`
@@ -125,6 +137,20 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 	} else if uri == "/www/actionMap"{
 		info := mynetWay.ProtocolActions.GetActionMap()
 		jsonStr,_ = json.Marshal(&info)
+	}else if uri == "/www/getRoomOne"{
+		roomId := query.Get("id")
+		room := MySyncRoomPool[roomId]
+		//history := room.LogicFrameHistory
+		//type RoomOne struct {
+		//	Info Room 	`json:"info"`
+		//	HistoryList []*myproto.ResponseRoomHistory `json:"historyList"`
+		//}
+		//roonOne := RoomOne{}
+		//roonOne.Info = *room
+		//roonOne.HistoryList = history
+		//zlib.MyPrint(roonOne)
+		jsonStr,_ = json.Marshal(&room)
+		//zlib.ExitPrint(jsonStr)
 	} else if uri == "/www/testCreateJwtToken"{
 		//info := mynetWay.testCreateJwtToken()
 		//jsonStr,_ = json.Marshal(&info)
@@ -179,6 +205,7 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string)error{
 		uri == "/www/sync_frame_client_server.jpg" ||
 		uri == "/www/index.html" ||
 		uri == "/www/config.html" ||
+		uri == "/www/roomDetail.html" ||
 		uri == "/www/apilist.html"{ //静态文件
 
 		fileContent, err := getStaticFileContent(uri)

@@ -75,13 +75,13 @@ wait...
                 }
 
             }
-            html += "</table></td></tr>";
-
-            html += "<tr><td><table>";
-            for(let key0  in metrics[roomId]){
-                html += "<tr><td>"+key0+"</td><td>"+metrics[roomId][key0]+"</td></tr>";
-            }
-            html += "</table></td></tr>";
+            html += "</table></td><td><a target='_blank' href='/www/roomDetail.html?id="+roomId+"'>详情</a>  </td></tr>";
+            //
+            // html += "<tr><td><table>";
+            // for(let key0  in metrics[roomId]){
+            //     html += "<tr><td>"+key0+"</td><td>"+metrics[roomId][key0]+"</td></tr>";
+            // }
+            // html += "</table></td></tr>";
             // html += "<tr><td>"+data[key].Id+"</td><td>"+data[key].Action+"</td><td>"+data[key].Desc+"</td><td>"+JsonFormat[key]+"</td></tr>"
         }
         html += "</table>";

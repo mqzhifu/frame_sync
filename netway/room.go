@@ -9,23 +9,25 @@ import (
 )
 
 type Room struct {
-	Id					string                        `json:"id"`
-	AddTime 			int32                            `json:"addTime"`
-	Timeout 			int32                            `json:"timeout"`
-	StartTime 			int32                          `json:"startTime"`
-	EndTime 			int32                            `json:"endTime"`
+	Id					string                        	`json:"id"`
+	AddTime 			int32                        	`json:"addTime"`
+	Timeout 			int32                           `json:"timeout"`
+	StartTime 			int32                          	`json:"startTime"`
+	EndTime 			int32                           `json:"endTime"`
 	ReadyTimeout 		int32                           `json:"readyTimeout"`
-	Status 				int32                         `json:"status"`
-	PlayerList			[]*myproto.Player             `json:"playerList"`
-	SequenceNumber		int                           `json:"sequenceNumber"`
-	PlayersAckList		map[int32]int32               `json:"playersAckList"`
+	Status 				int32                         	`json:"status"`
+	PlayerList			[]*myproto.Player             	`json:"playerList"`
+	SequenceNumber		int                           	`json:"sequenceNumber"`
+	PlayersAckList		map[int32]int32               	`json:"playersAckList"`
 	PlayersAckStatus	int                             `json:"playersAckStatus"`
 	PlayersReadyList	map[int32]int32                 `json:"playersReadyList"`
 	RandSeek			int32                           `json:"randSeek"`
-	PlayersOperationQueue 		*list.List             `json:"-"`
-	CloseChan 			chan int                       `json:"-"`
-	ReadyCloseChan 		chan int                      `json:"-"`
-	LogicFrameHistory 	[]*myproto.ResponseRoomHistory `json:"logicFrameHistory"`
+	//接收玩家操作指令-集合
+	PlayersOperationQueue 		*list.List             	`json:"-"`
+	CloseChan 			chan int                       	`json:"-"`
+	ReadyCloseChan 		chan int                      	`json:"-"`
+	//本局游戏，历史记录，玩家的所有操作
+	LogicFrameHistory 	[]*myproto.ResponseRoomHistory 	`json:"logicFrameHistory"`
 }
 
 func NewRoom()*Room {
@@ -49,6 +51,8 @@ func NewRoom()*Room {
 	//	Status: SYNC_ELEMENT_STATUS_WAIT,
 	//	Room: room,
 	//}
+
+	myMetrics.input <- MetricsChanMsg{Key: "total.RoomNum",Opt: 2}
 
 	return room
 }

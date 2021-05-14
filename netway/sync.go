@@ -12,32 +12,6 @@ import (
 type Sync struct {
 	Options Options
 }
-//type LogicFrameHistory struct {
-//	Id 		int
-//	Action 	string
-//	Content string
-//}
-//逻辑帧
-//type LogicFrame struct {
-//	Id 				int 		`json:"id"`
-//	RoomId 			string		`json:"roomId"`
-//	SequenceNumber 	int			`json:"sequenceNumber"`
-//	Operations 		[]Operation	`json:"operations"`
-//}
-//玩家操作指令集
-//type Operation struct {
-//	Id 			int 	`json:"id"`
-//	Event 		string	`json:"event"`
-//	Value 		string	`json:"value"`
-//	PlayerId 	int32		`json:"playerId"`
-//}
-type RoomSyncMetrics struct{
-	InputNum	int `json:"inputNum"`
-	InputSize	int `json:"inputSize"`
-	OutputNum	int `json:"outputNum"`
-	OutputSize	int `json:"outputSize"`
-
-}
 
 type Options struct {
 	FPS 				int32 		`json:"fps"`			//frame pre second
@@ -46,15 +20,17 @@ type Options struct {
 	Log *zlib.Log
 }
 
-var testLock int
+var debugBreakPoint int
 //集合 ：每个副本
 var MySyncRoomPool map[string]*Room
 //索引表，PlayerId=>RoomId
 var mySyncPlayerRoom map[int32]string
+//同步 - 逻辑中的自增ID - 默认值
 var logicFrameMsgDefaultId int32
+//同步 - 逻辑中 - 操作帧的 自增ID - 默认值
 var operationDefaultId int32
 var RoomSyncMetricsPool map[string]RoomSyncMetrics
-//var mylog *zlib.Log
+
 func NewSync(options Options)*Sync {
 	mylog = options.Log
 	mylog.Info("NewSync instance")
@@ -63,45 +39,15 @@ func NewSync(options Options)*Sync {
 	sync := new(Sync)
 	sync.Options = options
 
-
+	debugBreakPoint = 0
 	logicFrameMsgDefaultId = 16
 	operationDefaultId = 32
-
+	//统计
 	RoomSyncMetricsPool = make(map[string]RoomSyncMetrics)
-
-	testLock = 0
 
 	return sync
 }
-//func (sync *Sync)checkRoomTimeoutLoop(ctx context.Context){
-//	for{
-//		select {
-//		case <- ctx.Done():
-//			mylog.Warning("checkRoomTimeoutLoop done.")
-//			return
-//		default:
-//			sync.checkRoomTimeout()
-//			time.Sleep(1 * time.Second)
-//		}
-//	}
-//}
-//func (sync *Sync)checkRoomTimeout(){
-//	roomLen := len(mySyncRoomPool)
-//	if roomLen <= 0{
-//		return
-//	}
-//
-//	now := int32( zlib.GetNowTimeSecondToInt())
-//	for _,v:=range mySyncRoomPool{
-//		if v.Status != ROOM_STATUS_EXECING{
-//			continue
-//		}
-//
-//		if now > v.Timeout{
-//			sync.roomEnd(v.Id)
-//		}
-//	}
-//}
+
 
 //给集合添加一个新的 游戏副本
 func (sync *Sync) AddPoolElement(room 	*Room){
@@ -111,16 +57,6 @@ func (sync *Sync) AddPoolElement(room 	*Room){
 		mylog.Error("mySyncRoomPool has exist : ",room.Id)
 		return
 	}
-	//syncRoomPoolElement := SyncRoomPoolElement{
-	//	Status: SYNC_ELEMENT_STATUS_WAIT,
-	//	Room: room,
-	//	SequenceNumber: 0,
-	//	PlayersAckList: make(map[int]int),
-	//	PlayersAckStatus:PLAYERS_ACK_STATUS_INIT,
-	//	AddTime: zlib.GetNowTimeSecondToInt(),
-	//	RandSeek: zlib.GetRandIntNum(100),
-	//
-	//}
 	MySyncRoomPool[room.Id] = room
 }
 //进入战后，场景渲染完后，进入准确状态
@@ -183,10 +119,12 @@ func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,wsCon
 	go sync.logicFrameLoop(room)
 
 }
+//根据playerId 反查 roomId
 func  (sync *Sync)GetMySyncPlayerRoomById(playerId int32)string{
 	roomId,_ :=  mySyncPlayerRoom[playerId]
 	return roomId
 }
+//检查 所有玩家是否 都已准确，超时了
 func  (sync *Sync)checkReadyTimeout(room *Room){
 	for{
 		select {
@@ -209,7 +147,7 @@ func  (sync *Sync)checkReadyTimeout(room *Room){
 end:
 	mylog.Warning("checkReadyTimeout loop routine close")
 }
-//创建一个新的房间
+//一局新游戏，均已准备，进入开始状态
 func  (sync *Sync)Start(roomId string){
 	mylog.Warning("start a new game:")
 
@@ -235,7 +173,7 @@ func  (sync *Sync)Start(roomId string){
 	room.ReadyCloseChan = make(chan int)
 	go sync.checkReadyTimeout(room)
 }
-//有一个房间内，搜索一个用户
+//在一个房间内，搜索一个用户
 func (sync *Sync)getPlayerByIdInRoom(playerId int32 ,room *Room,)(myplayer *myproto.Player,empty bool){
 	for _,player:= range room.PlayerList{
 		if player.Id == playerId{
@@ -244,7 +182,7 @@ func (sync *Sync)getPlayerByIdInRoom(playerId int32 ,room *Room,)(myplayer *mypr
 	}
 	return myplayer,true
 }
-
+//根据ROOID  有池子里找到该roomInfo
 func (sync *Sync) getPoolElementById(roomId string)(SyncRoomPoolElement *Room,empty bool){
 	v,exist := MySyncRoomPool[roomId]
 	if !exist{
@@ -253,7 +191,7 @@ func (sync *Sync) getPoolElementById(roomId string)(SyncRoomPoolElement *Room,em
 	}
 	return v,false
 }
-
+//同步 玩家 操作 定时器
 func  (sync *Sync)logicFrameLoop(room *Room){
 	if sync.Options.FPS > 1000 {
 		zlib.ExitPrint("fps > 1000 ms")
@@ -280,7 +218,7 @@ func  (sync *Sync)logicFrameLoop(room *Room){
 end:
 	mylog.Warning("pushLogicFrame loop routine close")
 }
-
+//同上
 func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 	queue := room.PlayersOperationQueue
 	end := queue.Len()
@@ -330,7 +268,7 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 		for j := 0; j < len(elementOperations); j++ {
 			//if elementOperations[j].Event != "empty"{
 			//	mylog.Debug("elementOperations j :",elementOperations[j])
-			//	testLock = 1
+			//	debugBreakPoint = 1
 			//}
 			operations = append(operations, &elementOperations[j])
 		}
@@ -348,7 +286,7 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 	sync.boardCastFrameInRoom(room.Id, "pushLogicFrame",&logicFrame)
 	return fpsTime
 }
-
+//定时，接收玩家的操作记录
 func  (sync *Sync)ReceivePlayerOperation(logicFrame myproto.RequestPlayerOperations,wsConn *WsConn,content string){
 	//mylog.Debug(logicFrame)
 	room,empty := sync.getPoolElementById(logicFrame.RoomId)
@@ -374,6 +312,7 @@ func  (sync *Sync)ReceivePlayerOperation(logicFrame myproto.RequestPlayerOperati
 		room.PlayersAckList[wsConn.PlayerId] = 1
 	}
 }
+//检测玩家发送的操作是否合规
 func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPlayerOperations,wsConn *WsConn)error{
 	if room.Status == ROOM_STATUS_INIT {
 		return errors.New("room status err is  ROOM_STATUS_INIT  "+strconv.Itoa(int(room.Status)))
@@ -419,7 +358,7 @@ func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPla
 
 	return nil
 }
-
+//游戏结束
 func  (sync *Sync)roomEnd(roomId string,sendCloseChan int){
 	mylog.Info("roomEnd")
 	room,empty := sync.getPoolElementById(roomId)
@@ -436,7 +375,6 @@ func  (sync *Sync)roomEnd(roomId string,sendCloseChan int){
 	if sendCloseChan == 1{
 		room.CloseChan <- 1
 	}
-
 }
 //玩家操作后，触发C端主动发送游戏结束事件
 func  (sync *Sync)GameOver(requestGameOver myproto.RequestGameOver,wsConn *WsConn){
@@ -450,18 +388,18 @@ func  (sync *Sync)GameOver(requestGameOver myproto.RequestGameOver,wsConn *WsCon
 
 	sync.roomEnd(requestGameOver.RoomId,1)
 }
+//玩家触发了该角色死亡
 func  (sync *Sync)PlayerOver(requestGameOver myproto.RequestPlayerOver,wsConn *WsConn){
 	roomId := mySyncPlayerRoom[requestGameOver.PlayerId]
 	responseOtherPlayerOver := myproto.ResponseOtherPlayerOver{PlayerId: requestGameOver.PlayerId}
 	sync.boardCastInRoom(roomId,"otherPlayerOver",&responseOtherPlayerOver)
 }
-
+//更新一个逻辑帧的确认状态
 func (sync *Sync)upSyncRoomPoolElementPlayersAckStatus(roomId string,status int){
 	syncRoomPoolElement,_  := sync.getPoolElementById(roomId)
 	mylog.Notice("upSyncRoomPoolElementPlayersAckStatus ,old :",syncRoomPoolElement.PlayersAckStatus,"new",status)
 	syncRoomPoolElement.PlayersAckStatus = status
 }
-
 //判定一个房间内，玩家在线的人
 func (sync *Sync)roomOnlinePlayers(room *Room)[]int32{
 	var playerOnLine []int32
@@ -560,7 +498,7 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,contentStruc
 	content ,_ := json.Marshal(JsonCamelCase{contentStruct})
 	sync.addOneRoomHistory(syncRoomPoolElement,action,string(content))
 
-	//if testLock == 1{
+	//if debugBreakPoint == 1{
 	//	zlib.MyPrint(contentStruct)
 	//	zlib.ExitPrint(3333)
 	//}
