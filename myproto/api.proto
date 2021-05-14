@@ -197,3 +197,8 @@ message Player{
     int32 upd_port     = 8;
     string ip         = 9;
 }
+
+message ResponseRestartGame{
+    string      room_id             = 1;
+    repeated    int32 player_ids    = 2;
+}

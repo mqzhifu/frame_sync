@@ -588,10 +588,16 @@ func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayer
 		mylog.Error("playerResumeGame get room empty")
 		return
 	}
+	var restartGame = 0
+	var playerIds []int32
 	if room.Status == ROOM_STATUS_PAUSE {
 		playerOnlineNum := sync.roomOnlinePlayers(room)
 		if  len(playerOnlineNum) == len(room.PlayerList){
 			room.UpStatus(ROOM_STATUS_EXECING)
+			restartGame = 1
+			for _, v:= range room.PlayerList{
+				playerIds = append(playerIds,v.Id)
+			}
 		}
 	}
 
@@ -602,6 +608,13 @@ func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayer
 	}
 	sync.boardCastInRoom(room.Id,"otherPlayerResumeGame",&responseOtherPlayerResumeGame)
 	//mynetWay.SendMsgCompressByUid(wsConn.PlayerId,)
+	if restartGame == 1{
+		responseRestartGame := myproto.ResponseRestartGame{
+			RoomId: requestPlayerResumeGame.RoomId,
+			PlayerIds: playerIds,
+		}
+		sync.boardCastInRoom(room.Id,"restartGame",&responseRestartGame)
+	}
 
 }
 //C端获取一个房间的信息

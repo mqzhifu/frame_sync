@@ -99,15 +99,6 @@ func NewNetWay(option NetWayOption)*NetWay {
 	netWay.ProtocolActions = myprotocol.ProtocolActionsNew()
 
 	myMetrics = zlib.NewMetrics()
-	myMetrics.CreateOneNode("input_num")
-	myMetrics.CreateOneNode("output_num")
-
-	myMetrics.CreateOneNode("input_size")
-	myMetrics.CreateOneNode("output_size")
-
-	myMetrics.CreateOneNode("input_err_num")
-	myMetrics.CreateOneNode("output_err_num")
-
 
 	mynetWay = netWay
 	return netWay
@@ -205,6 +196,17 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 	netWay.SendMsgCompressByUid(jwtData.Payload.Uid,"loginRes",&loginRes)
 	//初始化即登陆成功的响应均完成后，开始该连接的 读取协程
 	go NewWsConn.IOLoop()
+
+
+	//myMetrics.CreateOneNode("input_num")
+	//myMetrics.CreateOneNode("output_num")
+	//
+	//myMetrics.CreateOneNode("input_size")
+	//myMetrics.CreateOneNode("output_size")
+	//
+	//myMetrics.CreateOneNode("input_err_num")
+	//myMetrics.CreateOneNode("output_err_num")
+
 
 	//netWay.pintRTT(jwtData.Payload.Uid)
 
@@ -360,8 +362,8 @@ func(netWay *NetWay)SendMsgByUid(uid int32,action string , content []byte){
 		mylog.Error("wsConn status =CONN_STATUS_CLOSE.")
 		return
 	}
-	myMetrics.IncNode("output_num")
-	myMetrics.PlusNode("output_size",len(content))
+	//myMetrics.IncNode("output_num")
+	//myMetrics.PlusNode("output_size",len(content))
 
 	if action =="pushLogicFrame"{
 		roomId := netWay.mySync.GetMySyncPlayerRoomById(uid)
