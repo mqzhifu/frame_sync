@@ -18,14 +18,15 @@ type Room struct {
 	Status 				int32                         	`json:"status"`
 	PlayerList			[]*myproto.Player             	`json:"playerList"`
 	SequenceNumber		int                           	`json:"sequenceNumber"`
-	PlayersAckList		map[int32]int32               	`json:"playersAckList"`
-	PlayersAckStatus	int                             `json:"playersAckStatus"`
 	PlayersReadyList	map[int32]int32                 `json:"playersReadyList"`
 	RandSeek			int32                           `json:"randSeek"`
+	PlayersAckList		map[int32]int32               	`json:"playersAckList"`
+	PlayersAckStatus	int                             `json:"playersAckStatus"`
 	//接收玩家操作指令-集合
 	PlayersOperationQueue 		*list.List             	`json:"-"`
 	CloseChan 			chan int                       	`json:"-"`
 	ReadyCloseChan 		chan int                      	`json:"-"`
+	WaitPlayerOfflineCloseChan	chan int						`json:"-"`
 	//本局游戏，历史记录，玩家的所有操作
 	LogicFrameHistory 	[]*myproto.ResponseRoomHistory 	`json:"logicFrameHistory"`
 }

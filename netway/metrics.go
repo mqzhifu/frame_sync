@@ -2,7 +2,6 @@ package netway
 
 import (
 	"context"
-	"strconv"
 )
 
 type Metrics struct {
@@ -35,14 +34,6 @@ type RoomSyncMetrics struct{
 	OutputNum	int `json:"outputNum"`
 	OutputSize	int `json:"outputSize"`
 }
-//myMetrics.CreateOneNode("input_num")
-//myMetrics.CreateOneNode("output_num")
-//
-//myMetrics.CreateOneNode("input_size")
-//myMetrics.CreateOneNode("output_size")
-//
-//myMetrics.CreateOneNode("input_err_num")
-//myMetrics.CreateOneNode("output_err_num")
 
 func MetricsNew()*Metrics{
 	metrics := new (Metrics)
@@ -70,13 +61,13 @@ func  (metrics *Metrics)start(ctx context.Context){
 
 func (metrics *Metrics)processMsg(metricsChanMsg MetricsChanMsg){
 	if metricsChanMsg.Opt == 1{
-		mylog.Debug("metrics :"+metricsChanMsg.Key + " add " + strconv.Itoa( metricsChanMsg.Value))
+		//mylog.Debug("metrics :"+metricsChanMsg.Key + " add " + strconv.Itoa( metricsChanMsg.Value))
 		metrics.Pool[metricsChanMsg.Key] += metricsChanMsg.Value
 	}else if metricsChanMsg.Opt == 2{
-		mylog.Debug("metrics :"+metricsChanMsg.Key + " ++ ")
+		//mylog.Debug("metrics :"+metricsChanMsg.Key + " ++ ")
 		metrics.Pool[metricsChanMsg.Key]++
 	}else if metricsChanMsg.Opt == 4{
-		mylog.Debug("metrics :"+metricsChanMsg.Key + " -- ")
+		//mylog.Debug("metrics :"+metricsChanMsg.Key + " -- ")
 		metrics.Pool[metricsChanMsg.Key]--
 	}
 }

@@ -349,9 +349,10 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         var requestClientPong = new proto.myproto.RequestClientPong();
         requestClientPong.setClientReceiveTime(now);
         requestClientPong.setAddTime(logicFrame.addTime);
+        requestClientPong.setRttTimeout(logicFrame.rttTimeout);
+        requestClientPong.setRttTimes(logicFrame.rttTimes);
         this.sendNewMsg("clientPong",requestClientPong);
         //     logicFrame.clientReceiveTime =  now
-
     };
     this.rStartBattle = function(logicFrame){
         // logicFrame.playerList = logicFrame.

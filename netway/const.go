@@ -14,7 +14,8 @@ const (
 	CLOSE_SOURCE_FD_READ_ERR = 10	//首次建立连接时，read出错
 	CLOSE_SOURCE_FD_PARSE_CONTENT = 11	//首次建立连接时，解析内容时出错
 	CLOSE_SOURCE_FIRST_NO_LOGIN = 12	//
-
+	CLOSE_SOURCE_RTT_TIMEOUT = 13	//S端已收到了RTT的响应，但已超时
+	CLOSE_SOURCE_RTT_TIMER_OUT = 13//RTT超时，定时器触发
 
 	CONTENT_TYPE_JSON = 1			//内容类型 json
 	CONTENT_TYPE_PROTOBUF = 2		//proto_buf

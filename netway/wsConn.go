@@ -28,6 +28,7 @@ type WsConn struct {
 	CloseChan 	chan int
 	RTT 		int64
 	MsgInChan		chan Message
+	RTTCancelChan chan int
 	//outChan 	chan []byte
 }
 
@@ -54,6 +55,7 @@ func (wsConnManager *WsConnManager)CreateOneWsConn(conn *websocket.Conn)(myWsCon
 	myWsConn.UpTime 	= now
 	myWsConn.Status  	= CONN_STATUS_WAITING
 	myWsConn.MsgInChan  = make(chan Message,5000)
+	myWsConn.RTTCancelChan = make(chan int)
 	//myWsConn.outChan=  make(chan []byte,1000)
 
 	mylog.Info("reg wsConn callback CloseHandler")
@@ -140,6 +142,10 @@ func   (wsConn *WsConn)SendMsg(contentStruct interface{}){
 func   (wsConn *WsConn)Write(content []byte){
 	myMetrics.input <- MetricsChanMsg{Key: "total.output_num",Opt: 2}
 	myMetrics.input <- MetricsChanMsg{Key: "total.output_size",Opt: 1,Value: len(content)}
+
+	pid := strconv.Itoa(int(wsConn.PlayerId))
+	myMetrics.input <- MetricsChanMsg{Key: "player.fdNum."+pid,Opt: 2}
+	myMetrics.input <- MetricsChanMsg{Key: "player.fdSize."+pid,Opt: 1,Value: len(content)}
 
 	wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
 	//go NewWsConn.outChan

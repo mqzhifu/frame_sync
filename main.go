@@ -11,11 +11,16 @@ import (
 	"zlib"
 )
 
+
+
+func test(){
+	//zlib.ExitPrint(111)
+}
 var mylog *zlib.Log
 func main(){
 	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
 
-	//test()
+	test()
 
 	if len(os.Args) < 4{
 		msg := "os.Args len < 4 , ex :  env=dev , ip=127.0.0.1 , port=2222 , log_base_path=/data/www/golang/src/logs"

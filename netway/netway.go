@@ -120,6 +120,7 @@ func (netWay *NetWay)Startup(){
 	//清理，房间到期后，未回收的情况
 	//go mySync.checkRoomTimeoutLoop(startupCtx)
 	go myMetrics.start(startupCtx)
+	myMetrics.input <- MetricsChanMsg{Key: "startTime",Opt: 1,Value: int( zlib.GetNowMillisecond())}
 
 	netWay.startHttpServer()
 }
@@ -199,8 +200,7 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 	//初始化即登陆成功的响应均完成后，开始该连接的 读取协程
 	go NewWsConn.IOLoop()
 
-	//netWay.pintRTT(jwtData.Payload.Uid)
-
+	netWay.serverPingRtt(time.Duration(rttMinTimeSecond),NewWsConn,1)
 	mylog.Info("wsHandler end ,player login success!!!")
 }
 func  (netWay *NetWay)loginPre(NewWsConn *WsConn)(jwt zlib.JwtData,err error){
@@ -258,15 +258,7 @@ func(netWay *NetWay)login(requestLogin myproto.RequestLogin,wsConn *WsConn)(JwtD
 
 	return JwtData,err
 }
-//==================================
-func  (netWay *NetWay)pintRTT(playerId int32){
-	//ping 一下，测试下RTT
-	millisecond  := zlib.GetNowMillisecond()
-	responseServerPing := myproto.ResponseServerPing{
-		AddTime:millisecond,
-	}
-	netWay.SendMsgCompressByUid(playerId,"serverPing",&responseServerPing)
-}
+
 func(netWay *NetWay)recviceMatchSuccess(ctx context.Context){
 	mylog.Info("recviceMatchSuccess start:")
 	for{
@@ -284,20 +276,8 @@ func(netWay *NetWay)recviceMatchSuccess(ctx context.Context){
 end:
 	mylog.Warning("recviceMatchSuccess close")
 }
-func(netWay *NetWay) ClientPong(requestClientPong myproto.RequestClientPong,wsConn *WsConn){
-	RTT := requestClientPong.ClientReceiveTime -  requestClientPong.AddTime
-	wsConn.RTT = RTT
-	mylog.Info("client RTT:",RTT," ms")
-}
 
-func(netWay *NetWay)clientPing(pingRTT myproto.RequestClientPing,wsConn *WsConn){
-	responseServerPong := myproto.ResponseServerPong{
-		AddTime: pingRTT.AddTime,
-		ClientReceiveTime :pingRTT.ClientReceiveTime,
-		ServerResponseTime:zlib.GetNowMillisecond(),
-	}
-	netWay.SendMsgCompressByUid(wsConn.PlayerId,"serverPong",&responseServerPong)
-}
+
 
 func(netWay *NetWay)heartbeat(requestClientHeartbeat myproto.RequestClientHeartbeat,wsConn *WsConn){
 	now := zlib.GetNowTimeSecondToInt()
@@ -467,6 +447,7 @@ func  (netWay *NetWay)Quit() {
 	}
 	netWay.Option.Mylog.Warning("quit finish")
 }
+
 //func (sync *Sync)checkRoomTimeoutLoop(ctx context.Context){
 //	for{
 //		select {
@@ -496,3 +477,4 @@ func  (netWay *NetWay)Quit() {
 //		}
 //	}
 //}
+

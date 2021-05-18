@@ -19,9 +19,9 @@ type Options struct {
 	MapSize				int32		`json:"mapSize"`		//地址大小，给前端初始化使用
 	Log *zlib.Log
 }
-
+//断点调试
 var debugBreakPoint int
-//集合 ：每个副本
+//集合 ：房间(一局游戏副本)
 var MySyncRoomPool map[string]*Room
 //索引表，PlayerId=>RoomId
 var mySyncPlayerRoom map[int32]string
@@ -93,6 +93,13 @@ func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,wsCon
 
 	RoomSyncMetricsPool[roomId] = RoomSyncMetrics{}
 
+	sync.testFirstLogicFrame(room)
+	room.ReadyCloseChan <- 1
+	//开启定时器，推送逻辑帧
+	go sync.logicFrameLoop(room)
+
+}
+func  (sync *Sync)testFirstLogicFrame(room *Room){
 	//初始结束后，这里方便测试，再补一帧，所有玩家的随机位置
 	if room.PlayerList[0].Id < 999{
 		var operations []*myproto.Operation
@@ -114,10 +121,6 @@ func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,wsCon
 		}
 		sync.boardCastInRoom(room.Id,"pushLogicFrame",&logicFrameMsg)
 	}
-	room.ReadyCloseChan <- 1
-	//开启定时器，推送逻辑帧
-	go sync.logicFrameLoop(room)
-
 }
 //根据playerId 反查 roomId
 func  (sync *Sync)GetMySyncPlayerRoomById(playerId int32)string{
@@ -147,6 +150,30 @@ func  (sync *Sync)checkReadyTimeout(room *Room){
 end:
 	mylog.Warning("checkReadyTimeout loop routine close")
 }
+//检查 所有玩家是否 都已准确，超时了
+func  (sync *Sync)playerOfflineCheckRoomTimeout(room *Room){
+	for{
+		select {
+		case   <-room.ReadyCloseChan:
+			goto end
+		default:
+			now := zlib.GetNowTimeSecondToInt()
+			if now > int(room.ReadyTimeout){
+				mylog.Error("room ready timeout id :",room.Id)
+				requestReadyTimeout := myproto.ResponseReadyTimeout{
+					RoomId: room.Id,
+				}
+				sync.boardCastInRoom(room.Id,"readyTimeout",&requestReadyTimeout)
+				sync.roomEnd(room.Id,0)
+				goto end
+			}
+			time.Sleep(time.Second * 1)
+		}
+	}
+end:
+	mylog.Warning("playerOfflineCheckRoomTimeout loop routine close")
+}
+
 //一局新游戏，均已准备，进入开始状态
 func  (sync *Sync)Start(roomId string){
 	mylog.Warning("start a new game:")
@@ -325,9 +352,16 @@ func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPla
 		//而，其它玩家因为消息被拒，导致此条消息只有A发送成功，但是迟迟等不到其它玩家再未发送消息，该帧进入死锁
 		//固，这里做出改变，暂停状态下：正常玩家可以多发一帧，等待掉线玩家重新上线
 		if int(logicFrame.SequenceNumber) == room.SequenceNumber{
-			//只有第一帧才会出现这种情况
-				msg := "logicFrame.SequenceNumber  == room.SequenceNumber"
+			mylog.Warning("logicFrame.SequenceNumber  == room.SequenceNumber")
+			//只有掉线的玩家，最后这一帧的数据没有发出来，才会到这个条件里
+			//但，其它正常玩家如果还是一直不停的在发 这一帧，QUEUE 就爆了
+			if room.PlayersAckList[wsConn.PlayerId] == 1{
+				msg := "(offline) last frame Players has ack ,don'send... "
 				mylog.Error(msg)
+				return errors.New(msg)
+			}else{
+
+			}
 		}else{
 			c_n := strconv.Itoa(int(logicFrame.SequenceNumber))
 			r_n := strconv.Itoa(int( room.SequenceNumber))
@@ -435,6 +469,7 @@ func (sync *Sync)Close(wsConn *WsConn){
 		//playerOnLineCount-- //这里因为，已有一个玩家关闭中，但是还未处理
 		mylog.Info("ROOM_STATUS_EXECING ,has check roomEnd , playerOnLineCount : ", playerOnLineCount)
 		if playerOnLineCount <= 0 {
+			//
 			sync.roomEnd(roomId,1)
 		}else{
 			if room.Status == ROOM_STATUS_EXECING {

@@ -884,7 +884,9 @@ proto.myproto.RequestClientPong.toObject = function(includeInstance, msg) {
   var f, obj = {
     addTime: jspb.Message.getFieldWithDefault(msg, 1, 0),
     clientReceiveTime: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    serverResponseTime: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    serverResponseTime: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    rttTimeout: jspb.Message.getFieldWithDefault(msg, 4, 0),
+    rttTimes: jspb.Message.getFieldWithDefault(msg, 5, 0)
   };
 
   if (includeInstance) {
@@ -933,6 +935,14 @@ proto.myproto.RequestClientPong.deserializeBinaryFromReader = function(msg, read
       var value = /** @type {number} */ (reader.readInt64());
       msg.setServerResponseTime(value);
       break;
+    case 4:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setRttTimeout(value);
+      break;
+    case 5:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setRttTimes(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -980,6 +990,20 @@ proto.myproto.RequestClientPong.serializeBinaryToWriter = function(message, writ
   if (f !== 0) {
     writer.writeInt64(
       3,
+      f
+    );
+  }
+  f = message.getRttTimeout();
+  if (f !== 0) {
+    writer.writeInt64(
+      4,
+      f
+    );
+  }
+  f = message.getRttTimes();
+  if (f !== 0) {
+    writer.writeInt32(
+      5,
       f
     );
   }
@@ -1037,6 +1061,42 @@ proto.myproto.RequestClientPong.prototype.getServerResponseTime = function() {
  */
 proto.myproto.RequestClientPong.prototype.setServerResponseTime = function(value) {
   return jspb.Message.setProto3IntField(this, 3, value);
+};
+
+
+/**
+ * optional int64 rtt_timeout = 4;
+ * @return {number}
+ */
+proto.myproto.RequestClientPong.prototype.getRttTimeout = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.myproto.RequestClientPong} returns this
+ */
+proto.myproto.RequestClientPong.prototype.setRttTimeout = function(value) {
+  return jspb.Message.setProto3IntField(this, 4, value);
+};
+
+
+/**
+ * optional int32 rtt_times = 5;
+ * @return {number}
+ */
+proto.myproto.RequestClientPong.prototype.getRttTimes = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.myproto.RequestClientPong} returns this
+ */
+proto.myproto.RequestClientPong.prototype.setRttTimes = function(value) {
+  return jspb.Message.setProto3IntField(this, 5, value);
 };
 
 
@@ -1544,7 +1604,9 @@ proto.myproto.RequestClientPing.toObject = function(includeInstance, msg) {
   var f, obj = {
     addTime: jspb.Message.getFieldWithDefault(msg, 1, 0),
     clientReceiveTime: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    serverResponseTime: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    serverResponseTime: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    rttTimeout: jspb.Message.getFieldWithDefault(msg, 4, 0),
+    rttTimes: jspb.Message.getFieldWithDefault(msg, 5, 0)
   };
 
   if (includeInstance) {
@@ -1593,6 +1655,14 @@ proto.myproto.RequestClientPing.deserializeBinaryFromReader = function(msg, read
       var value = /** @type {number} */ (reader.readInt64());
       msg.setServerResponseTime(value);
       break;
+    case 4:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setRttTimeout(value);
+      break;
+    case 5:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setRttTimes(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -1640,6 +1710,20 @@ proto.myproto.RequestClientPing.serializeBinaryToWriter = function(message, writ
   if (f !== 0) {
     writer.writeInt64(
       3,
+      f
+    );
+  }
+  f = message.getRttTimeout();
+  if (f !== 0) {
+    writer.writeInt64(
+      4,
+      f
+    );
+  }
+  f = message.getRttTimes();
+  if (f !== 0) {
+    writer.writeInt32(
+      5,
       f
     );
   }
@@ -1697,6 +1781,42 @@ proto.myproto.RequestClientPing.prototype.getServerResponseTime = function() {
  */
 proto.myproto.RequestClientPing.prototype.setServerResponseTime = function(value) {
   return jspb.Message.setProto3IntField(this, 3, value);
+};
+
+
+/**
+ * optional int64 rtt_timeout = 4;
+ * @return {number}
+ */
+proto.myproto.RequestClientPing.prototype.getRttTimeout = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.myproto.RequestClientPing} returns this
+ */
+proto.myproto.RequestClientPing.prototype.setRttTimeout = function(value) {
+  return jspb.Message.setProto3IntField(this, 4, value);
+};
+
+
+/**
+ * optional int32 rtt_times = 5;
+ * @return {number}
+ */
+proto.myproto.RequestClientPing.prototype.getRttTimes = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.myproto.RequestClientPing} returns this
+ */
+proto.myproto.RequestClientPing.prototype.setRttTimes = function(value) {
+  return jspb.Message.setProto3IntField(this, 5, value);
 };
 
 
@@ -4115,7 +4235,9 @@ proto.myproto.ResponseServerPing.toObject = function(includeInstance, msg) {
   var f, obj = {
     addTime: jspb.Message.getFieldWithDefault(msg, 1, 0),
     clientReceiveTime: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    serverResponseTime: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    serverResponseTime: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    rttTimeout: jspb.Message.getFieldWithDefault(msg, 4, 0),
+    rttTimes: jspb.Message.getFieldWithDefault(msg, 5, 0)
   };
 
   if (includeInstance) {
@@ -4164,6 +4286,14 @@ proto.myproto.ResponseServerPing.deserializeBinaryFromReader = function(msg, rea
       var value = /** @type {number} */ (reader.readInt64());
       msg.setServerResponseTime(value);
       break;
+    case 4:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setRttTimeout(value);
+      break;
+    case 5:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setRttTimes(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -4211,6 +4341,20 @@ proto.myproto.ResponseServerPing.serializeBinaryToWriter = function(message, wri
   if (f !== 0) {
     writer.writeInt64(
       3,
+      f
+    );
+  }
+  f = message.getRttTimeout();
+  if (f !== 0) {
+    writer.writeInt64(
+      4,
+      f
+    );
+  }
+  f = message.getRttTimes();
+  if (f !== 0) {
+    writer.writeInt32(
+      5,
       f
     );
   }
@@ -4271,6 +4415,42 @@ proto.myproto.ResponseServerPing.prototype.setServerResponseTime = function(valu
 };
 
 
+/**
+ * optional int64 rtt_timeout = 4;
+ * @return {number}
+ */
+proto.myproto.ResponseServerPing.prototype.getRttTimeout = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.myproto.ResponseServerPing} returns this
+ */
+proto.myproto.ResponseServerPing.prototype.setRttTimeout = function(value) {
+  return jspb.Message.setProto3IntField(this, 4, value);
+};
+
+
+/**
+ * optional int32 rtt_times = 5;
+ * @return {number}
+ */
+proto.myproto.ResponseServerPing.prototype.getRttTimes = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.myproto.ResponseServerPing} returns this
+ */
+proto.myproto.ResponseServerPing.prototype.setRttTimes = function(value) {
+  return jspb.Message.setProto3IntField(this, 5, value);
+};
+
+
 
 
 
@@ -4305,7 +4485,9 @@ proto.myproto.ResponseServerPong.toObject = function(includeInstance, msg) {
   var f, obj = {
     addTime: jspb.Message.getFieldWithDefault(msg, 1, 0),
     clientReceiveTime: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    serverResponseTime: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    serverResponseTime: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    rttTimeout: jspb.Message.getFieldWithDefault(msg, 4, 0),
+    rttTimes: jspb.Message.getFieldWithDefault(msg, 5, 0)
   };
 
   if (includeInstance) {
@@ -4354,6 +4536,14 @@ proto.myproto.ResponseServerPong.deserializeBinaryFromReader = function(msg, rea
       var value = /** @type {number} */ (reader.readInt64());
       msg.setServerResponseTime(value);
       break;
+    case 4:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setRttTimeout(value);
+      break;
+    case 5:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setRttTimes(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -4401,6 +4591,20 @@ proto.myproto.ResponseServerPong.serializeBinaryToWriter = function(message, wri
   if (f !== 0) {
     writer.writeInt64(
       3,
+      f
+    );
+  }
+  f = message.getRttTimeout();
+  if (f !== 0) {
+    writer.writeInt64(
+      4,
+      f
+    );
+  }
+  f = message.getRttTimes();
+  if (f !== 0) {
+    writer.writeInt32(
+      5,
       f
     );
   }
@@ -4458,6 +4662,42 @@ proto.myproto.ResponseServerPong.prototype.getServerResponseTime = function() {
  */
 proto.myproto.ResponseServerPong.prototype.setServerResponseTime = function(value) {
   return jspb.Message.setProto3IntField(this, 3, value);
+};
+
+
+/**
+ * optional int64 rtt_timeout = 4;
+ * @return {number}
+ */
+proto.myproto.ResponseServerPong.prototype.getRttTimeout = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.myproto.ResponseServerPong} returns this
+ */
+proto.myproto.ResponseServerPong.prototype.setRttTimeout = function(value) {
+  return jspb.Message.setProto3IntField(this, 4, value);
+};
+
+
+/**
+ * optional int32 rtt_times = 5;
+ * @return {number}
+ */
+proto.myproto.ResponseServerPong.prototype.getRttTimes = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.myproto.ResponseServerPong} returns this
+ */
+proto.myproto.ResponseServerPong.prototype.setRttTimes = function(value) {
+  return jspb.Message.setProto3IntField(this, 5, value);
 };
 
 

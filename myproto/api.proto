@@ -11,6 +11,8 @@ message RequestClientPong{
     int64 add_time               = 1;
     int64 client_receive_time     = 2;
     int64 server_response_time    = 3;
+    int64 rtt_timeout             = 4;
+    int32 rtt_times                 =5;
 }
 
 message RequestPlayerOperations{
@@ -30,9 +32,11 @@ message Operation{
 
 
 message RequestClientPing{
-    int64 add_time               = 1;
+    int64 add_time                = 1;
     int64 client_receive_time     = 2;
     int64 server_response_time    = 3;
+    int64 rtt_timeout             = 4;
+    int32 rtt_times                 =5;
 }
 
 message RequestPlayerResumeGame{
@@ -113,12 +117,16 @@ message ResponseServerPing{
     int64 add_time               = 1;
     int64 client_receive_time     = 2;
     int64 server_response_time    = 3;
+    int64 rtt_timeout             = 4;
+    int32 rtt_times                 =5;
 }
 
 message ResponseServerPong{
     int64 add_time               = 1;
     int64 client_receive_time     = 2;
     int64 server_response_time    = 3;
+    int64 rtt_timeout             = 4;
+    int32 rtt_times                 =5;
 }
 
 
