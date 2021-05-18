@@ -131,20 +131,20 @@ func  (sync *Sync)GetMySyncPlayerRoomById(playerId int32)string{
 func  (sync *Sync)checkReadyTimeout(room *Room){
 	for{
 		select {
-		case   <-room.ReadyCloseChan:
-			goto end
-		default:
-			now := zlib.GetNowTimeSecondToInt()
-			if now > int(room.ReadyTimeout){
-				mylog.Error("room ready timeout id :",room.Id)
-				requestReadyTimeout := myproto.ResponseReadyTimeout{
-					RoomId: room.Id,
-				}
-				sync.boardCastInRoom(room.Id,"readyTimeout",&requestReadyTimeout)
-				sync.roomEnd(room.Id,0)
+			case   <-room.ReadyCloseChan:
 				goto end
-			}
-			time.Sleep(time.Second * 1)
+			default:
+				now := zlib.GetNowTimeSecondToInt()
+				if now > int(room.ReadyTimeout){
+					mylog.Error("room ready timeout id :",room.Id)
+					requestReadyTimeout := myproto.ResponseReadyTimeout{
+						RoomId: room.Id,
+					}
+					sync.boardCastInRoom(room.Id,"readyTimeout",&requestReadyTimeout)
+					sync.roomEnd(room.Id,0)
+					goto end
+				}
+				time.Sleep(time.Second * 1)
 		}
 	}
 end:
@@ -154,20 +154,20 @@ end:
 func  (sync *Sync)playerOfflineCheckRoomTimeout(room *Room){
 	for{
 		select {
-		case   <-room.ReadyCloseChan:
-			goto end
-		default:
-			now := zlib.GetNowTimeSecondToInt()
-			if now > int(room.ReadyTimeout){
-				mylog.Error("room ready timeout id :",room.Id)
-				requestReadyTimeout := myproto.ResponseReadyTimeout{
-					RoomId: room.Id,
-				}
-				sync.boardCastInRoom(room.Id,"readyTimeout",&requestReadyTimeout)
-				sync.roomEnd(room.Id,0)
+			case   <-room.ReadyCloseChan:
 				goto end
-			}
-			time.Sleep(time.Second * 1)
+			default:
+				now := zlib.GetNowTimeSecondToInt()
+				if now > int(room.ReadyTimeout){
+					mylog.Error("room ready timeout id :",room.Id)
+					requestReadyTimeout := myproto.ResponseReadyTimeout{
+						RoomId: room.Id,
+					}
+					sync.boardCastInRoom(room.Id,"readyTimeout",&requestReadyTimeout)
+					sync.roomEnd(room.Id,0)
+					goto end
+				}
+				time.Sleep(time.Second * 1)
 		}
 	}
 end:

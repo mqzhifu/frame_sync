@@ -263,13 +263,13 @@ func(netWay *NetWay)recviceMatchSuccess(ctx context.Context){
 	mylog.Info("recviceMatchSuccess start:")
 	for{
 		select {
-		case newRoom :=  <-netWay.MatchSuccessChan:
-			netWay.mySync.AddPoolElement(newRoom)
-			netWay.mySync.Start(newRoom.Id)
-		case   <-ctx.Done():
-			goto end
-		default:
-			time.Sleep(time.Second * 1)
+			case newRoom :=  <-netWay.MatchSuccessChan:
+				netWay.mySync.AddPoolElement(newRoom)
+				netWay.mySync.Start(newRoom.Id)
+			case   <-ctx.Done():
+				goto end
+			default:
+				time.Sleep(time.Second * 1)
 			//mySleepSecond(1,"checkConnPoolTimeout")
 		}
 	}

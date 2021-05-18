@@ -233,13 +233,16 @@ end :
 
 func  (wsConn *WsConn)ProcessMsgLoop(ctx context.Context){
 	for{
+		ctxHasDone := 0
 		select{
 			case <-ctx.Done():
-				goto end
+				ctxHasDone = 1
 			case msg := <-wsConn.MsgInChan:
 				mylog.Info("ProcessMsgLoop receive msg",msg.Action)
 				mynetWay.Router(msg,wsConn)
-			default:
+		}
+		if ctxHasDone == 1{
+			goto end
 		}
 	}
 end :

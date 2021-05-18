@@ -64,9 +64,9 @@ func(netWay *NetWay) ClientPong(requestClientPong myproto.RequestClientPong,wsCo
 
 	//小于500ms,如果RTT过段 ，会造成大批量的PING/PONG，占用带宽、影响正常消息发送
 	if RTT < 500 {
-		mylog.Info("rtt sleep 800ms")
+		mylog.Info("rtt sleep 500ms")
 		//睡眠500毫秒
-		time.Sleep(800 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
 	//再开启一个新的TIMER
 	netWay.serverPingRtt(time.Duration(rttMinTimeSecond),wsConn,1)
@@ -95,7 +95,7 @@ func getOnetimerCtrl(timeoutSecond time.Duration,cancel chan int,cancelCallback 
 				cancelCallback()
 				goto end
 			case <- timer.C:
-				zlib.MyPrint("timeour")
+				zlib.MyPrint("select chan read : timeout")
 				timeoutCallback()
 				goto end
 			default:

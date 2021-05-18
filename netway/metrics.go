@@ -2,6 +2,7 @@ package netway
 
 import (
 	"context"
+	"zlib"
 )
 
 type Metrics struct {
@@ -46,17 +47,22 @@ func MetricsNew()*Metrics{
 }
 
 func  (metrics *Metrics)start(ctx context.Context){
+	ctxHasDone := 0
 	for{
 		select {
-		case metricsChanMsg := <- metrics.input:
-			metrics.processMsg(metricsChanMsg)
-		case <- ctx.Done():
-			mylog.Warning("checkRoomTimeoutLoop done.")
-			return
-		default:
-			//time.Sleep(1 * time.Second)
+			case metricsChanMsg := <- metrics.input:
+				metrics.processMsg(metricsChanMsg)
+			case <- ctx.Done():
+				ctxHasDone = 1
+				mylog.Warning("checkRoomTimeoutLoop done.")
+		}
+		if ctxHasDone == 1{
+			goto end
 		}
 	}
+	end:
+		zlib.MyPrint("end:checkRoomTimeoutLoop done.")
+
 }
 
 func (metrics *Metrics)processMsg(metricsChanMsg MetricsChanMsg){

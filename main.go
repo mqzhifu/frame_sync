@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "net/http/pprof"
 	"context"
 	"frame_sync/netway"
 	"os"
@@ -11,10 +12,25 @@ import (
 	"zlib"
 )
 
-
+func testFunc1(quiteChan chan int,io chan int){
+	//select {
+	//	case sign := <- quiteChan:
+	//		zlib.MyPrint(sign)
+	//	case data := <-io:
+	//		zlib.MyPrint(data)
+	//}
+}
 
 func test(){
-	//zlib.ExitPrint(111)
+	//
+	//quiteChan := make(chan int)
+	//ioChan := make(chan int)
+	//go testFunc1(quiteChan,ioChan)
+	//time.Sleep(time.Second * 2)
+	//ioChan <-1
+	//time.Sleep(time.Second * 2)
+	//quiteChan <-1
+	//zlib.ExitPrint(3333)
 }
 var mylog *zlib.Log
 func main(){
@@ -86,12 +102,12 @@ func main(){
 	go DemonSignal(newNetWay,mainCtx,mainCancel)
 	for{
 		select {
-		case   <-mainCtx.Done():
-			mylog.Warning("mainChan")
-			goto mainEnd
-		default:
-			time.Sleep(time.Second * 1)
-			//mySleepSecond(1, "main")
+			case   <-mainCtx.Done():
+				mylog.Warning("mainChan")
+				goto mainEnd
+			default:
+				time.Sleep(time.Second * 1)
+				//mySleepSecond(1, "main")
 		}
 	}
 
