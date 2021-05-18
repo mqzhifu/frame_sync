@@ -100,19 +100,18 @@ func main(){
 
 	mainCtx,mainCancel := context.WithCancel(rootCtx)
 	go DemonSignal(newNetWay,mainCtx,mainCancel)
-	for{
-		select {
-			case   <-mainCtx.Done():
-				mylog.Warning("mainChan")
-				goto mainEnd
-			default:
-				time.Sleep(time.Second * 1)
+	//for{
+	//	select {
+	//		case   <-mainCtx.Done():
+	//			mylog.Warning("mainChan")
+				//goto mainEnd
+			//default:
+			//	time.Sleep(time.Second * 1)
 				//mySleepSecond(1, "main")
-		}
-	}
-
-	mainEnd:
-		mylog.Warning("main end...")
+		//}
+	//}
+	<-mainCtx.Done()
+	mylog.Warning("main end...")
 
 	time.Sleep(2 * time.Second)
 }

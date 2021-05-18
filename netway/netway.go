@@ -112,14 +112,14 @@ func (netWay *NetWay)Startup(){
 
 	netWay.MatchSuccessChan = make(chan *Room)
 	//开启匹配服务
-	go myMatch.matchingPlayerCreateRoom  (startupCtx,netWay.MatchSuccessChan)
+	//go myMatch.matchingPlayerCreateRoom  (startupCtx,netWay.MatchSuccessChan)
 	//监听超时的WS连接
-	go wsConnManager.checkConnPoolTimeout(startupCtx)
+	//go wsConnManager.checkConnPoolTimeout(startupCtx)
 	//接收<匹配成功>的房间信息，并分发
-	go netWay.recviceMatchSuccess(startupCtx)
+	//go netWay.recviceMatchSuccess(startupCtx)
 	//清理，房间到期后，未回收的情况
 	//go mySync.checkRoomTimeoutLoop(startupCtx)
-	go myMetrics.start(startupCtx)
+	//go myMetrics.start(startupCtx)
 	myMetrics.input <- MetricsChanMsg{Key: "startTime",Opt: 1,Value: int( zlib.GetNowMillisecond())}
 
 	netWay.startHttpServer()
