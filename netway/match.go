@@ -67,36 +67,33 @@ func (match *Match) matchingPlayerCreateRoom(ctx context.Context,matchSuccessCha
 	for{
 		select {
 		case   <-ctx.Done():
-			//netWay.Option.Mylog.Warning("matchingPlayerCreateRoom close")
 			goto end
 		default:
-			//zlib.MyPrint(len(signPlayerPool))
-			//mylog.Info("matching:",len(signPlayerPool),match.Option.RoomPeople)
-			if int32(len(signPlayerPool)) >= match.Option.RoomPeople{
-				newRoom := NewRoom()
-				timeout := int32(zlib.GetNowTimeSecondToInt()) + mynetWay.Option.RoomTimeout
-				newRoom.Timeout = int32(timeout)
-				readyTimeout := int32(zlib.GetNowTimeSecondToInt()) + mynetWay.Option.RoomReadyTimeout
-				newRoom.ReadyTimeout = readyTimeout
-				for i:=0;i < len(signPlayerPool);i++{
-					player,empty := mynetWay.Players.GetById(signPlayerPool[i].PlayerId)
-					if empty{
-						mylog.Error("match Players.getById empty , ", signPlayerPool[i].PlayerId)
-					}
-					player.RoomId = newRoom.Id
-					newRoom.AddPlayer(player)
-					newRoom.PlayersReadyList[player.Id] = 0
-				}
-				//删除上面匹配成功的玩家
-				signPlayerPool = append(signPlayerPool[match.Option.RoomPeople:])
-				mylog.Info("create a room :",newRoom)
-				//将该房间添加到容器中
-				matchSuccessChan <- newRoom
-
-
+			if int32(len(signPlayerPool)) < match.Option.RoomPeople{
+				time.Sleep(time.Second * 1)
+				break
 			}
+
+			newRoom := NewRoom()
+			timeout := int32(zlib.GetNowTimeSecondToInt()) + mynetWay.Option.RoomTimeout
+			newRoom.Timeout = int32(timeout)
+			readyTimeout := int32(zlib.GetNowTimeSecondToInt()) + mynetWay.Option.RoomReadyTimeout
+			newRoom.ReadyTimeout = readyTimeout
+			for i:=0;i < len(signPlayerPool);i++{
+				player,empty := mynetWay.Players.GetById(signPlayerPool[i].PlayerId)
+				if empty{
+					mylog.Error("match Players.getById empty , ", signPlayerPool[i].PlayerId)
+				}
+				player.RoomId = newRoom.Id
+				newRoom.AddPlayer(player)
+				newRoom.PlayersReadyList[player.Id] = 0
+			}
+			//删除上面匹配成功的玩家
+			signPlayerPool = append(signPlayerPool[match.Option.RoomPeople:])
+			mylog.Info("create a room :",newRoom)
+			//将该房间添加到容器中
+			matchSuccessChan <- newRoom
 			time.Sleep(time.Second * 1)
-			//mySleepSecond(1,"matching player")
 		}
 	}
 end:

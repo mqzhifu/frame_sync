@@ -254,17 +254,17 @@ func (wsConnManager *WsConnManager)checkConnPoolTimeout(ctx context.Context){
 	mylog.Info("checkConnPoolTimeout start:")
 	for{
 		select {
-		case   <-ctx.Done():
-			goto end
-		default:
-			for _,v := range wsConnManager.Pool{
-				now := int32 (zlib.GetNowTimeSecondToInt())
-				x := v.UpTime + mynetWay.Option.ConnTimeout
-				if now  > x {
-					mynetWay.CloseOneConn(v, CLOSE_SOURCE_TIMEOUT)
+			case   <-ctx.Done():
+				goto end
+			default:
+				for _,v := range wsConnManager.Pool{
+					now := int32 (zlib.GetNowTimeSecondToInt())
+					x := v.UpTime + mynetWay.Option.ConnTimeout
+					if now  > x {
+						mynetWay.CloseOneConn(v, CLOSE_SOURCE_TIMEOUT)
+					}
 				}
-			}
-			time.Sleep(time.Second * 1)
+				time.Sleep(time.Second * 1)
 			//mySleepSecond(1,"checkConnPoolTimeout")
 		}
 	}
