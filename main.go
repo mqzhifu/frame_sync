@@ -104,11 +104,11 @@ func main(){
 	//	select {
 	//		case   <-mainCtx.Done():
 	//			mylog.Warning("mainChan")
-				//goto mainEnd
-			//default:
-			//	time.Sleep(time.Second * 1)
-				//mySleepSecond(1, "main")
-		//}
+	//			goto mainEnd
+	//		default:
+	//			time.Sleep(time.Second * 1)
+	//			mySleepSecond(1, "main")
+	//	}
 	//}
 	<-mainCtx.Done()
 	mylog.Warning("main end...")
