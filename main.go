@@ -1,9 +1,9 @@
 package main
 
 import (
-	_ "net/http/pprof"
 	"context"
 	"frame_sync/netway"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"strconv"
@@ -12,25 +12,39 @@ import (
 	"zlib"
 )
 
-func testFunc1(quiteChan chan int,io chan int){
-	//select {
-	//	case sign := <- quiteChan:
-	//		zlib.MyPrint(sign)
-	//	case data := <-io:
-	//		zlib.MyPrint(data)
-	//}
+func testFunc1(mm map[string]int){
+	for{
+		vv ,_ := mm["a"]
+		zlib.MyPrint(vv)
+	}
+}
+
+func testFunc2(mm map[string]int){
+	for{
+		mm["b"] = 1
+	}
 }
 
 func test(){
+	//bb := make(chan int )
 	//
-	//quiteChan := make(chan int)
-	//ioChan := make(chan int)
-	//go testFunc1(quiteChan,ioChan)
-	//time.Sleep(time.Second * 2)
-	//ioChan <-1
-	//time.Sleep(time.Second * 2)
-	//quiteChan <-1
-	//zlib.ExitPrint(3333)
+	//defer func() {
+	//	if err := recover(); err != nil {
+	//		fmt.Println("rrrrrrrr:",err)
+	//	}
+	//}()
+
+	//mm := make(map[string]int)
+	//mm["a"] = 1
+	//mm["b"] = 2
+	//go testFunc1(mm)
+	//go testFunc2(mm)
+
+	//aa := []int{}
+
+	//zlib.MyPrint(aa[5])
+	//<- bb
+
 }
 var mylog *zlib.Log
 func main(){

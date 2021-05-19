@@ -344,11 +344,21 @@ func(netWay *NetWay)SendMsgByUid(uid int32,action string , content []byte){
 	}
 	//wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
 	if mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF {
-		wsConn.Conn.WriteMessage(websocket.BinaryMessage,content)
+		netWay.myWriteMessage(wsConn,websocket.BinaryMessage,content)
+		//wsConn.Conn.WriteMessage(websocket.BinaryMessage,content)
 	}else{
-		wsConn.Conn.WriteMessage(websocket.TextMessage,content)
+		netWay.myWriteMessage(wsConn,websocket.TextMessage,content)
+		//wsConn.Conn.WriteMessage(websocket.TextMessage,content)
 	}
-
+}
+func(netWay *NetWay) myWriteMessage(wsConn *WsConn ,msgCate int ,content []byte){
+	defer func() {
+		if err := recover(); err != nil {
+			mylog.Error("wsConn.Conn.WriteMessage failed:",err)
+			netWay.CloseOneConn(wsConn,CLOSE_SOURCE_SEND_MESSAGE)
+		}
+	}()
+	wsConn.Conn.WriteMessage(msgCate,content)
 }
 //一个玩家取消了准备/报名
 func(netWay *NetWay)cancelSign(requestCancelSign myproto.RequestPlayerMatchSignCancel,wsConn *WsConn){

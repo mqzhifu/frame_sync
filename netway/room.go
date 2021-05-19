@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"frame_sync/myproto"
 	"strconv"
+	"sync"
 	"time"
 	"zlib"
 )
@@ -29,6 +30,7 @@ type Room struct {
 	WaitPlayerOfflineCloseChan	chan int						`json:"-"`
 	//本局游戏，历史记录，玩家的所有操作
 	LogicFrameHistory 	[]*myproto.ResponseRoomHistory 	`json:"logicFrameHistory"`
+	PlayersAckListLock  sync.Mutex						`json:"-"`
 }
 
 func NewRoom()*Room {

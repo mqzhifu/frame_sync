@@ -335,9 +335,9 @@ func  (sync *Sync)ReceivePlayerOperation(logicFrame myproto.RequestPlayerOperati
 
 	logicFrameStr ,_ := json.Marshal(logicFrame.Operations)
 	room.PlayersOperationQueue.PushBack(string(logicFrameStr))
-	if room.PlayersAckList[wsConn.PlayerId] == 0{
-		room.PlayersAckList[wsConn.PlayerId] = 1
-	}
+	room.PlayersAckListLock.Lock()
+	room.PlayersAckList[wsConn.PlayerId] = 1
+	room.PlayersAckListLock.Unlock()
 }
 //检测玩家发送的操作是否合规
 func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPlayerOperations,wsConn *WsConn)error{
