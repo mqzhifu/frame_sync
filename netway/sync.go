@@ -249,7 +249,7 @@ end:
 func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 	queue := room.PlayersOperationQueue
 	end := queue.Len()
-	mylog.Debug("logicFrameLoopReal len:",end)
+	//mylog.Debug("logicFrameLoopReal len:",end)
 	if end <= 0 {
 		return fpsTime
 	}
@@ -284,7 +284,7 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 		if i >= end {
 			break
 		}
-		mylog.Debug("len:",queue.Len()," element:",element , " i:",i)
+		//mylog.Debug("len:",queue.Len()," element:",element , " i:",i)
 		operationsValueInterface := element.Value
 		operationsValue := operationsValueInterface.(string)
 		var elementOperations []myproto.Operation
@@ -303,7 +303,7 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 
 		tmpElement := element.Next()
 		queue.Remove(element)
-		mylog.Debug("tmpElement:",tmpElement , " len:",queue.Len())
+		//mylog.Debug("tmpElement:",tmpElement , " len:",queue.Len())
 		element = tmpElement
 
 		i++
