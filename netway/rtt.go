@@ -87,22 +87,23 @@ func getOnetimerCtrl(timeoutSecond time.Duration,cancel chan int,cancelCallback 
 	mylog.Debug("create a new timer : ",timeoutSecond * 1000 ,"ms" )
 	timer := time.NewTicker(time.Second *  timeoutSecond)
 	go func(timer *time.Ticker){
+		isBreak := 0
 		for{
 			select {
 			case <- cancel:
 				zlib.MyPrint("select chan read : cancelTime")
 				timer.Stop()
 				cancelCallback()
-				goto end
+				isBreak = 1
 			case <- timer.C:
 				zlib.MyPrint("select chan read : timeout")
 				timeoutCallback()
 				goto end
-			default:
-				//zlib.MyPrint("im default,sleep 1 ")
-				//time.Sleep(time.Second * 1)
 			}
 
+			if isBreak == 1{
+				goto end
+			}
 		}
 	end:
 		zlib.MyPrint("OnetimerCtrl end.")
