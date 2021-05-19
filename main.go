@@ -111,6 +111,7 @@ func main(){
 	//	}
 	//}
 	<-mainCtx.Done()
+	mylog.CloseChan <- 1
 	mylog.Warning("main end...")
 
 	time.Sleep(2 * time.Second)
