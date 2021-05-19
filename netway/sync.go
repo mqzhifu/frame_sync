@@ -249,6 +249,7 @@ end:
 func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 	queue := room.PlayersOperationQueue
 	end := queue.Len()
+	mylog.Debug("logicFrameLoopReal len:",end)
 	if end <= 0 {
 		return fpsTime
 	}
@@ -265,7 +266,6 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 			mylog.Error("还有玩家未发送操作记录,当前确认人数:",ack)
 			return fpsTime
 		}
-		sync.upSyncRoomPoolElementPlayersAckStatus(room.Id, PLAYERS_ACK_STATUS_OK)
 	}
 
 
@@ -284,6 +284,7 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 		if i >= end {
 			break
 		}
+		mylog.Debug("len:",queue.Len()," element:",element , " i:",i)
 		operationsValueInterface := element.Value
 		operationsValue := operationsValueInterface.(string)
 		var elementOperations []myproto.Operation
@@ -300,14 +301,15 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 			operations = append(operations, &elementOperations[j])
 		}
 
-
-
 		tmpElement := element.Next()
 		queue.Remove(element)
+		mylog.Debug("tmpElement:",tmpElement , " len:",queue.Len())
 		element = tmpElement
 
 		i++
 	}
+	sync.upSyncRoomPoolElementPlayersAckStatus(room.Id, PLAYERS_ACK_STATUS_OK)
+
 	mylog.Info("operations:",operations)
 	logicFrame.Operations = operations
 	sync.boardCastFrameInRoom(room.Id, "pushLogicFrame",&logicFrame)

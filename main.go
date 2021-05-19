@@ -69,7 +69,6 @@ func main(){
 		zlib.ExitPrint("env is err , list:",list)
 	}
 
-
 	rootCtx := context.Background()
 	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
 	logOption := zlib.LogOption{
@@ -91,8 +90,8 @@ func main(){
 		Mylog 				:mylog,
 		Host				:ip,
 		Port				:port,
-		ContentType			:netway.CONTENT_TYPE_JSON,
-		//ContentType			:netway.CONTENT_TYPE_PROTOBUF,
+		//ContentType			:netway.CONTENT_TYPE_JSON,
+		ContentType			:netway.CONTENT_TYPE_PROTOBUF,
 		LoginAuthType		:"jwt",
 		LoginAuthSecretKey	:"chukong",
 		IOTimeout			:3,
@@ -107,7 +106,7 @@ func main(){
 		OffLineWaitTime		:20,//玩家掉线后，等待多久
 		MapSize				:10,
 		LockMode			: netway.LOCK_MODE_PESSIMISTIC,
-		FPS					:5,
+		FPS					:10,
 	}
 	newNetWay := netway.NewNetWay(newNetWayOption)
 	go newNetWay.Startup()

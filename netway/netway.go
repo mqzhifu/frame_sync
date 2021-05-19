@@ -200,7 +200,7 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 	//初始化即登陆成功的响应均完成后，开始该连接的 读取协程
 	go NewWsConn.IOLoop()
 
-	netWay.serverPingRtt(time.Duration(rttMinTimeSecond),NewWsConn,1)
+	//netWay.serverPingRtt(time.Duration(rttMinTimeSecond),NewWsConn,1)
 	mylog.Info("wsHandler end ,player login success!!!")
 }
 func  (netWay *NetWay)loginPre(NewWsConn *WsConn)(jwt zlib.JwtData,err error){
