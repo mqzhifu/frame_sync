@@ -30,15 +30,15 @@ func tt1(m *sync.Mutex){
 	return
 }
 func test(){
-	bb := make(chan int )
-
-	var m sync.Mutex
-	tt1(&m)
-	time.Sleep(time.Second * 1)
-	zlib.MyPrint(222)
-	m.Lock()
-	zlib.MyPrint(11111)
-	<- bb
+	//bb := make(chan int )
+	//
+	//var m sync.Mutex
+	//tt1(&m)
+	//time.Sleep(time.Second * 1)
+	//zlib.MyPrint(222)
+	//m.Lock()
+	//zlib.MyPrint(11111)
+	//<- bb
 	//
 	//
 	//defer func() {
