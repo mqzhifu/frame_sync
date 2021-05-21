@@ -7,26 +7,39 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 	"zlib"
 )
 
-func testFunc1(mm map[string]int){
-	for{
-		vv ,_ := mm["a"]
-		zlib.MyPrint(vv)
-	}
+//func testFunc1(mm map[string]int){
+//	for{
+//		vv ,_ := mm["a"]
+//		zlib.MyPrint(vv)
+//	}
+//}
+//
+//func testFunc2(mm map[string]int){
+//	for{
+//		mm["b"] = 1
+//	}
+//}
+func tt1(m *sync.Mutex){
+	m.Lock()
+	return
 }
-
-func testFunc2(mm map[string]int){
-	for{
-		mm["b"] = 1
-	}
-}
-
 func test(){
-	//bb := make(chan int )
+	bb := make(chan int )
+
+	var m sync.Mutex
+	tt1(&m)
+	time.Sleep(time.Second * 1)
+	zlib.MyPrint(222)
+	m.Lock()
+	zlib.MyPrint(11111)
+	<- bb
+	//
 	//
 	//defer func() {
 	//	if err := recover(); err != nil {
