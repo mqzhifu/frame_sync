@@ -16,7 +16,7 @@ type Metrics struct {
 type MetricsChanMsg struct {
 	Key 	string
 	Value 	int
-	Opt 	int
+	Opt 	int	//1累加2加加3累减4减减
 }
 
 type TotalMetrics struct{

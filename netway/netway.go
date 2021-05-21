@@ -105,6 +105,9 @@ func NewNetWay(option NetWayOption)*NetWay {
 }
 //启动 - 入口
 func (netWay *NetWay)Startup(){
+	s_time := zlib.GetNowMillisecond()
+	myMetrics.input <- MetricsChanMsg{Key: "starupTime",Opt: 1,Value: int(s_time)}
+
 	//从外层调用的CTX上，派生netway自己的根ctx
 	startupCtx ,cancel := context.WithCancel(netWay.Option.Cxt)
 	netWay.MyCtx = startupCtx
@@ -120,7 +123,7 @@ func (netWay *NetWay)Startup(){
 	//清理，房间到期后，未回收的情况
 	//go mySync.checkRoomTimeoutLoop(startupCtx)
 	go myMetrics.start(startupCtx)
-	myMetrics.input <- MetricsChanMsg{Key: "startTime",Opt: 1,Value: int( zlib.GetNowMillisecond())}
+	//myMetrics.input <- MetricsChanMsg{Key: "startTime",Opt: 1,Value: int( zlib.GetNowMillisecond())}
 
 	netWay.startHttpServer()
 }
@@ -202,6 +205,7 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 
 	//netWay.serverPingRtt(time.Duration(rttMinTimeSecond),NewWsConn,1)
 	mylog.Info("wsHandler end ,player login success!!!")
+	myMetrics.input <- MetricsChanMsg{Key: "historyFDCreateOK",Opt: 2}
 }
 func  (netWay *NetWay)loginPre(NewWsConn *WsConn)(jwt zlib.JwtData,err error){
 	//这里有个问题，连接成功后，C端立刻就得发消息，不然就异常~bug
@@ -440,6 +444,7 @@ func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 	myMatch.delOnePlayer(wsConn.PlayerId)
 	//mySleepSecond(2,"CloseOneConn")
 	myMetrics.input <- MetricsChanMsg{Key: "total.FDNum",Opt: 4}
+	myMetrics.input <- MetricsChanMsg{Key: "historyFDDestroy",Opt: 2}
 }
 //退出
 func  (netWay *NetWay)Quit() {

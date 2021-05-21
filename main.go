@@ -12,51 +12,11 @@ import (
 	"time"
 	"zlib"
 )
-
-//func testFunc1(mm map[string]int){
-//	for{
-//		vv ,_ := mm["a"]
-//		zlib.MyPrint(vv)
-//	}
-//}
-//
-//func testFunc2(mm map[string]int){
-//	for{
-//		mm["b"] = 1
-//	}
-//}
 func tt1(m *sync.Mutex){
 	m.Lock()
 	return
 }
 func test(){
-	//bb := make(chan int )
-	//
-	//var m sync.Mutex
-	//tt1(&m)
-	//time.Sleep(time.Second * 1)
-	//zlib.MyPrint(222)
-	//m.Lock()
-	//zlib.MyPrint(11111)
-	//<- bb
-	//
-	//
-	//defer func() {
-	//	if err := recover(); err != nil {
-	//		fmt.Println("rrrrrrrr:",err)
-	//	}
-	//}()
-
-	//mm := make(map[string]int)
-	//mm["a"] = 1
-	//mm["b"] = 2
-	//go testFunc1(mm)
-	//go testFunc2(mm)
-
-	//aa := []int{}
-
-	//zlib.MyPrint(aa[5])
-	//<- bb
 
 }
 var mylog *zlib.Log

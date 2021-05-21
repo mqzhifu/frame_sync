@@ -106,6 +106,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		//}
 		//jsonStr,_ = json.Marshal(&myMetrics)
 		pool:= myMetrics.Pool
+		pool["execTime"] = int(int(zlib.GetNowMillisecond()) - pool["starupTime"])
 		jsonStr,_ = json.Marshal(&pool)
 		zlib.MyPrint(string(jsonStr))
 	}else if uri == "/www/getRoomList"{
@@ -151,6 +152,30 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		//zlib.MyPrint(roonOne)
 		jsonStr,_ = json.Marshal(&room)
 		//zlib.ExitPrint(jsonStr)
+	} else if uri == "/www/createJwtToken"{
+		randUid := query.Get("id")
+		randUid = strings.Trim(randUid," ")
+		if randUid == ""{
+			jsonStr = []byte( "id 为空")
+		}else{
+			uidStrConvInt32,_ := strconv.ParseInt(randUid,10,32)
+			payload := zlib.JwtDataPayload{
+				Uid:int32(uidStrConvInt32),
+				ATime:int32(zlib.GetNowMillisecond()),
+				AppId:2,
+			}
+			token := zlib.CreateJwtToken(mynetWay.Option.LoginAuthSecretKey,payload)
+			type CreateJwtNewToken struct {
+				Uid 	int32
+				Token 	string
+			}
+			createJwtNewToken := CreateJwtNewToken{
+				Uid: payload.Uid,
+				Token:token,
+			}
+			jsonStr,_ = json.Marshal(&createJwtNewToken)
+		}
+
 	} else if uri == "/www/testCreateJwtToken"{
 		//info := mynetWay.testCreateJwtToken()
 		//jsonStr,_ = json.Marshal(&info)
