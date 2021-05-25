@@ -46,6 +46,42 @@
 <table>
     <p>
         增加RTT测量<br/>
+        调整main函数，将参数处理与初始化分成2个函数<br/>
+        考虑持久化方案，增加 持久化配置变量，预留持久化接口<br/>
+        protobuf 文件修改:增加 ResponsePlayerMatchSignFailed(1031) 、ResponsePlayerMatchingFailed (1033)两个方法  <br/>
+        常量名修改：CONN_STATUS_WAIT 改 CONN_STATUS_INIT
+        metrics增加常量 ：METRICS_OPT_PLUS METRICS_OPT_INC  等 <br/>
+        增加login.go文件 ：将登陆处理流程分拆成一个新的文件<br/>
+        原匹配报名是有个中间方法，再调用match addOnePlayer,去掉中间方法直接调用 addOnePlayer<br/>
+        新addOnePlayer 增加各种状态值的判断，同时使用新接口 1031 告知C端 报名是有可能失败的<br/>
+        匹配玩家协程：<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;1. 增加 对player各种状态判定及日志，但如何报错还没想好咋处理<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;2. 匹配时即设定了player.roomId/readack init 改为 sync.start执行<br/>
+        匹配成功后，创建的房间加入队列失败的情况，增加判定，错误的话直接retrun<br/>
+        原metrics调用方法，过于偷懒，封装一个公共方法，统一调用，同时使用常量值，而不是直接使用数字<br/>
+        重要的方法加一些注释,同时删除了一些无用的注释代码<br/>
+        原netway监听退出信号函数在startHttpServer方法中，不合理，抽离出来，放到根函数下<br/>
+        playerInfo其实是个缓存，短期不能删，但是长期得有一个协程定时删，功能写了，但是MAP会有并发问题，这个稍后解决？<br/>
+        变量名优化：netWay.Players 改为netWay.PlayerManager <Br/>
+        JS-DEMO在连接断开后，还会持续调用函数玩家操作，修复了这个BUG<br/>
+        SendMsgCompressByUid等函数放在根文件中不太合理，统一先放到router.go文件下，后期再想想如何再分拆出来<br/>
+        CloseOneConn 入口判定少了一个条件 pause ，修复下BUG<br/>
+        增加SendMsgCompressByConn方法，原只能直接针对UID发送，增加可以直接用WS-FD发送消息函数<br/>
+        动态RTT定时器计算方式，放开，还是失败了，太吃性能，暂时还没找到问题，回头处理<br/>
+        sync mySyncPlayerRoom变量是保存roomId => playerId，这个变量是多余的，统一走playerInfo，删除此变量<br/>
+        基于上面删除的变量，同时增加新的playerId 转roomId方法 ：GetRoomIdByPlayerId<br/>
+        sync.close ，当游戏结束后，roomId是取不到的，是个BUG，修复了<br/>
+        当有重复连接的玩家，原S端检测出会报错，不踢掉，现改成直接踢掉，同时告诉被踢掉的C端<br/>
+        发送消息有myWrite write 原生write 统一一下出口，也就是归置成一个公共函数<br/>
+    </p>
+
+
+</table>
+
+2021-05-19
+<table>
+    <p>
+        zlib基类调整：将 驼峰转蛇型  公众函数由 主项目移到 zlib基类里<br/>
         protobuf 文件修改，4个接口(ResponseServerPing 等)增加了共计8个字段，int64 rtt_times rtt_timeout   <br/>
         增加测试工具：metrics<br/>
     </p>

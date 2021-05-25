@@ -109,6 +109,8 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		pool["execTime"] = int(int(zlib.GetNowMillisecond()) - pool["starupTime"])
 		jsonStr,_ = json.Marshal(&pool)
 		zlib.MyPrint(string(jsonStr))
+	}else if uri == "/www/getFD"{
+		//pool := wsConnManager.Pool
 	}else if uri == "/www/getRoomList"{
 		type RoomList struct {
 			Rooms map[string]Room              `json:"rooms"`

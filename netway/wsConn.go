@@ -2,15 +2,11 @@ package netway
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"github.com/golang/protobuf/proto"
+	"frame_sync/myproto"
 	"github.com/gorilla/websocket"
-	"regexp"
 	"strconv"
-	"strings"
 	"time"
-	"unicode"
 	"zlib"
 )
 
@@ -36,10 +32,9 @@ func NewWsConnManager()*WsConnManager {
 	wsConnManager :=  new(WsConnManager)
 	//全局变量
 	wsConnManager.Pool = make(map[int32]*WsConn)
-
 	return wsConnManager
 }
-
+//创建一个新的连接结构体
 func (wsConnManager *WsConnManager)CreateOneWsConn(conn *websocket.Conn)(myWsConn *WsConn,err error ){
 	mylog.Info("Create one WsConn  client struct")
 	if int32(len(wsConnManager.Pool))   > mynetWay.Option.MaxClientConnNum{
@@ -53,7 +48,7 @@ func (wsConnManager *WsConnManager)CreateOneWsConn(conn *websocket.Conn)(myWsCon
 	myWsConn.PlayerId 	= 0
 	myWsConn.AddTime 	= now
 	myWsConn.UpTime 	= now
-	myWsConn.Status  	= CONN_STATUS_WAITING
+	myWsConn.Status  	= CONN_STATUS_INIT
 	myWsConn.MsgInChan  = make(chan Message,5000)
 	myWsConn.RTTCancelChan = make(chan int)
 	//myWsConn.outChan=  make(chan []byte,1000)
@@ -63,17 +58,24 @@ func (wsConnManager *WsConnManager)CreateOneWsConn(conn *websocket.Conn)(myWsCon
 
 	return myWsConn,nil
 }
+
 func (wsConnManager *WsConnManager)getConnPoolById(id int32)(*WsConn,bool){
 	wsConn,ok := wsConnManager.Pool[id]
 	return wsConn,ok
 }
+//往POOL里添加一个新的连接
 func  (wsConnManager *WsConnManager)addConnPool( NewWsConn *WsConn)error{
-	v ,exist := wsConnManager.getConnPoolById(NewWsConn.PlayerId)
+	oldWsConn ,exist := wsConnManager.getConnPoolById(NewWsConn.PlayerId)
 	if exist{
-		msg := strconv.Itoa(int(NewWsConn.PlayerId)) + " player has joined conn pool ,addTime : "+strconv.Itoa(int(v.AddTime)) + " , u can , kickOff old fd.?"
+		//msg := strconv.Itoa(int(NewWsConn.PlayerId)) + " player has joined conn pool ,addTime : "+strconv.Itoa(int(v.AddTime)) + " , u can , kickOff old fd.?"
+		msg := strconv.Itoa(int(NewWsConn.PlayerId)) + " kickOff old pid :"+strconv.Itoa(int(oldWsConn.PlayerId))
 		mylog.Warning(msg)
-		err := errors.New(msg)
-		return err
+		//err := errors.New(msg)
+		responseKickOff := myproto.ResponseKickOff{
+			Time: zlib.GetNowMillisecond(),
+		}
+		mynetWay.SendMsgCompressByConn(oldWsConn,"kickOff",&responseKickOff)
+		//return err
 	}
 	mylog.Info("addConnPool : ",NewWsConn.PlayerId)
 	wsConnManager.Pool[NewWsConn.PlayerId] = NewWsConn
@@ -85,69 +87,22 @@ func  (wsConnManager *WsConnManager)delConnPool(uid int32  ){
 	delete(wsConnManager.Pool,uid)
 }
 
+func   (wsConn *WsConn)Write(content []byte,messageType int){
+	defer func() {
+		if err := recover(); err != nil {
+			mylog.Error("wsConn.Conn.WriteMessage failed:",err)
+			mynetWay.CloseOneConn(wsConn,CLOSE_SOURCE_SEND_MESSAGE)
+		}
+	}()
 
-func Case2Camel(name string) string {
-	name = strings.Replace(name, "_", " ", -1)
-	name = strings.Title(name)
-	return strings.Replace(name, " ", "", -1)
-}
-type JsonCamelCase struct {
-	Value interface{}
-}
-
-func (c JsonCamelCase) MarshalJSON() ([]byte, error) {
-	var keyMatchRegex = regexp.MustCompile(`\"(\w+)\":`)
-	marshalled, err := json.Marshal(c.Value)
-	converted := keyMatchRegex.ReplaceAllFunc(
-		marshalled,
-		func(match []byte) []byte {
-			matchStr := string(match)
-			key := matchStr[1 : len(matchStr)-2]
-			resKey := Lcfirst(Case2Camel(key))
-			return []byte(`"` + resKey + `":`)
-		},
-	)
-	return converted, err
-}
-// 首字母小写
-func Lcfirst(str string) string {
-	for i, v := range str {
-		return string(unicode.ToLower(v)) + str[i+1:]
-	}
-	return ""
-}
-
-
-func CompressContent(contentStruct interface{})(content []byte  ,err error){
-	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON {
-		content, err = json.Marshal(JsonCamelCase{contentStruct})
-		mylog.Info("CompressContent json:",string(content),err )
-	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF {
-		contentStruct := contentStruct.(proto.Message)
-		content, err = proto.Marshal(contentStruct)
-	}else{
-		err = errors.New(" switch err")
-	}
-	if err != nil{
-		mylog.Error("CompressContent err :",err.Error())
-	}
-	return content,err
-}
-//发送一条消息，此方法是给:UID还未注册到池里的情况 ，主要是首次登陆验证出错 的时候
-func   (wsConn *WsConn)SendMsg(contentStruct interface{}){
-	contentByte ,_ := CompressContent(contentStruct)
-	wsConn.Write(contentByte)
-}
-
-func   (wsConn *WsConn)Write(content []byte){
-	myMetrics.input <- MetricsChanMsg{Key: "total.output_num",Opt: 2}
-	myMetrics.input <- MetricsChanMsg{Key: "total.output_size",Opt: 1,Value: len(content)}
+	myMetrics.fastLog("total.output.num",METRICS_OPT_INC,0)
+	myMetrics.fastLog("total.output.size",METRICS_OPT_PLUS,len(content))
 
 	pid := strconv.Itoa(int(wsConn.PlayerId))
-	myMetrics.input <- MetricsChanMsg{Key: "player.fdNum."+pid,Opt: 2}
-	myMetrics.input <- MetricsChanMsg{Key: "player.fdSize."+pid,Opt: 1,Value: len(content)}
+	myMetrics.fastLog("player.fd.num."+pid,METRICS_OPT_INC,0)
+	myMetrics.fastLog("player.fd.size."+pid,METRICS_OPT_PLUS,len(content))
 
-	wsConn.Conn.WriteMessage(websocket.TextMessage,[]byte(content))
+	wsConn.Conn.WriteMessage(messageType,[]byte(content))
 	//go NewWsConn.outChan
 }
 func   (wsConn *WsConn)UpLastTime(){
@@ -170,12 +125,18 @@ func   (wsConn *WsConn)Read()(content string,err error){
 	//wsConn.Conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(mynetWay.Option.IOTimeout)))
 	messageType , dataByte  , err  := wsConn.Conn.ReadMessage()
 	if err != nil{
-		myMetrics.input <- MetricsChanMsg{Key: "total.input_err_num",Opt: 2}
+		myMetrics.fastLog("total.input.err.num",METRICS_OPT_INC,0)
 		mynetWay.Option.Mylog.Error("wsConn.Conn.ReadMessage err: ",err.Error())
 		return content,err
 	}
-	myMetrics.input <- MetricsChanMsg{Key: "total.input_num",Opt: 2}
-	myMetrics.input <- MetricsChanMsg{Key: "total.input_size",Opt: 1,Value: len(dataByte)}
+	myMetrics.fastLog("total.input.num",METRICS_OPT_INC,0)
+	myMetrics.fastLog("total.input.size",METRICS_OPT_PLUS,len(dataByte))
+
+	pid := strconv.Itoa(int(wsConn.PlayerId))
+	myMetrics.fastLog("player.fd.num."+pid,METRICS_OPT_INC,0)
+	myMetrics.fastLog("player.fd.size."+pid,METRICS_OPT_PLUS,len(content))
+
+
 
 	mylog.Debug("WsConn.ReadMessage messageType:",messageType , " len :",len(dataByte) , " data:" ,string(dataByte))
 	content = string(dataByte)
@@ -219,7 +180,7 @@ func  (wsConn *WsConn)ReadLoop(ctx context.Context){
 			}
 
 			wsConn.UpLastTime()
-			msg,err  := mynetWay.parserContent(content)
+			msg,err  := mynetWay.parserContentProtocol(content)
 			if err !=nil{
 				mylog.Warning("parserContent err :",err.Error())
 				continue
@@ -271,3 +232,4 @@ func (wsConnManager *WsConnManager)checkConnPoolTimeout(ctx context.Context){
 end:
 	mylog.Warning("checkConnPoolTimeout close")
 }
+

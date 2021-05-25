@@ -12,16 +12,18 @@ var rttMinTimeSecond = 1
 func  (netWay *NetWay)serverPingRtt(second time.Duration ,wsConn *WsConn,times int ){
 	//ping 一下，测试下RTT
 	millisecond  := zlib.GetNowMillisecond()
+	//超时时间 = rtt最小时间
 	rttTimeout := millisecond + int64( int(second) * 1000);
 	responseServerPing := myproto.ResponseServerPing{
 		AddTime:millisecond,
 		RttTimeout: rttTimeout,
 		RttTimes: int32(times),
 	}
-
+	//正常收到了C端回调，且一切正常
 	RttCallbackCancelFunc := func (){
 		mylog.Warning("RttCallbackCancelFunc...")
 	}
+	//触发了超时回调
 	RttCallbackTimerTimeoutFunc := func(){
 		mylog.Error("RttCallbackTimerTimeoutFunc")
 		if times >= 2{
@@ -29,14 +31,14 @@ func  (netWay *NetWay)serverPingRtt(second time.Duration ,wsConn *WsConn,times i
 			return
 		}
 	}
-
+	//创建一个定时器
 	getOnetimerCtrl(second,wsConn.RTTCancelChan,RttCallbackCancelFunc,RttCallbackTimerTimeoutFunc)
 	netWay.SendMsgCompressByUid(wsConn.PlayerId,"serverPing",&responseServerPing)
 }
 
 func(netWay *NetWay) ClientPong(requestClientPong myproto.RequestClientPong,wsConn *WsConn){
 	RTT := requestClientPong.ClientReceiveTime -  requestClientPong.AddTime
-	wsConn.RTT = RTT
+	//wsConn.RTT = RTT
 	now := zlib.GetNowMillisecond()
 	mylog.Info("client RTT:",RTT," ms")
 	if now >= requestClientPong.RttTimeout{//证明已超过规定的返回时间了
@@ -53,6 +55,7 @@ func(netWay *NetWay) ClientPong(requestClientPong myproto.RequestClientPong,wsCo
 	if RTT > int64(rttMinTimeSecond * 1000){
 		//虽然没有触发超时机制，但是大于1秒，囚徒 模式的同步，游戏已毫无体验感了
 		mylog.Error("RTT >= 1000ms")
+		//如果重试2次以上的RTT ，还是超时，直接放弃了...关闭FD
 		if requestClientPong.RttTimes >= 2{
 			netWay.CloseOneConn(wsConn,CLOSE_SOURCE_RTT_TIMEOUT)
 			return
@@ -61,8 +64,7 @@ func(netWay *NetWay) ClientPong(requestClientPong myproto.RequestClientPong,wsCo
 		netWay.serverPingRtt(time.Duration(timeSecond),wsConn,2)
 		return
 	}
-
-	//小于500ms,如果RTT过段 ，会造成大批量的PING/PONG，占用带宽、影响正常消息发送
+	//小于500ms,证明网络还可以，没必要太频繁RTT测试 ，会造成大批量的PING/PONG，占用带宽、影响正常消息发送
 	if RTT < 500 {
 		mylog.Info("rtt sleep 500ms")
 		//睡眠500毫秒
@@ -98,14 +100,13 @@ func getOnetimerCtrl(timeoutSecond time.Duration,cancel chan int,cancelCallback 
 			case <- timer.C:
 				zlib.MyPrint("select chan read : timeout")
 				timeoutCallback()
-				goto end
+				isBreak = 1
 			}
 
 			if isBreak == 1{
-				goto end
+				break
 			}
 		}
-	end:
 		zlib.MyPrint("OnetimerCtrl end.")
 	}(timer)
 

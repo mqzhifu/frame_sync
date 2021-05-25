@@ -45,7 +45,14 @@ func MetricsNew()*Metrics{
 	return metrics
 	//myMetrics = zlib.NewMetrics()
 }
-
+func  (metrics *Metrics)fastLog(key string,opt int ,value int ){
+	metricsChanMsg := MetricsChanMsg{
+		Key :key,
+		Opt: opt,
+		Value: value,
+	}
+	metrics.input <- metricsChanMsg
+}
 func  (metrics *Metrics)start(ctx context.Context){
 	ctxHasDone := 0
 	for{
@@ -69,9 +76,12 @@ func (metrics *Metrics)processMsg(metricsChanMsg MetricsChanMsg){
 	if metricsChanMsg.Opt == 1{
 		//mylog.Debug("metrics :"+metricsChanMsg.Key + " add " + strconv.Itoa( metricsChanMsg.Value))
 		metrics.Pool[metricsChanMsg.Key] += metricsChanMsg.Value
-	}else if metricsChanMsg.Opt == 2{
+	}else if metricsChanMsg.Opt == 2 {
 		//mylog.Debug("metrics :"+metricsChanMsg.Key + " ++ ")
 		metrics.Pool[metricsChanMsg.Key]++
+	}else if metricsChanMsg.Opt == 3{
+		//mylog.Debug("metrics :"+metricsChanMsg.Key + " add " + strconv.Itoa( metricsChanMsg.Value))
+		metrics.Pool[metricsChanMsg.Key] -= metricsChanMsg.Value
 	}else if metricsChanMsg.Opt == 4{
 		//mylog.Debug("metrics :"+metricsChanMsg.Key + " -- ")
 		metrics.Pool[metricsChanMsg.Key]--

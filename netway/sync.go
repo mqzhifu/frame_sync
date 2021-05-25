@@ -24,7 +24,7 @@ var debugBreakPoint int
 //集合 ：房间(一局游戏副本)
 var MySyncRoomPool map[string]*Room
 //索引表，PlayerId=>RoomId
-var mySyncPlayerRoom map[int32]string
+//var mySyncPlayerRoom map[int32]string
 //同步 - 逻辑中的自增ID - 默认值
 var logicFrameMsgDefaultId int32
 //同步 - 逻辑中 - 操作帧的 自增ID - 默认值
@@ -35,7 +35,7 @@ func NewSync(options Options)*Sync {
 	mylog = options.Log
 	mylog.Info("NewSync instance")
 	MySyncRoomPool = make(map[string]*Room)
-	mySyncPlayerRoom = make(map[int32]string)
+	//mySyncPlayerRoom = make(map[int32]string)
 	sync := new(Sync)
 	sync.Options = options
 
@@ -45,26 +45,43 @@ func NewSync(options Options)*Sync {
 	//统计
 	RoomSyncMetricsPool = make(map[string]RoomSyncMetrics)
 
+	sync.initPool()
 	return sync
 }
 
+func (sync *Sync)initPool(){
+	if mynetWay.Option.Store == 1{
 
+	}
+}
 //给集合添加一个新的 游戏副本
-func (sync *Sync) AddPoolElement(room 	*Room){
+func (sync *Sync) AddPoolElement(room 	*Room)error{
 	mylog.Info("addPoolElement")
 	_ ,exist := MySyncRoomPool[room.Id]
 	if exist{
-		mylog.Error("mySyncRoomPool has exist : ",room.Id)
-		return
+		msg := "mySyncRoomPool has exist : " + room.Id
+		mylog.Error(msg)
+		err := errors.New(msg)
+		return err
 	}
 	MySyncRoomPool[room.Id] = room
+	return nil
+}
+func (sync *Sync) delPoolElement(roomId string){
+	//mylog.Info("addPoolElement")
+	//room ,exist := MySyncRoomPool[roomId]
+	//if !exist{
+	//	mylog.Error("delPoolElement not exist : ",roomId)
+	//	return
+	//}
+	//for _,player := range room.PlayerList{
+	//
+	//}
 }
 //进入战后，场景渲染完后，进入准确状态
 func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,wsConn *WsConn) {
-	//zlib.MyPrint(requestPlayerReady.PlayerId)
-	//zlib.ExitPrint(requestPlayerReady)
-	roomId := mySyncPlayerRoom[requestPlayerReady.PlayerId]
-	mylog.Debug("mySyncPlayerRoom:", mySyncPlayerRoom, " , id :",roomId)
+	roomId := mynetWay.PlayerManager.GetRoomIdByPlayerId(requestPlayerReady.PlayerId)
+	mylog.Debug(" roomId :",roomId)
 	room,empty := sync.getPoolElementById(roomId)
 	if empty{
 		mylog.Error("playerReady getPoolElementById empty",roomId)
@@ -122,11 +139,6 @@ func  (sync *Sync)testFirstLogicFrame(room *Room){
 		sync.boardCastInRoom(room.Id,"pushLogicFrame",&logicFrameMsg)
 	}
 }
-//根据playerId 反查 roomId
-func  (sync *Sync)GetMySyncPlayerRoomById(playerId int32)string{
-	roomId,_ :=  mySyncPlayerRoom[playerId]
-	return roomId
-}
 //检查 所有玩家是否 都已准确，超时了
 func  (sync *Sync)checkReadyTimeout(room *Room){
 	for{
@@ -174,7 +186,7 @@ end:
 	mylog.Warning("playerOfflineCheckRoomTimeout loop routine close")
 }
 
-//一局新游戏，均已准备，进入开始状态
+//一局新游戏创建成功，告知玩家进入战场，等待 所有玩家准备确认
 func  (sync *Sync)Start(roomId string){
 	mylog.Warning("start a new game:")
 
@@ -191,9 +203,19 @@ func  (sync *Sync)Start(roomId string){
 		Time			:time.Now().UnixNano() / 1e6,
 	}
 
-	for _,v :=range room.PlayerList{
-		mySyncPlayerRoom[v.Id] = roomId
+	for _,player :=range room.PlayerList{
+		player.RoomId = room.Id
+		room.PlayersReadyList[player.Id] = 0
+		if mynetWay.Option.Store == 1{
+			//推送玩家缓存状态
+		}
+		//mySyncPlayerRoom[v.Id] = roomId
 	}
+
+	if mynetWay.Option.Store == 1{
+		//推送房间信息
+	}
+
 
 	sync.boardCastInRoom(roomId,"enterBattle",&responseClientInitRoomData)
 	room.CloseChan = make(chan int)
@@ -405,9 +427,14 @@ func  (sync *Sync)roomEnd(roomId string,sendCloseChan int){
 	room.UpStatus(ROOM_STATUS_END)
 	room.EndTime = int32(zlib.GetNowTimeSecondToInt())
 	for _,v:= range room.PlayerList{
-		mynetWay.Players.UpPlayerRoomId(v.Id,"")
-		delete(mySyncPlayerRoom,v.Id)
+		mynetWay.PlayerManager.UpPlayerRoomId(v.Id,"")
+		//delete(mySyncPlayerRoom,v.Id)
 	}
+
+	if mynetWay.Option.Store == 1{
+
+	}
+
 	if sendCloseChan == 1{
 		room.CloseChan <- 1
 	}
@@ -426,7 +453,8 @@ func  (sync *Sync)GameOver(requestGameOver myproto.RequestGameOver,wsConn *WsCon
 }
 //玩家触发了该角色死亡
 func  (sync *Sync)PlayerOver(requestGameOver myproto.RequestPlayerOver,wsConn *WsConn){
-	roomId := mySyncPlayerRoom[requestGameOver.PlayerId]
+	//roomId := mySyncPlayerRoom[requestGameOver.PlayerId]
+	roomId := mynetWay.PlayerManager.GetRoomIdByPlayerId(requestGameOver.PlayerId)
 	responseOtherPlayerOver := myproto.ResponseOtherPlayerOver{PlayerId: requestGameOver.PlayerId}
 	sync.boardCastInRoom(roomId,"otherPlayerOver",&responseOtherPlayerOver)
 }
@@ -440,7 +468,7 @@ func (sync *Sync)upSyncRoomPoolElementPlayersAckStatus(roomId string,status int)
 func (sync *Sync)roomOnlinePlayers(room *Room)[]int32{
 	var playerOnLine []int32
 	for _, v := range room.PlayerList {
-		player, empty := mynetWay.Players.GetById(v.Id)
+		player, empty := mynetWay.PlayerManager.GetById(v.Id)
 		//mylog.Debug("pinfo::",player," empty:",empty," ,pid:",v.Id)
 		if empty {
 			continue
@@ -457,13 +485,18 @@ func (sync *Sync)roomOnlinePlayers(room *Room)[]int32{
 //玩家断开连接后
 func (sync *Sync)Close(wsConn *WsConn){
 	mylog.Warning("sync.close")
-	//获取该玩家的roomId
-	roomId,ok := mySyncPlayerRoom[wsConn.PlayerId]
-	if !ok || roomId == "" {
+	roomId := mynetWay.PlayerManager.GetRoomIdByPlayerId(wsConn.PlayerId)
+	if roomId == ""{
+		//这里会先执行roomEnd，然后清空了player roomId 所有获取不到
+		mylog.Warning("roomid = empty ",wsConn.PlayerId)
 		return
 	}
 	//判断下所有玩家是否均下线了
-	room, _ := sync.getPoolElementById(roomId)
+	room, empty := sync.getPoolElementById(roomId)
+	if empty{
+		mylog.Warning("room == empty , ",roomId)
+		return
+	}
 	if room.Status == ROOM_STATUS_EXECING || room.Status == ROOM_STATUS_PAUSE {
 		playerOnLine := sync.roomOnlinePlayers(room)
 		//mylog.Debug("playerOnLine:",playerOnLine, "len :",len(playerOnLine))
@@ -495,7 +528,6 @@ func  (sync *Sync)boardCastInRoom(roomId string,action string ,contentStruct int
 			mylog.Error("player offline")
 			continue
 		}
-		//mynetWay.SendMsgByUid(player.Id,action,content)
 		mynetWay.SendMsgCompressByUid(player.Id,action,contentStruct)
 	}
 	//content ,_:= json.Marshal(contentStruct)
@@ -522,7 +554,6 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,contentStruc
 			mylog.Error("player offline")
 			continue
 		}
-		//mynetWay.SendMsgByUid(player.Id,action,content)
 		mynetWay.SendMsgCompressByUid(player.Id,action,contentStruct)
 
 	}
@@ -602,7 +633,7 @@ func  (sync *Sync)GetRoom(requestGetRoom myproto.RequestGetRoom,wsConn *WsConn){
 		AddTime: room.AddTime,
 		PlayerList: room.PlayerList,
 		Status :room.Status,
-		Timeout: room.Timeout,
+		//Timeout: room.Timeout,
 		RandSeek:room.RandSeek,
 		RoomId: room.Id,
 	}

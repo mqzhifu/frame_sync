@@ -84,7 +84,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         requestGameOver.setResult("ccccccWin");
         this.sendNewMsg("gameOver", requestGameOver);
 
-        window.clearInterval(self.pushLogicFrameLoopFunc);
+        clearInterval(self.pushLogicFrameLoopFunc);
         self.upOptBnt("游戏结束1",1)
 
         return alert("完犊子了，撞车了...这游戏得结束了....");
@@ -152,13 +152,13 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.closeFD = function (){//主动关闭
         console.log("closeFD");
         // window.clearInterval(self.heartbeatLoopFunc);
-        // window.clearInterval(self.pushLogicFrameLoopFunc);
+        clearInterval(self.pushLogicFrameLoopFunc);
         self.myClose = 1;
         self.wsObj.close();
     };
     this.onclose = function(ev){//接收到服务端关闭
         alert("receive server close:" +ev.code);
-        window.clearInterval(self.pushLogicFrameLoopFunc);
+        clearInterval(self.pushLogicFrameLoopFunc);
         self.upStatus("close")
         // window.clearInterval(self.heartbeatLoopFunc);
         if (self.myClose == 1){
@@ -256,7 +256,9 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
         }else if ( action == 'enterBattle' ){
             self.rEnterBattle(content);
         }else if( "gameOver" == action){
-            self.rOver(logicFrame);
+            self.rOver(content);
+        }else if( "kickOff" == action){
+            self.rKickOff(content);
         }else if( "pushLogicFrame" == action){
             self.rPushLogicFrame(content)
         }else if( "readyTimeout" == action){
@@ -359,7 +361,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
         self.upStatus("startBattle");
         self.pushLogicFrameLoopFunc = setInterval(self.playerCommandPush,self.logicFrameLoopTimeMs);
-
+        // console.log("self.pushLogicFrameLoopFunc:",self.pushLogicFrameLoopFunc)
         var exceptionOffLineId = "exceptionOffLineId"+self.playerId;
         // self.upOptBnt("游戏中...<a href='javascript:void(0);'  id='"+exceptionOffLineId+"'>异常掉线</a>",1)
         // $("#"+exceptionOffLineId).click(self.closeFD);
@@ -499,9 +501,15 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
 
     };
     this.rOver = function(ev){
-        window.clearInterval(self.pushLogicFrameLoopFunc);
+        clearInterval(self.pushLogicFrameLoopFunc);
         self.upOptBnt("游戏结束2",1)
-    }
+        return alert("have player game end...");
+    };
+
+    this.rKickOff = function(ev){
+        return alert("您被踢下线喽~");
+    };
+
     //=================== 以上都是 接收S端的处理函数========================================
 
     this.getMap = function (tableId) {

@@ -210,3 +210,15 @@ message ResponseRestartGame{
     string      room_id             = 1;
     repeated    int32 player_ids    = 2;
 }
+
+message ResponsePlayerMatchSignFailed{
+    int32   player_id = 1;
+    string  msg = 2;
+}
+
+message ResponsePlayerMatchingFailed{
+    int32   player_id = 1;
+    string  msg = 2;
+    string  roomId = 3;
+
+}
