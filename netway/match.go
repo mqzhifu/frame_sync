@@ -81,7 +81,7 @@ func (match *Match)matchSignErrAndSend(msg string,wsConn *WsConn){
 		PlayerId: wsConn.PlayerId,
 		Msg: msg,
 	}
-	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"playerMatchSignFailed",playerMatchSignFailed)
+	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"playerMatchSignFailed",&playerMatchSignFailed)
 }
 
 func (match *Match) delOnePlayer(requestCancelSign myproto.RequestPlayerMatchSignCancel,wsConn *WsConn){

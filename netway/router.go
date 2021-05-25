@@ -47,7 +47,7 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 		case "playerLogicFrameAck":
 			//err = parserMsgContent(msg.Content,&logicFrame)
 			//mySync.playerLogicFrameAck(logicFrame,wsConn)
-		case "playerCancelReady"://玩家取消报名等待
+		case "playerMatchSignCancel"://玩家取消报名等待
 			err = netWay.parserContentMsg(msg.Content,&requestPlayerMatchSignCancel)
 		case "gameOver"://游戏结束
 			err = netWay.parserContentMsg(msg.Content,&requestGameOver)
@@ -89,7 +89,7 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 			netWay.mySync.PlayerResumeGame(requestPlayerResumeGame,wsConn )
 		case "playerOperations"://玩家推送操作指令
 			netWay.mySync.ReceivePlayerOperation(requestPlayerOperations,wsConn,msg.Content)
-		case "playerCancelReady"://玩家取消报名等待
+		case "playerMatchSignCancel"://玩家取消报名等待
 			myMatch.delOnePlayer(requestPlayerMatchSignCancel,wsConn)
 		case "gameOver"://游戏结束
 			netWay.mySync.GameOver(requestGameOver,wsConn)

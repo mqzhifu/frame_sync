@@ -36,7 +36,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     this.communicationContentType = contentType;
     //入口函数，必须得先建立连接后，都有后续的所有操作
     this.create  = function(){
-        console.log("this status :",self.status);
+        console.log("create , this status :",self.status);
         if (self.status != "init" && self.status != "close"){
             return alert(" status !=  init or close");
         }
@@ -118,7 +118,7 @@ function ws (playerId,token,host,uri,matchGroupPeople,tableMax,DomIdObj,offLineW
     //     return 111;
     // }
     this.sendNewMsg =  function ( action,contentObj  ){
-        console.log( " sendMsg:" + self.descPre ,contentObj.toObject());
+        console.log( " sendMsg:" +  " action: "+action + " "  + self.descPre ,contentObj.toObject());
         var id = self.getActionId(action,"client");
         var content = null;
         if (self.communicationContentType == "json"){

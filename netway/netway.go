@@ -38,7 +38,7 @@ type NetWayOption struct {
 	IOTimeout			int64								//read write sock fd 超时时间
 	Cxt 				context.Context						//调用方的CTX，用于所有协程的退出操作
 	MainChan			chan int32	`json:"-"`
-	ConnTimeout 		int32								//检测FD最后更新时间
+	ConnTimeout 		int32		`json:"connTimeout"`						//检测FD最后更新时间
 
 	MapSize				int32		`json:"mapSize"`		//地址大小，给前端初始化使用
 	RoomPeople			int32		`json:"roomPeople"`		//一局游戏包含几个玩家
@@ -103,7 +103,6 @@ func NewNetWay(option NetWayOption)*NetWay {
 	netWay.ProtocolActions = myprotocol.ProtocolActionsNew()
 	//统计模块
 	myMetrics = MetricsNew()
-
 
 	return netWay
 }

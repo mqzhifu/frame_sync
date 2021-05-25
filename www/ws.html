@@ -139,12 +139,13 @@ S端配置信息
 
         var html = "<tr><td>hostUri</td><td>"+host + hostUri+"</td></tr>";
         // html += "<tr><td>hostUri</td><td>"+hostUri+"</td></tr>";
-        html += "<tr><td>matchGroupPeople</td><td>"+matchGroupPeople+"</td></tr>";
         // html += "<tr><td>tableMax</td><td>"+tableMax+"</td></tr>";
-        // html += "<tr><td>OffLineWaitTime</td><td>"+OffLineWaitTime+"</td></tr>";
+        html += "<tr><td>OffLineWaitTime</td><td>"+offLineWaitTime+"</td></tr>";
+        html += "<tr><td>matchGroupPeople</td><td>"+matchGroupPeople+"</td></tr>";
         html += "<tr><td>FPS</td><td>"+ data.fps+"</td></tr>";
         html += "<tr><td>FPS-MS</td><td>"+ 1000 /  data.fps+"</td></tr>";
-
+        html += "<tr><td>ready-timeout</td><td>"+ data.roomReadyTimeout+"</td></tr>";
+        html += "<tr><td>ConnTimeout</td><td>"+ data.connTimeout+"</td></tr>";
 
         if (data.contentType == 1){
             data.contentTypeStr = "json";

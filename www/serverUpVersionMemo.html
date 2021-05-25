@@ -35,6 +35,7 @@
         sync.close ，当游戏结束后，roomId是取不到的，是个BUG，修复了<br/>
         当有重复连接的玩家，原S端检测出会报错，不踢掉，现改成直接踢掉，同时告诉被踢掉的C端<br/>
         发送消息有myWrite write 原生write 统一一下出口，也就是归置成一个公共函数<br/>
+        给C端提供一个接口，接收一个int数，根据该数生成一个token<br/>
     </p>
 
 
@@ -45,6 +46,7 @@
 2021-05-19
 <table>
     <p>
+        WS 发送数据有时候会失败，原因是：可能发送之前FD即关闭了，结果抛panic，程序中卡，加上recover防止终止<br/>
         zlib基类调整：将 驼峰转蛇型  公众函数由 主项目移到 zlib基类里<br/>
         protobuf 文件修改，4个接口(ResponseServerPing 等)增加了共计8个字段，int64 rtt_times rtt_timeout   <br/>
         增加测试工具：metrics<br/>
