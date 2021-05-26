@@ -14,4 +14,4 @@
 |1027|kickOff|该玩家在其它地方登陆，踢掉了当前连接||
 |1029|restartGame|玩家均已在线，重新开始游戏||
 |1031|playerMatchSignFailed|玩家匹配报名失败||
-|1033|ResponsePlayerMatchingFailed|玩家匹配失败||
+|1033|playerMatchingFailed|玩家匹配失败||
