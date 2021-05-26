@@ -405,7 +405,6 @@ func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPla
 		return nil
 	}
 
-
 	if int(logicFrame.SequenceNumber) > room.SequenceNumber{
 		return errors.New("client num > room.SequenceNumber err:"+numberMsg)
 	}

@@ -25,6 +25,8 @@ type NetWay struct {
 type NetWayOption struct {
 	Host 				string		`json:"host"`
 	Port 				string		`json:"port"`
+	TcpPort 			string 		`json:"tcpPort"`
+	UdpPort				string 		`json:"udpPort"`
 	Mylog 				*zlib.Log	`json:"mylog"`
 	Protocol 			int32		`json:"myprotocol"`		//协议  ，ws sockdt udp
 	WsUri				string		`json:"wsUri"`			//接HOST的后面的URL地址
@@ -157,7 +159,6 @@ func (netWay *NetWay)startHttpServer( ){
 		netWay.Option.Mylog.Error("ListenAndServe:", err)
 	}
 }
-//一个客户端连接请求进入
 func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 	netWay.Option.Mylog.Info("wsHandler: have a new client http request")
 	//http 升级 ws
@@ -167,6 +168,18 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 		netWay.Option.Mylog.Error("Upgrade websocket failed: ", err.Error())
 		return
 	}
+	netWay.OpenNewConn(wsConnFD)
+}
+
+func(netWay *NetWay)tcpHandler(){
+	//netWay.OpenNewConn()
+}
+
+func(netWay *NetWay)udpHandler(){
+
+}
+//一个客户端连接请求进入
+func(netWay *NetWay)OpenNewConn( wsConnFD *websocket.Conn) {
 	//创建一个连接元素，将WS FD 保存到该容器中
 	NewWsConn ,err := wsConnManager.CreateOneWsConn(wsConnFD)
 	if err !=nil{
