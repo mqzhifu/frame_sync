@@ -41,7 +41,7 @@ func  (netWay *NetWay)loginPre(wsConn *WsConn)(jwt zlib.JwtData,err error){
 			ErrMsg:err.Error(),
 		}
 		//NewWsConn.SendMsg(loginRes)
-		netWay.SendMsgCompressByUid(wsConn.PlayerId,"loginRes",loginRes)
+		netWay.SendMsgCompressByUid(wsConn.PlayerId,"loginRes",&loginRes)
 		netWay.CloseOneConn(wsConn, CLOSE_SOURCE_AUTH_FAILED)
 		return jwt ,err
 	}

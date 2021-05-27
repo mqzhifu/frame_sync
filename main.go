@@ -6,25 +6,16 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 	"zlib"
 )
-func tt1(m *sync.Mutex){
-	m.Lock()
-	return
-}
-func test(){
-
-}
 var mylog *zlib.Log
 func main(){
 	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
-	test()
 
-	if len(os.Args) < 4{
-		msg := "os.Args len < 4 , ex :  env=dev , ip=127.0.0.1 , port=2222 , log_base_path=/data/www/golang/src/logs"
+	if len(os.Args) < 5{
+		msg := "os.Args len < 5 , ex :  env=dev , ip=127.0.0.1 , port=2222 , log_base_path=/data/www/golang/src/logs cs=server"
 		zlib.ExitPrint(msg)
 	}
 
@@ -32,6 +23,7 @@ func main(){
 	ip 				:= os.Args[2]
 	port 			:= os.Args[3]
 	log_base_path 	:= os.Args[4]
+	clientServer	:= os.Args[5]
 
 	msg := "os.Args: env= "+env +" ,ip= "+ip +" ,port=" + port+ " ,log_base_path= " +log_base_path
 	zlib.MyPrint(msg)
@@ -40,10 +32,10 @@ func main(){
 		zlib.ExitPrint("env is err , list:",list)
 	}
 
-	enter(log_base_path,ip,port)
+	enter(log_base_path,ip,port,clientServer)
 }
 
-func enter(log_base_path string,ip string ,port string){
+func enter(log_base_path string,ip string ,port string,clientServer string){
 	rootCtx := context.Background()
 
 	logOption := zlib.LogOption{
@@ -62,8 +54,11 @@ func enter(log_base_path string,ip string ,port string){
 		//Host 				:"192.168.192.125",
 		//Port 				:"2222",
 		Mylog 				:mylog,
-		Host				:ip,
+		ListenIp			:ip,
+		OutIp				:ip,
+		//OutIp				: "39.106.65.76",
 		Port				:port,
+		UdpPort				:"9999",
 		//ContentType			:netway.CONTENT_TYPE_JSON,
 		ContentType			:netway.CONTENT_TYPE_PROTOBUF,
 		LoginAuthType		:"jwt",
@@ -71,17 +66,23 @@ func enter(log_base_path string,ip string ,port string){
 		IOTimeout			:3,
 		Cxt 				:rootCtx,
 		ConnTimeout			: 60,
-		Protocol			: netway.PROTOCOL_WEBSOCKET,
+		//Protocol			: netway.PROTOCOL_WEBSOCKET,
+		Protocol			: netway.PROTOCOL_TCP,
 		WsUri				: "/ws",
 		MaxClientConnNum	:65535,
 		RoomPeople			:2,
-		//RoomTimeout 		:120,
 		RoomReadyTimeout 	:10,
 		OffLineWaitTime		:20,//玩家掉线后，等待多久
 		MapSize				:10,
 		LockMode			: netway.LOCK_MODE_PESSIMISTIC,
 		FPS					:10,
 		Store				: 0,
+	}
+	if clientServer == "client"{
+		netway.StartTcpClient(newNetWayOption,mylog)
+		cc := make(chan int)
+		<- cc
+		return
 	}
 	//创建网关，并启动
 	newNetWay := netway.NewNetWay(newNetWayOption)
@@ -92,10 +93,11 @@ func enter(log_base_path string,ip string ,port string){
 	go DemonSignal(newNetWay,mainCtx,mainCancel)
 	//阻塞，如果有信号终止了，最后要把main正常结束
 	<-mainCtx.Done()
+	//这里做个容错，可能会遗漏掉的协程未结束 或 结束程序有点慢
+	time.Sleep(5 * time.Second)
+
 	mylog.CloseChan <- 1
 	mylog.Warning("main end...")
-	//这里做个容错，可能会遗漏掉的协程未结束 或 结束程序有点慢
-	time.Sleep(1 * time.Second)
 }
 //信号 处理
 func  DemonSignal(newNetWay *netway.NetWay,mainCtx context.Context,mainCancel context.CancelFunc){
@@ -110,7 +112,7 @@ func  DemonSignal(newNetWay *netway.NetWay,mainCtx context.Context,mainCancel co
 		switch sign {
 			case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
 				mylog.Warning(prefix+" exit!!!")
-				newNetWay.Quit()
+				newNetWay.CloseChan <- 1
 				goto end
 			case syscall.SIGUSR1:
 				mylog.Warning(prefix+" usr1!!!")

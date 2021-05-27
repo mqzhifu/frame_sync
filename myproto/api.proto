@@ -214,11 +214,12 @@ message ResponseRestartGame{
 message ResponsePlayerMatchSignFailed{
     int32   player_id = 1;
     string  msg = 2;
+    int32   code = 3;
 }
 
 message ResponsePlayerMatchingFailed{
     int32   player_id = 1;
     string  msg = 2;
     string  roomId = 3;
-
+    int32   code = 3;
 }

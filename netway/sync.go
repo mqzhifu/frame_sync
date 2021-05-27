@@ -107,7 +107,6 @@ func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,wsCon
 	room.UpStatus(ROOM_STATUS_EXECING)
 	room.StartTime = int32(zlib.GetNowTimeSecondToInt())
 
-
 	RoomSyncMetricsPool[roomId] = RoomSyncMetrics{}
 
 	sync.testFirstLogicFrame(room)
@@ -186,7 +185,7 @@ end:
 	mylog.Warning("playerOfflineCheckRoomTimeout loop routine close")
 }
 
-//一局新游戏创建成功，告知玩家进入战场，等待 所有玩家准备确认
+//一局新游戏（副本）创建成功，告知玩家进入战场，等待 所有玩家准备确认
 func  (sync *Sync)Start(roomId string){
 	mylog.Warning("start a new game:")
 
@@ -215,7 +214,6 @@ func  (sync *Sync)Start(roomId string){
 	if mynetWay.Option.Store == 1{
 		//推送房间信息
 	}
-
 
 	sync.boardCastInRoom(roomId,"enterBattle",&responseClientInitRoomData)
 	room.CloseChan = make(chan int)
@@ -415,12 +413,17 @@ func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPla
 
 	return nil
 }
-//游戏结束
+//游戏结束 - 结算
 func  (sync *Sync)roomEnd(roomId string,sendCloseChan int){
 	mylog.Info("roomEnd")
 	room,empty := sync.getPoolElementById(roomId)
 	if empty{
 		mylog.Error("getPoolElementById is empty",roomId)
+		return
+	}
+	//避免重复结束
+	if room.Status == ROOM_STATUS_END{
+		mylog.Error("roomEnd status err ",roomId)
 		return
 	}
 	room.UpStatus(ROOM_STATUS_END)

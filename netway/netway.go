@@ -16,19 +16,19 @@ type NetWay struct {
 	httpServer      	*http.Server
 	MyCtx           	context.Context
 	MyCtxCancel     	context.CancelFunc
-	PlayerManager         	*PlayerManager
+	PlayerManager      	*PlayerManager
 	ProtocolActions 	*myprotocol.ProtocolActions
 	CloseChan       	chan int32
 	MatchSuccessChan    chan *Room
 }
 
 type NetWayOption struct {
-	Host 				string		`json:"host"`
+	ListenIp			string		`json:"listenIp"`
+	OutIp				string		`json:"outIp"`
 	Port 				string		`json:"port"`
-	TcpPort 			string 		`json:"tcpPort"`
 	UdpPort				string 		`json:"udpPort"`
 	Mylog 				*zlib.Log	`json:"mylog"`
-	Protocol 			int32		`json:"myprotocol"`		//协议  ，ws sockdt udp
+	Protocol 			int32		`json:"protocol"`		//协议  ，ws tcp udp
 	WsUri				string		`json:"wsUri"`			//接HOST的后面的URL地址
 	ContentType 		int32		`json:"contentType"`	//json protobuf
 
@@ -75,6 +75,8 @@ var myMatch		*Match
 var wsConnManager *WsConnManager
 var myMetrics *Metrics
 var mylog *zlib.Log
+var prototolManager *PrototolManager
+var myTcpServer *TcpServer
 func NewNetWay(option NetWayOption)*NetWay {
 	option.Mylog.Info("New NetWay instance :")
 	zlib.PrintStruct(option," : ")
@@ -110,6 +112,8 @@ func NewNetWay(option NetWayOption)*NetWay {
 }
 //启动 - 入口
 func (netWay *NetWay)Startup(){
+	myTcpServer =  TcpServerNew()
+	prototolManager = PrototolManagerNew()
 	//启动时间
 	s_time := zlib.GetNowMillisecond()
 	myMetrics.fastLog("starupTime",METRICS_OPT_PLUS,int(s_time))
@@ -129,8 +133,7 @@ func (netWay *NetWay)Startup(){
 	go myMetrics.start(startupCtx)
 	//玩家缓存状态，下线后，超时清理
 	go netWay.PlayerManager.checkOfflineTimeout(startupCtx)
-	//开始HTTP 监听 模块
-	go netWay.startHttpServer()
+	go prototolManager.Start()
 
 	netWay.CloseChan = make(chan int32)
 	go func() {
@@ -138,11 +141,14 @@ func (netWay *NetWay)Startup(){
 		netWay.Quit()
 	}()
 }
+
+
+
 //启动HTTP 服务
 func (netWay *NetWay)startHttpServer( ){
-	netWay.Option.Mylog.Info("ws Startup : ",netWay.Option.WsUri,netWay.Option.Host+":"+netWay.Option.Port)
+	netWay.Option.Mylog.Info("ws Startup : ",netWay.Option.WsUri,netWay.Option.ListenIp+":"+netWay.Option.Port)
 
-	dns := netWay.Option.Host + ":" + netWay.Option.Port
+	dns := netWay.Option.ListenIp + ":" + netWay.Option.Port
 	var addr = flag.String("server addr", dns, "server address")
 
 	httpServer := & http.Server{
@@ -168,18 +174,20 @@ func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 		netWay.Option.Mylog.Error("Upgrade websocket failed: ", err.Error())
 		return
 	}
-	netWay.OpenNewConn(wsConnFD)
+	imp := WebsocketConnImpNew(wsConnFD)
+	netWay.OpenNewConn(imp)
 }
 
-func(netWay *NetWay)tcpHandler(){
-	//netWay.OpenNewConn()
+func(netWay *NetWay)tcpHandler(tcpConn *TcpConn){
+	imp := TcpConnImpNew(tcpConn)
+	netWay.OpenNewConn(imp)
 }
 
 func(netWay *NetWay)udpHandler(){
 
 }
 //一个客户端连接请求进入
-func(netWay *NetWay)OpenNewConn( wsConnFD *websocket.Conn) {
+func(netWay *NetWay)OpenNewConn( wsConnFD FDAdapter) {
 	//创建一个连接元素，将WS FD 保存到该容器中
 	NewWsConn ,err := wsConnManager.CreateOneWsConn(wsConnFD)
 	if err !=nil{
@@ -269,11 +277,12 @@ func  (wsConn *WsConn)CloseHandler(code int, text string) error{
 func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 	netWay.Option.Mylog.Info("wsConn close ,source : ",source,wsConn.PlayerId)
 	if wsConn.Status == CONN_STATUS_CLOSE {
-		netWay.Option.Mylog.Error("wsConn.Status error")
+		netWay.Option.Mylog.Error("CloseOneConn error :wsConn.Status == CLOSE")
 		return
 	}
-	//把后台守护  协程 先关了
+	//状态更新为已关闭，防止重复关闭
 	wsConn.Status = CONN_STATUS_CLOSE
+	//把后台守护  协程 先关了，不再收消息了
 	wsConn.CloseChan <- 1
 	//netWay.Players.delById(wsConn.PlayerId)//这个不能删除，用于玩家掉线恢复的记录
 	//先把玩家的在线状态给变更下，不然 mySync.close 里面获取房间在线人数，会有问题
@@ -282,6 +291,7 @@ func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 	netWay.mySync.Close(wsConn)
 
 	err := wsConn.Conn.Close()
+
 	netWay.Option.Mylog.Info("wsConn.Conn.Close err:",err)
 
 	wsConnManager.delConnPool(wsConn.PlayerId)
@@ -294,8 +304,8 @@ func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 }
 //退出
 func  (netWay *NetWay)Quit() {
-	ctx, _ := context.WithCancel(netWay.Option.Cxt)
-	netWay.httpServer.Shutdown(ctx)
+	mylog.Warning("netWay.Quit")
+	prototolManager.Quit()
 
 	netWay.MyCtxCancel() //关闭 所有  startup开启的协程
 

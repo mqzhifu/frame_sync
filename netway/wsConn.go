@@ -20,7 +20,7 @@ type WsConn struct {
 	UpTime 		int32
 	PlayerId	int32
 	Status  	int
-	Conn 		*websocket.Conn
+	Conn 		FDAdapter //*websocket.Conn
 	CloseChan 	chan int
 	RTT 		int64
 	MsgInChan		chan Message
@@ -35,7 +35,7 @@ func NewWsConnManager()*WsConnManager {
 	return wsConnManager
 }
 //创建一个新的连接结构体
-func (wsConnManager *WsConnManager)CreateOneWsConn(conn *websocket.Conn)(myWsConn *WsConn,err error ){
+func (wsConnManager *WsConnManager)CreateOneWsConn(connFd FDAdapter)(myWsConn *WsConn,err error ){
 	mylog.Info("Create one WsConn  client struct")
 	if int32(len(wsConnManager.Pool))   > mynetWay.Option.MaxClientConnNum{
 		mylog.Error("more MaxClientConnNum")
@@ -44,7 +44,7 @@ func (wsConnManager *WsConnManager)CreateOneWsConn(conn *websocket.Conn)(myWsCon
 	now := int32(zlib.GetNowTimeSecondToInt())
 
 	myWsConn = new (WsConn)
-	myWsConn.Conn 		= conn
+	myWsConn.Conn 		= connFd	//*websocket.Conn
 	myWsConn.PlayerId 	= 0
 	myWsConn.AddTime 	= now
 	myWsConn.UpTime 	= now
@@ -54,7 +54,6 @@ func (wsConnManager *WsConnManager)CreateOneWsConn(conn *websocket.Conn)(myWsCon
 	//myWsConn.outChan=  make(chan []byte,1000)
 
 	mylog.Info("reg wsConn callback CloseHandler")
-	conn.SetCloseHandler(myWsConn.CloseHandler)
 
 	return myWsConn,nil
 }

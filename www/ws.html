@@ -107,7 +107,7 @@ S端配置信息
     }
 
     function initPlayer(player,divId,data){
-        var host = "ws://"+data.host + ":"+ data.port;
+        var host = "ws://"+data.outIp + ":"+ data.port;
         var hostUri = data.wsUri;
         var matchGroupPeople = data.roomPeople;
         var tableMax = data.mapSize;
@@ -131,7 +131,7 @@ S端配置信息
 
     function init(data){
         var serverConfigTable = $("#server_config_table");
-        var host = "ws://"+data.host + ":"+ data.port;
+        var host = "ws://"+data.outIp + ":"+ data.port;
         var hostUri = data.wsUri;
         var matchGroupPeople = data.roomPeople;
         var tableMax = data.mapSize;
