@@ -200,6 +200,7 @@ func  (sync *Sync)Start(roomId string){
 		PlayerList		:room.PlayerList,
 		RandSeek		:room.RandSeek,
 		Time			:time.Now().UnixNano() / 1e6,
+		UdpPort			:mynetWay.Option.UdpPort,
 	}
 
 	for _,player :=range room.PlayerList{

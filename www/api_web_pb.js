@@ -4857,7 +4857,9 @@ proto.myproto.ResponseEnterBattle.toObject = function(includeInstance, msg) {
     addTime: jspb.Message.getFieldWithDefault(msg, 5, 0),
     time: jspb.Message.getFieldWithDefault(msg, 6, 0),
     playerListList: jspb.Message.toObjectList(msg.getPlayerListList(),
-    proto.myproto.Player.toObject, includeInstance)
+    proto.myproto.Player.toObject, includeInstance),
+    udpPort: jspb.Message.getFieldWithDefault(msg, 8, ""),
+    sessionId: jspb.Message.getFieldWithDefault(msg, 9, 0)
   };
 
   if (includeInstance) {
@@ -4922,6 +4924,14 @@ proto.myproto.ResponseEnterBattle.deserializeBinaryFromReader = function(msg, re
       var value = new proto.myproto.Player;
       reader.readMessage(value,proto.myproto.Player.deserializeBinaryFromReader);
       msg.addPlayerList(value);
+      break;
+    case 8:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setUdpPort(value);
+      break;
+    case 9:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setSessionId(value);
       break;
     default:
       reader.skipField();
@@ -5000,6 +5010,20 @@ proto.myproto.ResponseEnterBattle.serializeBinaryToWriter = function(message, wr
       7,
       f,
       proto.myproto.Player.serializeBinaryToWriter
+    );
+  }
+  f = message.getUdpPort();
+  if (f.length > 0) {
+    writer.writeString(
+      8,
+      f
+    );
+  }
+  f = message.getSessionId();
+  if (f !== 0) {
+    writer.writeInt32(
+      9,
+      f
     );
   }
 };
@@ -5148,6 +5172,42 @@ proto.myproto.ResponseEnterBattle.prototype.addPlayerList = function(opt_value, 
  */
 proto.myproto.ResponseEnterBattle.prototype.clearPlayerListList = function() {
   return this.setPlayerListList([]);
+};
+
+
+/**
+ * optional string udp_port = 8;
+ * @return {string}
+ */
+proto.myproto.ResponseEnterBattle.prototype.getUdpPort = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 8, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.myproto.ResponseEnterBattle} returns this
+ */
+proto.myproto.ResponseEnterBattle.prototype.setUdpPort = function(value) {
+  return jspb.Message.setProto3StringField(this, 8, value);
+};
+
+
+/**
+ * optional int32 session_id = 9;
+ * @return {number}
+ */
+proto.myproto.ResponseEnterBattle.prototype.getSessionId = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 9, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.myproto.ResponseEnterBattle} returns this
+ */
+proto.myproto.ResponseEnterBattle.prototype.setSessionId = function(value) {
+  return jspb.Message.setProto3IntField(this, 9, value);
 };
 
 
