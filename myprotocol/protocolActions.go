@@ -9,14 +9,14 @@ import (
 )
 
 type ProtocolActions struct {
-	ActionMaps map[string]map[int]ActionMap
+	ActionMaps map[string]map[int32]ActionMap
 }
 
 type ActionMap struct {
-	Id 		int
-	Action	string
-	Desc 	string
-	Demo 	string
+	Id 		int32			`json:"id"`
+	Action	string		`json:"action"`
+	Desc 	string		`json:"desc"`
+	Demo 	string		`json:"demo"`
 }
 
 //var actionMap  	map[string]map[int]ActionMap
@@ -29,7 +29,7 @@ func ProtocolActionsNew()*ProtocolActions {
 
 func (protocolActions *ProtocolActions)initProtocolActionMap(){
 	//netway.mylog.Info("initActionMap")
-	actionMap := make( 	map[string]map[int]ActionMap)
+	actionMap := make( 	map[string]map[int32]ActionMap)
 
 	actionMap["client"] = loadingActionMapConfigFile("clientActionMap.txt")
 	actionMap["server"] = loadingActionMapConfigFile("serverActionMap.txt")
@@ -55,16 +55,16 @@ func getInfo(skip int) (funcName, fileName string, lineNo int ,dir string) {
 	dir = string(file[0 : i+1])
 	return
 }
-func loadingActionMapConfigFile(fileName string)map[int]ActionMap {
+func loadingActionMapConfigFile(fileName string)map[int32]ActionMap {
 	_, _,_,dir  := getInfo(1)
 	client,err := zlib.ReadLine(dir +"/"+fileName)
 	if err != nil{
 		zlib.ExitPrint("initActionMap ReadLine err :",err.Error())
 	}
-	am := make(map[int]ActionMap)
+	am := make(map[int32]ActionMap)
 	for _,v:= range client{
 		contentArr := strings.Split(v,"|")
-		id := zlib.Atoi(contentArr[1])
+		id := int32(zlib.Atoi(contentArr[1]))
 		//zlib.ExitPrint(id)
 		actionMap := ActionMap{
 			Id: id,
@@ -78,11 +78,11 @@ func loadingActionMapConfigFile(fileName string)map[int]ActionMap {
 }
 
 
-func(protocolActions *ProtocolActions)GetActionMap()map[string]map[int]ActionMap {
+func(protocolActions *ProtocolActions)GetActionMap()map[string]map[int32]ActionMap {
 	return protocolActions.ActionMaps
 }
 
-func(protocolActions *ProtocolActions)GetActionName(id int,category string)(actionMapT ActionMap,empty bool){
+func(protocolActions *ProtocolActions)GetActionName(id int32,category string)(actionMapT ActionMap,empty bool){
 	am := protocolActions.ActionMaps[category]
 	for k,v:=range am{
 		if k == id {

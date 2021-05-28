@@ -33,22 +33,40 @@ s发送
         }
     });
 
+    // function init(data){
+    //     var clientHtml = initActionMap(data.ActionMap.client,data.JsonFormat)
+    //     $("#client").html(clientHtml);
+    //
+    //     var serverHtml = initActionMap(data.ActionMap.server,data.JsonFormat)
+    //     $("#server").html(serverHtml);
+    // }
+    //
+    // function initActionMap(data,JsonFormat){
+    //     var html = "<table border='1'><tr><td>id</td><td>action</td><td>描述</td></tr>";
+    //     for(let key  in data){
+    //         html += "<tr><td>"+data[key].Id+"</td><td>"+data[key].Action+"</td><td>"+data[key].Desc+"</td><td>"+JsonFormat[key]+"</td></tr>"
+    //     }
+    //     html += "</table>";
+    //     return html;
+    // }
+
     function init(data){
-        var clientHtml = initActionMap(data.ActionMap.client,data.JsonFormat)
+        var clientHtml = initActionMap(data.client)
         $("#client").html(clientHtml);
 
-        var serverHtml = initActionMap(data.ActionMap.server,data.JsonFormat)
+        var serverHtml = initActionMap(data.server)
         $("#server").html(serverHtml);
     }
 
     function initActionMap(data,JsonFormat){
         var html = "<table border='1'><tr><td>id</td><td>action</td><td>描述</td></tr>";
         for(let key  in data){
-            html += "<tr><td>"+data[key].Id+"</td><td>"+data[key].Action+"</td><td>"+data[key].Desc+"</td><td>"+JsonFormat[key]+"</td></tr>"
+            html += "<tr><td>"+data[key].id+"</td><td>"+data[key].action+"</td><td>"+data[key].desc+"</td></tr>"
         }
         html += "</table>";
         return html;
     }
+
 
 </script>
 </body>

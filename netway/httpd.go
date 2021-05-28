@@ -1,10 +1,11 @@
 package netway
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
+	"frame_sync/myproto"
 	myprotocol "frame_sync/myprotocol"
+	"github.com/golang/protobuf/proto"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -20,17 +21,16 @@ type MyServer struct {
 	RoomPeople 		int32
 	Uri				string
 	OffLineWaitTime int32
-	ActionMap		map[string]map[int]myprotocol.ActionMap
+	ActionMap		map[string]map[int32]myprotocol.ActionMap
 	ContentType		int32
 	LoginAuthType	string
 	FPS 			int32
 }
 
-type ApiList struct {
-	ActionMap		map[string]map[int]myprotocol.ActionMap
-	JsonFormat 		map[int]string
-}
-
+//type ApiList struct {
+//	ActionMap		map[string]map[int]myprotocol.ActionMap `json:"actionMap"`
+	//JsonFormat 		map[int]string							`json:"jsonFormat"`
+//}
 type MyMetrics struct {
 	Rooms	int `json:"room"`
 	Players	int `json:"players"`
@@ -66,31 +66,66 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 	if uri == "/www/getServer"{
 		options := mynetWay.Option
 		//options.Host = "39.106.65.76"
-		jsonStr,_ = json.Marshal(&options)
-	}else if uri == "/www/apilist"{
-		ApiList := ApiList{
-			ActionMap : mynetWay.ProtocolActions.GetActionMap(),
-		}
-		formatStr := make(map[int]string)
-		for k,v := range ApiList.ActionMap["client"]{
-			//name := "main.Request" + zlib.StrFirstToUpper( v.Action )
-			//pt := proto.MessageType(name)
-			//strc := reflect.New(pt.Elem()).Interface()
-			//aa ,err := protoregistry.GlobalTypes.FindMessageByName("main.RequestLogin")
 
-			var out bytes.Buffer
-			apiJson := v.Demo
-			json.Indent(&out,[]byte(apiJson),"", "&nbsp;&nbsp;&nbsp;&nbsp;")
-			formatStr[k] = strings.Replace(out.String(),"\n","<br/>",-1)
+		format := query.Get("format")
+		format = strings.Trim(format," ")
+		if format == ""{
+			jsonStr,_ = json.Marshal(&options)
+		}else if format == "proto"{
+			cfgServer := myproto.CfgServer{
+				ListenIp			:options.ListenIp,
+				OutIp				:options.OutIp,
+				Port				:options.Port,
+				UdpPort				:options.UdpPort,
+				ContentType			:options.ContentType,
+				LoginAuthType		:options.LoginAuthType,
+				LoginAuthSecretKey	:options.LoginAuthSecretKey,
+				IOTimeout			:options.IOTimeout,
+				ConnTimeout			: options.ConnTimeout,
+				Protocol			: options.Protocol,
+				WsUri				: options.WsUri,
+				MaxClientConnNum	:options.MaxClientConnNum,
+				RoomPeople			:options.RoomPeople,
+				RoomReadyTimeout 	:options.RoomReadyTimeout,
+				OffLineWaitTime		:options.OffLineWaitTime,//玩家掉线后，等待多久
+				MapSize				:options.MapSize,
+				LockMode			: options.LockMode,
+				FPS					:options.FPS,
+				Store				: options.Store,
+			}
+			jsonStr,_ = proto.Marshal(&cfgServer)
 		}
-		for k,v := range ApiList.ActionMap["server"]{
-			var out bytes.Buffer
-			apiJson := v.Demo
-			json.Indent(&out,[]byte(apiJson),"", "&nbsp;&nbsp;&nbsp;&nbsp;")
-			formatStr[k] = strings.Replace(out.String(),"\n","<br/>",-1)
+
+	}else if uri == "/www/apilist"{
+		format := query.Get("format")
+		info := mynetWay.ProtocolActions.GetActionMap()
+		if format == ""{
+			jsonStr,_ = json.Marshal(&info)
+		}else if format == "proto"{
+			cfgServer := myproto.CfgProtocolActions{}
+			client := make(map[int32]*myproto.CfgActions)
+			server := make(map[int32]*myproto.CfgActions)
+			for k,v := range info["client"]{
+				client[k] = &myproto.CfgActions{
+					Id: v.Id,
+					Action: v.Action,
+					Desc: v.Desc,
+					Demo: v.Demo,
+				}
+			}
+			for k,v := range info["server"]{
+				client[k] = &myproto.CfgActions{
+					Id: v.Id,
+					Action: v.Action,
+					Desc: v.Desc,
+					Demo: v.Demo,
+				}
+			}
+
+			cfgServer.Client = client
+			cfgServer.Server = server
+			jsonStr,_ = proto.Marshal(&cfgServer)
 		}
-		ApiList.JsonFormat = formatStr
-		jsonStr,_ = json.Marshal(&ApiList)
 
 	}else if uri == "/www/getMetrics"{
 		//myMetrics := MyMetrics{
@@ -138,8 +173,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		jsonStr,_ = json.Marshal(&roomList)
 		//mylog.Debug("jsonStr:",jsonStr,err)
 	} else if uri == "/www/actionMap"{
-		info := mynetWay.ProtocolActions.GetActionMap()
-		jsonStr,_ = json.Marshal(&info)
+
 	}else if uri == "/www/getRoomOne"{
 		roomId := query.Get("id")
 		room := MySyncRoomPool[roomId]

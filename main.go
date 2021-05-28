@@ -66,8 +66,8 @@ func enter(log_base_path string,ip string ,port string,clientServer string){
 		IOTimeout			:3,
 		Cxt 				:rootCtx,
 		ConnTimeout			: 60,
-		//Protocol			: netway.PROTOCOL_WEBSOCKET,
-		Protocol			: netway.PROTOCOL_TCP,
+		Protocol			: netway.PROTOCOL_WEBSOCKET,
+		//Protocol			: netway.PROTOCOL_TCP,
 		WsUri				: "/ws",
 		MaxClientConnNum	:65535,
 		RoomPeople			:2,
@@ -78,12 +78,7 @@ func enter(log_base_path string,ip string ,port string,clientServer string){
 		FPS					:10,
 		Store				: 0,
 	}
-	if clientServer == "client"{
-		netway.StartTcpClient(newNetWayOption,mylog)
-		cc := make(chan int)
-		<- cc
-		return
-	}
+	switchClientServer(clientServer,newNetWayOption)
 	//创建网关，并启动
 	newNetWay := netway.NewNetWay(newNetWayOption)
 	go newNetWay.Startup()
@@ -94,10 +89,31 @@ func enter(log_base_path string,ip string ,port string,clientServer string){
 	//阻塞，如果有信号终止了，最后要把main正常结束
 	<-mainCtx.Done()
 	//这里做个容错，可能会遗漏掉的协程未结束 或 结束程序有点慢
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	mylog.CloseChan <- 1
 	mylog.Warning("main end...")
+}
+func switchClientServer(clientServer string,newNetWayOption netway.NetWayOption ){
+	switch clientServer {
+		case "client":
+			netway.StartTcpClient(newNetWayOption,mylog)
+			cc := make(chan int)
+			<- cc
+			zlib.ExitPrint(1111111111)
+		case "udpClient":
+			udpServer :=  netway.UdpServerNew(newNetWayOption,mylog)
+			udpServer.StartClient()
+			cc := make(chan int)
+			<- cc
+			zlib.ExitPrint(22222)
+		case "udpServer":
+			udpServer :=  netway.UdpServerNew(newNetWayOption,mylog)
+			udpServer.Start()
+			cc := make(chan int)
+			<- cc
+			zlib.ExitPrint(33333)
+	}
 }
 //信号 处理
 func  DemonSignal(newNetWay *netway.NetWay,mainCtx context.Context,mainCancel context.CancelFunc){

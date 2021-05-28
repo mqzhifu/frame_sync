@@ -221,5 +221,45 @@ message ResponsePlayerMatchingFailed{
     int32   player_id = 1;
     string  msg = 2;
     string  roomId = 3;
-    int32   code = 3;
+    int32   code = 4;
+}
+
+message CfgServer{
+    	string  ListenIp            = 1;
+    	string  OutIp               = 2;
+    	string  Port                = 3;
+    	string  UdpPort             = 4;
+    	int32   Protocol            = 5;
+    	string  WsUri               = 6;
+    	int32   ContentType         = 7;
+
+    	string  LoginAuthType       = 8;
+    	string  LoginAuthSecretKey  = 9;
+
+    	int32   MaxClientConnNum    = 10;
+    	int32   MsgContentMax       = 11;
+    	int64   IOTimeout           = 12;
+    	int32   ConnTimeout         = 13;
+
+    	int32   MapSize             = 14;
+    	int32   RoomPeople          = 15;
+    	int32   RoomTimeout         = 16;
+    	int32   OffLineWaitTime     = 17;
+
+    	int32   LockMode            = 18;
+    	int32   FPS                 = 19;
+    	int32   RoomReadyTimeout    = 20;
+    	int32   Store               = 21;
+}
+
+message CfgProtocolActions{
+    map<int32,CfgActions> client = 1;
+    map<int32,CfgActions> server = 2;
+}
+
+message CfgActions{
+    int32 id        = 1;
+    string action   = 2;
+    string desc     = 3;
+    string demo     = 4;
 }

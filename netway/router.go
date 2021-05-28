@@ -130,7 +130,7 @@ func(netWay *NetWay)SendMsg(wsConn *WsConn,action string,content []byte){
 		return
 	}
 	//协议号
-	strId := strconv.Itoa(actionMapT.Id)
+	strId := strconv.Itoa(int(actionMapT.Id))
 	//合并 协议号 + 消息内容体
 	content = zlib.BytesCombine([]byte(strId),content)
 	if wsConn.Status == CONN_STATUS_CLOSE {
@@ -181,7 +181,7 @@ func  (netWay *NetWay)parserContentProtocol(content string)(message Message,err 
 
 	actionIdStr := content[0:4]
 	actionId,_ := strconv.Atoi(actionIdStr)
-	actionName,empty := netWay.ProtocolActions.GetActionName(actionId,"client")
+	actionName,empty := netWay.ProtocolActions.GetActionName(int32(actionId),"client")
 	if empty{
 		errMsg := "actionId ProtocolActions.GetActionName empty!!!"
 		mylog.Error(errMsg,actionId)

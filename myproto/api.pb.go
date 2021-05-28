@@ -25,7 +25,7 @@ type RequestLogin struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token"`
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 }
 
 func (x *RequestLogin) Reset() {
@@ -72,11 +72,11 @@ type RequestClientPong struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time"`
-	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time"`
-	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time"`
-	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout"`
-	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times"`
+	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
+	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time,omitempty"`
+	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time,omitempty"`
+	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout,omitempty"`
+	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times,omitempty"`
 }
 
 func (x *RequestClientPong) Reset() {
@@ -151,10 +151,10 @@ type RequestPlayerOperations struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id             int32        `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
-	RoomId         string       `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	SequenceNumber int32        `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
-	Operations     []*Operation `protobuf:"bytes,4,rep,name=operations,proto3" json:"operations"`
+	Id             int32        `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	RoomId         string       `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	SequenceNumber int32        `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	Operations     []*Operation `protobuf:"bytes,4,rep,name=operations,proto3" json:"operations,omitempty"`
 }
 
 func (x *RequestPlayerOperations) Reset() {
@@ -222,10 +222,10 @@ type Operation struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
-	Event    string `protobuf:"bytes,2,opt,name=event,proto3" json:"event"`
-	Value    string `protobuf:"bytes,3,opt,name=value,proto3" json:"value"`
-	PlayerId int32  `protobuf:"varint,4,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Event    string `protobuf:"bytes,2,opt,name=event,proto3" json:"event,omitempty"`
+	Value    string `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	PlayerId int32  `protobuf:"varint,4,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
 }
 
 func (x *Operation) Reset() {
@@ -293,11 +293,11 @@ type RequestClientPing struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time"`
-	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time"`
-	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time"`
-	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout"`
-	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times"`
+	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
+	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time,omitempty"`
+	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time,omitempty"`
+	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout,omitempty"`
+	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times,omitempty"`
 }
 
 func (x *RequestClientPing) Reset() {
@@ -372,9 +372,9 @@ type RequestPlayerResumeGame struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
+	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
 }
 
 func (x *RequestPlayerResumeGame) Reset() {
@@ -435,7 +435,7 @@ type RequestPlayerMatchSign struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
 }
 
 func (x *RequestPlayerMatchSign) Reset() {
@@ -482,8 +482,8 @@ type RequestPlayerReady struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	RoomId   string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	RoomId   string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
 }
 
 func (x *RequestPlayerReady) Reset() {
@@ -537,8 +537,8 @@ type RequestGetRoom struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	RoomId   string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	RoomId   string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
 }
 
 func (x *RequestGetRoom) Reset() {
@@ -592,10 +592,10 @@ type RequestRoomHistory struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId            int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	RoomId              string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	SequenceNumberStart int32  `protobuf:"varint,3,opt,name=sequence_numberStart,json=sequenceNumberStart,proto3" json:"sequence_numberStart"`
-	SequenceNumberEnd   int32  `protobuf:"varint,4,opt,name=sequence_numberEnd,json=sequenceNumberEnd,proto3" json:"sequence_numberEnd"`
+	PlayerId            int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	RoomId              string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	SequenceNumberStart int32  `protobuf:"varint,3,opt,name=sequence_numberStart,json=sequenceNumberStart,proto3" json:"sequence_numberStart,omitempty"`
+	SequenceNumberEnd   int32  `protobuf:"varint,4,opt,name=sequence_numberEnd,json=sequenceNumberEnd,proto3" json:"sequence_numberEnd,omitempty"`
 }
 
 func (x *RequestRoomHistory) Reset() {
@@ -663,7 +663,7 @@ type RequestPlayerMatchSignCancel struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
 }
 
 func (x *RequestPlayerMatchSignCancel) Reset() {
@@ -710,7 +710,7 @@ type RequestClientHeartbeat struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Time int64 `protobuf:"varint,1,opt,name=time,proto3" json:"time"`
+	Time int64 `protobuf:"varint,1,opt,name=time,proto3" json:"time,omitempty"`
 }
 
 func (x *RequestClientHeartbeat) Reset() {
@@ -757,10 +757,10 @@ type RequestGameOver struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
-	Result         string `protobuf:"bytes,4,opt,name=result,proto3" json:"result"`
+	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	Result         string `protobuf:"bytes,4,opt,name=result,proto3" json:"result,omitempty"`
 }
 
 func (x *RequestGameOver) Reset() {
@@ -828,8 +828,8 @@ type RequestPlayerOver struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	SequenceNumber int32 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
+	PlayerId       int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	SequenceNumber int32 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
 }
 
 func (x *RequestPlayerOver) Reset() {
@@ -883,9 +883,9 @@ type ResponseLoginRes struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Code   int32   `protobuf:"varint,1,opt,name=code,proto3" json:"code"`
-	ErrMsg string  `protobuf:"bytes,2,opt,name=errMsg,proto3" json:"errMsg"`
-	Player *Player `protobuf:"bytes,3,opt,name=player,proto3" json:"player"`
+	Code   int32   `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	ErrMsg string  `protobuf:"bytes,2,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
+	Player *Player `protobuf:"bytes,3,opt,name=player,proto3" json:"player,omitempty"`
 }
 
 func (x *ResponseLoginRes) Reset() {
@@ -946,12 +946,12 @@ type ResponsePlayerStatus struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
-	Nickname string `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname"`
-	Status   int32  `protobuf:"varint,3,opt,name=status,proto3" json:"status"`
-	RoomId   string `protobuf:"bytes,4,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	AddTime  int32  `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time"`
-	UpTime   int32  `protobuf:"varint,6,opt,name=up_time,json=upTime,proto3" json:"up_time"`
+	Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Nickname string `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	Status   int32  `protobuf:"varint,3,opt,name=status,proto3" json:"status,omitempty"`
+	RoomId   string `protobuf:"bytes,4,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	AddTime  int32  `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
+	UpTime   int32  `protobuf:"varint,6,opt,name=up_time,json=upTime,proto3" json:"up_time,omitempty"`
 }
 
 func (x *ResponsePlayerStatus) Reset() {
@@ -1033,7 +1033,7 @@ type ResponseOtherPlayerOffline struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
 }
 
 func (x *ResponseOtherPlayerOffline) Reset() {
@@ -1080,7 +1080,7 @@ type ResponseKickOff struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Time int64 `protobuf:"varint,1,opt,name=time,proto3" json:"time"`
+	Time int64 `protobuf:"varint,1,opt,name=time,proto3" json:"time,omitempty"`
 }
 
 func (x *ResponseKickOff) Reset() {
@@ -1127,7 +1127,7 @@ type ResponseStartBattle struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SequenceNumberStart int32 `protobuf:"varint,1,opt,name=sequence_number_start,json=sequenceNumberStart,proto3" json:"sequence_number_start"`
+	SequenceNumberStart int32 `protobuf:"varint,1,opt,name=sequence_number_start,json=sequenceNumberStart,proto3" json:"sequence_number_start,omitempty"`
 }
 
 func (x *ResponseStartBattle) Reset() {
@@ -1174,11 +1174,11 @@ type ResponseServerPing struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time"`
-	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time"`
-	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time"`
-	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout"`
-	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times"`
+	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
+	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time,omitempty"`
+	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time,omitempty"`
+	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout,omitempty"`
+	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times,omitempty"`
 }
 
 func (x *ResponseServerPing) Reset() {
@@ -1253,11 +1253,11 @@ type ResponseServerPong struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time"`
-	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time"`
-	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time"`
-	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout"`
-	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times"`
+	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
+	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time,omitempty"`
+	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time,omitempty"`
+	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout,omitempty"`
+	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times,omitempty"`
 }
 
 func (x *ResponseServerPong) Reset() {
@@ -1332,13 +1332,13 @@ type ResponseEnterBattle struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RandSeek       int32     `protobuf:"varint,1,opt,name=rand_seek,json=randSeek,proto3" json:"rand_seek"`
-	RoomId         string    `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	SequenceNumber int32     `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
-	Status         int32     `protobuf:"varint,4,opt,name=status,proto3" json:"status"`
-	AddTime        int32     `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time"`
-	Time           int64     `protobuf:"varint,6,opt,name=time,proto3" json:"time"`
-	PlayerList     []*Player `protobuf:"bytes,7,rep,name=player_list,json=playerList,proto3" json:"player_list"`
+	RandSeek       int32     `protobuf:"varint,1,opt,name=rand_seek,json=randSeek,proto3" json:"rand_seek,omitempty"`
+	RoomId         string    `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	SequenceNumber int32     `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	Status         int32     `protobuf:"varint,4,opt,name=status,proto3" json:"status,omitempty"`
+	AddTime        int32     `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
+	Time           int64     `protobuf:"varint,6,opt,name=time,proto3" json:"time,omitempty"`
+	PlayerList     []*Player `protobuf:"bytes,7,rep,name=player_list,json=playerList,proto3" json:"player_list,omitempty"`
 }
 
 func (x *ResponseEnterBattle) Reset() {
@@ -1427,10 +1427,10 @@ type ResponsePushLogicFrame struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id             int32        `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
-	RoomId         string       `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	SequenceNumber int32        `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
-	Operations     []*Operation `protobuf:"bytes,4,rep,name=operations,proto3" json:"operations"`
+	Id             int32        `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	RoomId         string       `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	SequenceNumber int32        `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	Operations     []*Operation `protobuf:"bytes,4,rep,name=operations,proto3" json:"operations,omitempty"`
 }
 
 func (x *ResponsePushLogicFrame) Reset() {
@@ -1498,8 +1498,8 @@ type ResponseOtherPlayerOver struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	SequenceNumber int32 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
+	PlayerId       int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	SequenceNumber int32 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
 }
 
 func (x *ResponseOtherPlayerOver) Reset() {
@@ -1553,10 +1553,10 @@ type ResponseGameOver struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
-	Result         string `protobuf:"bytes,4,opt,name=result,proto3" json:"result"`
+	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	Result         string `protobuf:"bytes,4,opt,name=result,proto3" json:"result,omitempty"`
 }
 
 func (x *ResponseGameOver) Reset() {
@@ -1624,7 +1624,7 @@ type ResponseReadyTimeout struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RoomId string `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	RoomId string `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
 }
 
 func (x *ResponseReadyTimeout) Reset() {
@@ -1671,16 +1671,16 @@ type ResponsePushRoomInfo struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id             string    `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
-	AddTime        int32     `protobuf:"varint,2,opt,name=add_time,json=addTime,proto3" json:"add_time"`
-	Status         int32     `protobuf:"varint,3,opt,name=status,proto3" json:"status"`
-	Timeout        int32     `protobuf:"varint,4,opt,name=timeout,proto3" json:"timeout"`
-	SequenceNumber int32     `protobuf:"varint,5,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
-	RandSeek       int32     `protobuf:"varint,6,opt,name=rand_seek,json=randSeek,proto3" json:"rand_seek"`
-	PlayerList     []*Player `protobuf:"bytes,7,rep,name=player_list,json=playerList,proto3" json:"player_list"`
-	RoomId         string    `protobuf:"bytes,8,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	StartTime      int32     `protobuf:"varint,9,opt,name=start_time,json=startTime,proto3" json:"start_time"`
-	EndTime        int32     `protobuf:"varint,10,opt,name=end_time,json=endTime,proto3" json:"end_time"`
+	Id             string    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AddTime        int32     `protobuf:"varint,2,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
+	Status         int32     `protobuf:"varint,3,opt,name=status,proto3" json:"status,omitempty"`
+	Timeout        int32     `protobuf:"varint,4,opt,name=timeout,proto3" json:"timeout,omitempty"`
+	SequenceNumber int32     `protobuf:"varint,5,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	RandSeek       int32     `protobuf:"varint,6,opt,name=rand_seek,json=randSeek,proto3" json:"rand_seek,omitempty"`
+	PlayerList     []*Player `protobuf:"bytes,7,rep,name=player_list,json=playerList,proto3" json:"player_list,omitempty"`
+	RoomId         string    `protobuf:"bytes,8,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	StartTime      int32     `protobuf:"varint,9,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	EndTime        int32     `protobuf:"varint,10,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
 }
 
 func (x *ResponsePushRoomInfo) Reset() {
@@ -1790,7 +1790,7 @@ type ResponsePushRoomHistory struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	List []*ResponseRoomHistory `protobuf:"bytes,1,rep,name=list,proto3" json:"list"`
+	List []*ResponseRoomHistory `protobuf:"bytes,1,rep,name=list,proto3" json:"list,omitempty"`
 }
 
 func (x *ResponsePushRoomHistory) Reset() {
@@ -1837,9 +1837,9 @@ type ResponseRoomHistory struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id      int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
-	Action  string `protobuf:"bytes,2,opt,name=action,proto3" json:"action"`
-	Content string `protobuf:"bytes,3,opt,name=content,proto3" json:"content"`
+	Id      int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Action  string `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
+	Content string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
 }
 
 func (x *ResponseRoomHistory) Reset() {
@@ -1900,9 +1900,9 @@ type ResponseOtherPlayerResumeGame struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
+	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
 }
 
 func (x *ResponseOtherPlayerResumeGame) Reset() {
@@ -1963,15 +1963,15 @@ type Player struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
-	RoleId   int32  `protobuf:"varint,2,opt,name=role_id,json=roleId,proto3" json:"role_id"`
-	Nickname string `protobuf:"bytes,3,opt,name=nickname,proto3" json:"nickname"`
-	Status   int32  `protobuf:"varint,4,opt,name=status,proto3" json:"status"`
-	AddTime  int32  `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time"`
-	UpTime   int32  `protobuf:"varint,6,opt,name=upTime,proto3" json:"upTime"`
-	RoomId   string `protobuf:"bytes,7,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	UpdPort  int32  `protobuf:"varint,8,opt,name=upd_port,json=updPort,proto3" json:"upd_port"`
-	Ip       string `protobuf:"bytes,9,opt,name=ip,proto3" json:"ip"`
+	Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	RoleId   int32  `protobuf:"varint,2,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	Nickname string `protobuf:"bytes,3,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	Status   int32  `protobuf:"varint,4,opt,name=status,proto3" json:"status,omitempty"`
+	AddTime  int32  `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
+	UpTime   int32  `protobuf:"varint,6,opt,name=upTime,proto3" json:"upTime,omitempty"`
+	RoomId   string `protobuf:"bytes,7,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	UpdPort  int32  `protobuf:"varint,8,opt,name=upd_port,json=updPort,proto3" json:"upd_port,omitempty"`
+	Ip       string `protobuf:"bytes,9,opt,name=ip,proto3" json:"ip,omitempty"`
 }
 
 func (x *Player) Reset() {
@@ -2074,8 +2074,8 @@ type ResponseRestartGame struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RoomId    string  `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id"`
-	PlayerIds []int32 `protobuf:"varint,2,rep,packed,name=player_ids,json=playerIds,proto3" json:"player_ids"`
+	RoomId    string  `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	PlayerIds []int32 `protobuf:"varint,2,rep,packed,name=player_ids,json=playerIds,proto3" json:"player_ids,omitempty"`
 }
 
 func (x *ResponseRestartGame) Reset() {
@@ -2129,8 +2129,9 @@ type ResponsePlayerMatchSignFailed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	Msg      string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg"`
+	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	Msg      string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	Code     int32  `protobuf:"varint,3,opt,name=code,proto3" json:"code,omitempty"`
 }
 
 func (x *ResponsePlayerMatchSignFailed) Reset() {
@@ -2179,14 +2180,22 @@ func (x *ResponsePlayerMatchSignFailed) GetMsg() string {
 	return ""
 }
 
+func (x *ResponsePlayerMatchSignFailed) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
 type ResponsePlayerMatchingFailed struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
-	Msg      string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg"`
-	RoomId   string `protobuf:"bytes,3,opt,name=roomId,proto3" json:"roomId"`
+	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	Msg      string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	RoomId   string `protobuf:"bytes,3,opt,name=roomId,proto3" json:"roomId,omitempty"`
+	Code     int32  `protobuf:"varint,4,opt,name=code,proto3" json:"code,omitempty"`
 }
 
 func (x *ResponsePlayerMatchingFailed) Reset() {
@@ -2238,6 +2247,346 @@ func (x *ResponsePlayerMatchingFailed) GetMsg() string {
 func (x *ResponsePlayerMatchingFailed) GetRoomId() string {
 	if x != nil {
 		return x.RoomId
+	}
+	return ""
+}
+
+func (x *ResponsePlayerMatchingFailed) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+type CfgServer struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ListenIp           string `protobuf:"bytes,1,opt,name=ListenIp,proto3" json:"ListenIp,omitempty"`
+	OutIp              string `protobuf:"bytes,2,opt,name=OutIp,proto3" json:"OutIp,omitempty"`
+	Port               string `protobuf:"bytes,3,opt,name=Port,proto3" json:"Port,omitempty"`
+	UdpPort            string `protobuf:"bytes,4,opt,name=UdpPort,proto3" json:"UdpPort,omitempty"`
+	Protocol           int32  `protobuf:"varint,5,opt,name=Protocol,proto3" json:"Protocol,omitempty"`
+	WsUri              string `protobuf:"bytes,6,opt,name=WsUri,proto3" json:"WsUri,omitempty"`
+	ContentType        int32  `protobuf:"varint,7,opt,name=ContentType,proto3" json:"ContentType,omitempty"`
+	LoginAuthType      string `protobuf:"bytes,8,opt,name=LoginAuthType,proto3" json:"LoginAuthType,omitempty"`
+	LoginAuthSecretKey string `protobuf:"bytes,9,opt,name=LoginAuthSecretKey,proto3" json:"LoginAuthSecretKey,omitempty"`
+	MaxClientConnNum   int32  `protobuf:"varint,10,opt,name=MaxClientConnNum,proto3" json:"MaxClientConnNum,omitempty"`
+	MsgContentMax      int32  `protobuf:"varint,11,opt,name=MsgContentMax,proto3" json:"MsgContentMax,omitempty"`
+	IOTimeout          int64  `protobuf:"varint,12,opt,name=IOTimeout,proto3" json:"IOTimeout,omitempty"`
+	ConnTimeout        int32  `protobuf:"varint,13,opt,name=ConnTimeout,proto3" json:"ConnTimeout,omitempty"`
+	MapSize            int32  `protobuf:"varint,14,opt,name=MapSize,proto3" json:"MapSize,omitempty"`
+	RoomPeople         int32  `protobuf:"varint,15,opt,name=RoomPeople,proto3" json:"RoomPeople,omitempty"`
+	RoomTimeout        int32  `protobuf:"varint,16,opt,name=RoomTimeout,proto3" json:"RoomTimeout,omitempty"`
+	OffLineWaitTime    int32  `protobuf:"varint,17,opt,name=OffLineWaitTime,proto3" json:"OffLineWaitTime,omitempty"`
+	LockMode           int32  `protobuf:"varint,18,opt,name=LockMode,proto3" json:"LockMode,omitempty"`
+	FPS                int32  `protobuf:"varint,19,opt,name=FPS,proto3" json:"FPS,omitempty"`
+	RoomReadyTimeout   int32  `protobuf:"varint,20,opt,name=RoomReadyTimeout,proto3" json:"RoomReadyTimeout,omitempty"`
+	Store              int32  `protobuf:"varint,21,opt,name=Store,proto3" json:"Store,omitempty"`
+}
+
+func (x *CfgServer) Reset() {
+	*x = CfgServer{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_proto_msgTypes[34]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CfgServer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CfgServer) ProtoMessage() {}
+
+func (x *CfgServer) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_msgTypes[34]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CfgServer.ProtoReflect.Descriptor instead.
+func (*CfgServer) Descriptor() ([]byte, []int) {
+	return file_api_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *CfgServer) GetListenIp() string {
+	if x != nil {
+		return x.ListenIp
+	}
+	return ""
+}
+
+func (x *CfgServer) GetOutIp() string {
+	if x != nil {
+		return x.OutIp
+	}
+	return ""
+}
+
+func (x *CfgServer) GetPort() string {
+	if x != nil {
+		return x.Port
+	}
+	return ""
+}
+
+func (x *CfgServer) GetUdpPort() string {
+	if x != nil {
+		return x.UdpPort
+	}
+	return ""
+}
+
+func (x *CfgServer) GetProtocol() int32 {
+	if x != nil {
+		return x.Protocol
+	}
+	return 0
+}
+
+func (x *CfgServer) GetWsUri() string {
+	if x != nil {
+		return x.WsUri
+	}
+	return ""
+}
+
+func (x *CfgServer) GetContentType() int32 {
+	if x != nil {
+		return x.ContentType
+	}
+	return 0
+}
+
+func (x *CfgServer) GetLoginAuthType() string {
+	if x != nil {
+		return x.LoginAuthType
+	}
+	return ""
+}
+
+func (x *CfgServer) GetLoginAuthSecretKey() string {
+	if x != nil {
+		return x.LoginAuthSecretKey
+	}
+	return ""
+}
+
+func (x *CfgServer) GetMaxClientConnNum() int32 {
+	if x != nil {
+		return x.MaxClientConnNum
+	}
+	return 0
+}
+
+func (x *CfgServer) GetMsgContentMax() int32 {
+	if x != nil {
+		return x.MsgContentMax
+	}
+	return 0
+}
+
+func (x *CfgServer) GetIOTimeout() int64 {
+	if x != nil {
+		return x.IOTimeout
+	}
+	return 0
+}
+
+func (x *CfgServer) GetConnTimeout() int32 {
+	if x != nil {
+		return x.ConnTimeout
+	}
+	return 0
+}
+
+func (x *CfgServer) GetMapSize() int32 {
+	if x != nil {
+		return x.MapSize
+	}
+	return 0
+}
+
+func (x *CfgServer) GetRoomPeople() int32 {
+	if x != nil {
+		return x.RoomPeople
+	}
+	return 0
+}
+
+func (x *CfgServer) GetRoomTimeout() int32 {
+	if x != nil {
+		return x.RoomTimeout
+	}
+	return 0
+}
+
+func (x *CfgServer) GetOffLineWaitTime() int32 {
+	if x != nil {
+		return x.OffLineWaitTime
+	}
+	return 0
+}
+
+func (x *CfgServer) GetLockMode() int32 {
+	if x != nil {
+		return x.LockMode
+	}
+	return 0
+}
+
+func (x *CfgServer) GetFPS() int32 {
+	if x != nil {
+		return x.FPS
+	}
+	return 0
+}
+
+func (x *CfgServer) GetRoomReadyTimeout() int32 {
+	if x != nil {
+		return x.RoomReadyTimeout
+	}
+	return 0
+}
+
+func (x *CfgServer) GetStore() int32 {
+	if x != nil {
+		return x.Store
+	}
+	return 0
+}
+
+type CfgProtocolActions struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Client map[int32]*CfgActions `protobuf:"bytes,1,rep,name=client,proto3" json:"client,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Server map[int32]*CfgActions `protobuf:"bytes,2,rep,name=server,proto3" json:"server,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+}
+
+func (x *CfgProtocolActions) Reset() {
+	*x = CfgProtocolActions{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_proto_msgTypes[35]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CfgProtocolActions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CfgProtocolActions) ProtoMessage() {}
+
+func (x *CfgProtocolActions) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_msgTypes[35]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CfgProtocolActions.ProtoReflect.Descriptor instead.
+func (*CfgProtocolActions) Descriptor() ([]byte, []int) {
+	return file_api_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *CfgProtocolActions) GetClient() map[int32]*CfgActions {
+	if x != nil {
+		return x.Client
+	}
+	return nil
+}
+
+func (x *CfgProtocolActions) GetServer() map[int32]*CfgActions {
+	if x != nil {
+		return x.Server
+	}
+	return nil
+}
+
+type CfgActions struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id     int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Action string `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
+	Desc   string `protobuf:"bytes,3,opt,name=desc,proto3" json:"desc,omitempty"`
+	Demo   string `protobuf:"bytes,4,opt,name=demo,proto3" json:"demo,omitempty"`
+}
+
+func (x *CfgActions) Reset() {
+	*x = CfgActions{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_proto_msgTypes[36]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CfgActions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CfgActions) ProtoMessage() {}
+
+func (x *CfgActions) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_msgTypes[36]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CfgActions.ProtoReflect.Descriptor instead.
+func (*CfgActions) Descriptor() ([]byte, []int) {
+	return file_api_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *CfgActions) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *CfgActions) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *CfgActions) GetDesc() string {
+	if x != nil {
+		return x.Desc
+	}
+	return ""
+}
+
+func (x *CfgActions) GetDemo() string {
+	if x != nil {
+		return x.Demo
 	}
 	return ""
 }
@@ -2498,19 +2847,89 @@ var file_api_proto_rawDesc = []byte{
 	0x6d, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x6f, 0x6f, 0x6d,
 	0x49, 0x64, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x73,
 	0x18, 0x02, 0x20, 0x03, 0x28, 0x05, 0x52, 0x09, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64,
-	0x73, 0x22, 0x4e, 0x0a, 0x1d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x50, 0x6c, 0x61,
+	0x73, 0x22, 0x62, 0x0a, 0x1d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x50, 0x6c, 0x61,
 	0x79, 0x65, 0x72, 0x4d, 0x61, 0x74, 0x63, 0x68, 0x53, 0x69, 0x67, 0x6e, 0x46, 0x61, 0x69, 0x6c,
 	0x65, 0x64, 0x12, 0x1b, 0x0a, 0x09, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x12,
 	0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6d, 0x73,
-	0x67, 0x22, 0x65, 0x0a, 0x1c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x50, 0x6c, 0x61,
-	0x79, 0x65, 0x72, 0x4d, 0x61, 0x74, 0x63, 0x68, 0x69, 0x6e, 0x67, 0x46, 0x61, 0x69, 0x6c, 0x65,
-	0x64, 0x12, 0x1b, 0x0a, 0x09, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x49, 0x64, 0x12, 0x10,
-	0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6d, 0x73, 0x67,
-	0x12, 0x16, 0x0a, 0x06, 0x72, 0x6f, 0x6f, 0x6d, 0x49, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x06, 0x72, 0x6f, 0x6f, 0x6d, 0x49, 0x64, 0x42, 0x0c, 0x5a, 0x0a, 0x2e, 0x2f, 0x3b, 0x6d,
-	0x79, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x67, 0x12, 0x12, 0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52,
+	0x04, 0x63, 0x6f, 0x64, 0x65, 0x22, 0x79, 0x0a, 0x1c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x4d, 0x61, 0x74, 0x63, 0x68, 0x69, 0x6e, 0x67, 0x46,
+	0x61, 0x69, 0x6c, 0x65, 0x64, 0x12, 0x1b, 0x0a, 0x09, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x5f,
+	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72,
+	0x49, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x03, 0x6d, 0x73, 0x67, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x6f, 0x6f, 0x6d, 0x49, 0x64, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x6f, 0x6f, 0x6d, 0x49, 0x64, 0x12, 0x12, 0x0a, 0x04,
+	0x63, 0x6f, 0x64, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65,
+	0x22, 0x9d, 0x05, 0x0a, 0x09, 0x43, 0x66, 0x67, 0x53, 0x65, 0x72, 0x76, 0x65, 0x72, 0x12, 0x1a,
+	0x0a, 0x08, 0x4c, 0x69, 0x73, 0x74, 0x65, 0x6e, 0x49, 0x70, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x08, 0x4c, 0x69, 0x73, 0x74, 0x65, 0x6e, 0x49, 0x70, 0x12, 0x14, 0x0a, 0x05, 0x4f, 0x75,
+	0x74, 0x49, 0x70, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x4f, 0x75, 0x74, 0x49, 0x70,
+	0x12, 0x12, 0x0a, 0x04, 0x50, 0x6f, 0x72, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04,
+	0x50, 0x6f, 0x72, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x55, 0x64, 0x70, 0x50, 0x6f, 0x72, 0x74, 0x18,
+	0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x55, 0x64, 0x70, 0x50, 0x6f, 0x72, 0x74, 0x12, 0x1a,
+	0x0a, 0x08, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x18, 0x05, 0x20, 0x01, 0x28, 0x05,
+	0x52, 0x08, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x12, 0x14, 0x0a, 0x05, 0x57, 0x73,
+	0x55, 0x72, 0x69, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x57, 0x73, 0x55, 0x72, 0x69,
+	0x12, 0x20, 0x0a, 0x0b, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x54, 0x79, 0x70, 0x65, 0x18,
+	0x07, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0b, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x54, 0x79,
+	0x70, 0x65, 0x12, 0x24, 0x0a, 0x0d, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x41, 0x75, 0x74, 0x68, 0x54,
+	0x79, 0x70, 0x65, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x4c, 0x6f, 0x67, 0x69, 0x6e,
+	0x41, 0x75, 0x74, 0x68, 0x54, 0x79, 0x70, 0x65, 0x12, 0x2e, 0x0a, 0x12, 0x4c, 0x6f, 0x67, 0x69,
+	0x6e, 0x41, 0x75, 0x74, 0x68, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65, 0x79, 0x18, 0x09,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x12, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x41, 0x75, 0x74, 0x68, 0x53,
+	0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65, 0x79, 0x12, 0x2a, 0x0a, 0x10, 0x4d, 0x61, 0x78, 0x43,
+	0x6c, 0x69, 0x65, 0x6e, 0x74, 0x43, 0x6f, 0x6e, 0x6e, 0x4e, 0x75, 0x6d, 0x18, 0x0a, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x10, 0x4d, 0x61, 0x78, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x43, 0x6f, 0x6e,
+	0x6e, 0x4e, 0x75, 0x6d, 0x12, 0x24, 0x0a, 0x0d, 0x4d, 0x73, 0x67, 0x43, 0x6f, 0x6e, 0x74, 0x65,
+	0x6e, 0x74, 0x4d, 0x61, 0x78, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0d, 0x4d, 0x73, 0x67,
+	0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x4d, 0x61, 0x78, 0x12, 0x1c, 0x0a, 0x09, 0x49, 0x4f,
+	0x54, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x18, 0x0c, 0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x49,
+	0x4f, 0x54, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x12, 0x20, 0x0a, 0x0b, 0x43, 0x6f, 0x6e, 0x6e,
+	0x54, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x18, 0x0d, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0b, 0x43,
+	0x6f, 0x6e, 0x6e, 0x54, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x4d, 0x61,
+	0x70, 0x53, 0x69, 0x7a, 0x65, 0x18, 0x0e, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x4d, 0x61, 0x70,
+	0x53, 0x69, 0x7a, 0x65, 0x12, 0x1e, 0x0a, 0x0a, 0x52, 0x6f, 0x6f, 0x6d, 0x50, 0x65, 0x6f, 0x70,
+	0x6c, 0x65, 0x18, 0x0f, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a, 0x52, 0x6f, 0x6f, 0x6d, 0x50, 0x65,
+	0x6f, 0x70, 0x6c, 0x65, 0x12, 0x20, 0x0a, 0x0b, 0x52, 0x6f, 0x6f, 0x6d, 0x54, 0x69, 0x6d, 0x65,
+	0x6f, 0x75, 0x74, 0x18, 0x10, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0b, 0x52, 0x6f, 0x6f, 0x6d, 0x54,
+	0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x12, 0x28, 0x0a, 0x0f, 0x4f, 0x66, 0x66, 0x4c, 0x69, 0x6e,
+	0x65, 0x57, 0x61, 0x69, 0x74, 0x54, 0x69, 0x6d, 0x65, 0x18, 0x11, 0x20, 0x01, 0x28, 0x05, 0x52,
+	0x0f, 0x4f, 0x66, 0x66, 0x4c, 0x69, 0x6e, 0x65, 0x57, 0x61, 0x69, 0x74, 0x54, 0x69, 0x6d, 0x65,
+	0x12, 0x1a, 0x0a, 0x08, 0x4c, 0x6f, 0x63, 0x6b, 0x4d, 0x6f, 0x64, 0x65, 0x18, 0x12, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x08, 0x4c, 0x6f, 0x63, 0x6b, 0x4d, 0x6f, 0x64, 0x65, 0x12, 0x10, 0x0a, 0x03,
+	0x46, 0x50, 0x53, 0x18, 0x13, 0x20, 0x01, 0x28, 0x05, 0x52, 0x03, 0x46, 0x50, 0x53, 0x12, 0x2a,
+	0x0a, 0x10, 0x52, 0x6f, 0x6f, 0x6d, 0x52, 0x65, 0x61, 0x64, 0x79, 0x54, 0x69, 0x6d, 0x65, 0x6f,
+	0x75, 0x74, 0x18, 0x14, 0x20, 0x01, 0x28, 0x05, 0x52, 0x10, 0x52, 0x6f, 0x6f, 0x6d, 0x52, 0x65,
+	0x61, 0x64, 0x79, 0x54, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x53, 0x74,
+	0x6f, 0x72, 0x65, 0x18, 0x15, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x53, 0x74, 0x6f, 0x72, 0x65,
+	0x22, 0xb6, 0x02, 0x0a, 0x12, 0x43, 0x66, 0x67, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c,
+	0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x3f, 0x0a, 0x06, 0x63, 0x6c, 0x69, 0x65, 0x6e,
+	0x74, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x27, 0x2e, 0x6d, 0x79, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x2e, 0x43, 0x66, 0x67, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x41, 0x63, 0x74,
+	0x69, 0x6f, 0x6e, 0x73, 0x2e, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x45, 0x6e, 0x74, 0x72, 0x79,
+	0x52, 0x06, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x12, 0x3f, 0x0a, 0x06, 0x73, 0x65, 0x72, 0x76,
+	0x65, 0x72, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x27, 0x2e, 0x6d, 0x79, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x2e, 0x43, 0x66, 0x67, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x41, 0x63,
+	0x74, 0x69, 0x6f, 0x6e, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x65, 0x72, 0x45, 0x6e, 0x74, 0x72,
+	0x79, 0x52, 0x06, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x1a, 0x4e, 0x0a, 0x0b, 0x43, 0x6c, 0x69,
+	0x65, 0x6e, 0x74, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x29, 0x0a, 0x05, 0x76, 0x61,
+	0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x6d, 0x79, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x2e, 0x43, 0x66, 0x67, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x05,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x1a, 0x4e, 0x0a, 0x0b, 0x53, 0x65, 0x72,
+	0x76, 0x65, 0x72, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x29, 0x0a, 0x05, 0x76, 0x61,
+	0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x6d, 0x79, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x2e, 0x43, 0x66, 0x67, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x05,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x5c, 0x0a, 0x0a, 0x43, 0x66, 0x67,
+	0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x05, 0x52, 0x02, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x61, 0x63, 0x74, 0x69, 0x6f,
+	0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12,
+	0x12, 0x0a, 0x04, 0x64, 0x65, 0x73, 0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x64,
+	0x65, 0x73, 0x63, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x65, 0x6d, 0x6f, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x04, 0x64, 0x65, 0x6d, 0x6f, 0x42, 0x0c, 0x5a, 0x0a, 0x2e, 0x2f, 0x3b, 0x6d, 0x79,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -2525,7 +2944,7 @@ func file_api_proto_rawDescGZIP() []byte {
 	return file_api_proto_rawDescData
 }
 
-var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
 var file_api_proto_goTypes = []interface{}{
 	(*RequestLogin)(nil),                  // 0: myproto.RequestLogin
 	(*RequestClientPong)(nil),             // 1: myproto.RequestClientPong
@@ -2561,6 +2980,11 @@ var file_api_proto_goTypes = []interface{}{
 	(*ResponseRestartGame)(nil),           // 31: myproto.ResponseRestartGame
 	(*ResponsePlayerMatchSignFailed)(nil), // 32: myproto.ResponsePlayerMatchSignFailed
 	(*ResponsePlayerMatchingFailed)(nil),  // 33: myproto.ResponsePlayerMatchingFailed
+	(*CfgServer)(nil),                     // 34: myproto.CfgServer
+	(*CfgProtocolActions)(nil),            // 35: myproto.CfgProtocolActions
+	(*CfgActions)(nil),                    // 36: myproto.CfgActions
+	nil,                                   // 37: myproto.CfgProtocolActions.ClientEntry
+	nil,                                   // 38: myproto.CfgProtocolActions.ServerEntry
 }
 var file_api_proto_depIdxs = []int32{
 	3,  // 0: myproto.RequestPlayerOperations.operations:type_name -> myproto.Operation
@@ -2569,11 +2993,15 @@ var file_api_proto_depIdxs = []int32{
 	3,  // 3: myproto.ResponsePushLogicFrame.operations:type_name -> myproto.Operation
 	30, // 4: myproto.ResponsePushRoomInfo.player_list:type_name -> myproto.Player
 	28, // 5: myproto.ResponsePushRoomHistory.list:type_name -> myproto.ResponseRoomHistory
-	6,  // [6:6] is the sub-list for method output_type
-	6,  // [6:6] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	37, // 6: myproto.CfgProtocolActions.client:type_name -> myproto.CfgProtocolActions.ClientEntry
+	38, // 7: myproto.CfgProtocolActions.server:type_name -> myproto.CfgProtocolActions.ServerEntry
+	36, // 8: myproto.CfgProtocolActions.ClientEntry.value:type_name -> myproto.CfgActions
+	36, // 9: myproto.CfgProtocolActions.ServerEntry.value:type_name -> myproto.CfgActions
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_init() }
@@ -2990,6 +3418,42 @@ func file_api_proto_init() {
 				return nil
 			}
 		}
+		file_api_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CfgServer); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CfgProtocolActions); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CfgActions); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2997,7 +3461,7 @@ func file_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   34,
+			NumMessages:   39,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

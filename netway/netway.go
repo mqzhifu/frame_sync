@@ -23,11 +23,11 @@ type NetWay struct {
 }
 
 type NetWayOption struct {
-	ListenIp			string		`json:"listenIp"`
-	OutIp				string		`json:"outIp"`
-	Port 				string		`json:"port"`
-	UdpPort				string 		`json:"udpPort"`
-	Mylog 				*zlib.Log	`json:"mylog"`
+	ListenIp			string		`json:"listenIp"`		//程序启动时监听的IP
+	OutIp				string		`json:"outIp"`			//对外访问的IP
+	Port 				string		`json:"port"`			//监听端口号
+	UdpPort				string 		`json:"udpPort"`		//UDP端口号
+	Mylog 				*zlib.Log	`json:"-"`
 	Protocol 			int32		`json:"protocol"`		//协议  ，ws tcp udp
 	WsUri				string		`json:"wsUri"`			//接HOST的后面的URL地址
 	ContentType 		int32		`json:"contentType"`	//json protobuf
@@ -40,7 +40,7 @@ type NetWayOption struct {
 	IOTimeout			int64								//read write sock fd 超时时间
 	Cxt 				context.Context						//调用方的CTX，用于所有协程的退出操作
 	MainChan			chan int32	`json:"-"`
-	ConnTimeout 		int32		`json:"connTimeout"`						//检测FD最后更新时间
+	ConnTimeout 		int32		`json:"connTimeout"`	//检测FD最后更新时间
 
 	MapSize				int32		`json:"mapSize"`		//地址大小，给前端初始化使用
 	RoomPeople			int32		`json:"roomPeople"`		//一局游戏包含几个玩家
