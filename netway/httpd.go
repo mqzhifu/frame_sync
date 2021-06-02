@@ -253,6 +253,7 @@ func  routeStatic(w http.ResponseWriter,r *http.Request,uri string)error{
 		uri == "/www/metrics.html"||
 		uri == "/www/serverUpVersionMemo.html"||
 		uri == "/www/sync_frame_client_server.jpg" ||
+		uri == "/www/rsync_frame_lock_step.jpg" ||
 		uri == "/www/index.html" ||
 		uri == "/www/config.html" ||
 		uri == "/www/roomDetail.html" ||
