@@ -19,7 +19,7 @@ func TcpServerNew()*TcpServer{
 }
 
 func  (tcpServer *TcpServer)Start(){
-	ipPort := mynetWay.Option.ListenIp + ":" +mynetWay.Option.Port
+	ipPort := mynetWay.Option.ListenIp + ":" +mynetWay.Option.TcpPort
 	listener,err :=net.Listen("tcp",ipPort)
 	if err !=nil{
 		mylog.Error("net.Listen tcp err")

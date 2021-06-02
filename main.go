@@ -10,32 +10,46 @@ import (
 	"time"
 	"zlib"
 )
+//创建唯一ID
+
 var mylog *zlib.Log
 func main(){
 	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
 
-	if len(os.Args) < 5{
-		msg := "os.Args len < 5 , ex :  env=dev , ip=127.0.0.1 , port=2222 , log_base_path=/data/www/golang/src/logs cs=server"
-		zlib.ExitPrint(msg)
+	type CmdArgs struct {
+		Env 			string	`seq:"1" err:"env=dev"`
+		Ip 				string	`seq:"2" err:"ip=127.0.0.1"`
+		WsPort 			string	`seq:"3" err:"WsPort=2222"`
+		TcpPort 		string	`seq:"4" err:"TcpPort=2223"`
+		LogBasePath 	string	`seq:"5" err:"log_base_path=/data/www/golang/src/logs cs=server"`
+		ClientServer 	string 	`seq:"6" err:"cs=serve"`
 	}
-
-	env 			:= os.Args[1]
-	ip 				:= os.Args[2]
-	port 			:= os.Args[3]
-	log_base_path 	:= os.Args[4]
-	clientServer	:= os.Args[5]
-
-	msg := "os.Args: env= "+env +" ,ip= "+ip +" ,port=" + port+ " ,log_base_path= " +log_base_path
+	cmdArgsStruct := CmdArgs{}
+	cmsArg ,err := zlib.CmsArgs(cmdArgsStruct)
+	if err != nil{
+		zlib.ExitPrint(err.Error())
+	}
+	msg := "argc : "
+	for k,v := range cmsArg{
+		msg +=  k + ":"+ v + " , "
+	}
 	zlib.MyPrint(msg)
-	if !zlib.CheckEnvExist(env){
+
+	if !zlib.CheckEnvExist(cmsArg["Env"]){
 		list := zlib.GetEnvList()
 		zlib.ExitPrint("env is err , list:",list)
 	}
 
-	enter(log_base_path,ip,port,clientServer)
+	enter(cmsArg)
 }
 
-func enter(log_base_path string,ip string ,port string,clientServer string){
+func enter(cmsArg map[string]string){
+	log_base_path := cmsArg["LogBasePath"]
+	ip := cmsArg["Ip"]
+	wsPort:= cmsArg["WsPort"]
+	tcpPort:= cmsArg["TcpPort"]
+	ClientServer:= cmsArg["ClientServer"]
+
 	rootCtx := context.Background()
 
 	logOption := zlib.LogOption{
@@ -49,15 +63,14 @@ func enter(log_base_path string,ip string ,port string,clientServer string){
 		zlib.ExitPrint("new log err",errs.Error())
 	}
 	mylog = newlog
-	//mainChan := make(chan int )
+
 	newNetWayOption := netway.NetWayOption{
-		//Host 				:"192.168.192.125",
-		//Port 				:"2222",
 		Mylog 				:mylog,
 		ListenIp			:ip,
 		OutIp				:ip,
 		//OutIp				: "39.106.65.76",
-		Port				:port,
+		WsPort				:wsPort,
+		TcpPort				:tcpPort,
 		UdpPort				:"9999",
 		//ContentType			:netway.CONTENT_TYPE_JSON,
 		ContentType			:netway.CONTENT_TYPE_PROTOBUF,
@@ -66,8 +79,8 @@ func enter(log_base_path string,ip string ,port string,clientServer string){
 		IOTimeout			:3,
 		Cxt 				:rootCtx,
 		ConnTimeout			: 60,
-		Protocol			: netway.PROTOCOL_WEBSOCKET,
 		//Protocol			: netway.PROTOCOL_TCP,
+		Protocol			: netway.PROTOCOL_WEBSOCKET,
 		WsUri				: "/ws",
 		MaxClientConnNum	:65535,
 		RoomPeople			:2,
@@ -78,7 +91,8 @@ func enter(log_base_path string,ip string ,port string,clientServer string){
 		FPS					:10,
 		Store				: 0,
 	}
-	switchClientServer(clientServer,newNetWayOption)
+	//测试使用，开始TCP/UDP client端
+	testSwitchClientServer(ClientServer,newNetWayOption)
 	//创建网关，并启动
 	newNetWay := netway.NewNetWay(newNetWayOption)
 	go newNetWay.Startup()
@@ -94,7 +108,8 @@ func enter(log_base_path string,ip string ,port string,clientServer string){
 	mylog.CloseChan <- 1
 	mylog.Warning("main end...")
 }
-func switchClientServer(clientServer string,newNetWayOption netway.NetWayOption ){
+//测试使用，开始TCP/UDP client端
+func testSwitchClientServer(clientServer string,newNetWayOption netway.NetWayOption ){
 	switch clientServer {
 		case "client":
 			netway.StartTcpClient(newNetWayOption,mylog)

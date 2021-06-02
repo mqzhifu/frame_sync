@@ -12,7 +12,7 @@ import (
 	"zlib"
 )
 
-func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err error){
+func(netWay *NetWay) Router(msg myproto.Msg,conn *Conn)(data interface{},err error){
 
 	requestLogin := myproto.RequestLogin{}
 	requestClientPong := myproto.RequestClientPong{}
@@ -30,41 +30,39 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 	requestPlayerOver := myproto.RequestPlayerOver{}
 
 	//这里有个BUG，LOGIN 函数只能在第一次调用，回头加个限定
-
-
 	switch msg.Action {
 		case "login"://
-			err = netWay.parserContentMsg(msg.Content,&requestLogin)
+			err = netWay.parserContentMsg(msg.Content,&requestLogin,conn.PlayerId)
 		case "clientPong"://
-			err = netWay.parserContentMsg(msg.Content,&requestClientPong)
+			err = netWay.parserContentMsg(msg.Content,&requestClientPong,conn.PlayerId)
 		case "playerResumeGame"://恢复未结束的游戏
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerResumeGame)
+			err = netWay.parserContentMsg(msg.Content,&requestPlayerResumeGame,conn.PlayerId)
 		//case "playerStatus"://玩家检测是否有未结束的游戏
 		//	err = parserMsgContent(msg.Content,&requestPlayerStatus)
 		//netWay.Players.getPlayerStatus(requestPlayerStatus,wsConn)
 		case "playerOperations"://玩家推送操作指令
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerOperations)
+			err = netWay.parserContentMsg(msg.Content,&requestPlayerOperations,conn.PlayerId)
 		case "playerLogicFrameAck":
 			//err = parserMsgContent(msg.Content,&logicFrame)
 			//mySync.playerLogicFrameAck(logicFrame,wsConn)
 		case "playerMatchSignCancel"://玩家取消报名等待
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerMatchSignCancel)
+			err = netWay.parserContentMsg(msg.Content,&requestPlayerMatchSignCancel,conn.PlayerId)
 		case "gameOver"://游戏结束
-			err = netWay.parserContentMsg(msg.Content,&requestGameOver)
+			err = netWay.parserContentMsg(msg.Content,&requestGameOver,conn.PlayerId)
 		case "clientHeartbeat"://心跳
-			err = netWay.parserContentMsg(msg.Content,&requestClientHeartbeat)
+			err = netWay.parserContentMsg(msg.Content,&requestClientHeartbeat,conn.PlayerId)
 		case "playerMatchSign"://
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerMatchSign)
+			err = netWay.parserContentMsg(msg.Content,&requestPlayerMatchSign,conn.PlayerId)
 		case "playerReady"://玩家进入状态状态
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerReady)
+			err = netWay.parserContentMsg(msg.Content,&requestPlayerReady,conn.PlayerId)
 		case "roomHistory"://一局副本的，所有历史操作记录
-			err = netWay.parserContentMsg(msg.Content,&requestRoomHistory)
+			err = netWay.parserContentMsg(msg.Content,&requestRoomHistory,conn.PlayerId)
 		case "getRoom"://
-			err = netWay.parserContentMsg(msg.Content,&requestGetRoom)
+			err = netWay.parserContentMsg(msg.Content,&requestGetRoom,conn.PlayerId)
 		case "clientPing":
-			err = netWay.parserContentMsg(msg.Content,&requestClientPing)
+			err = netWay.parserContentMsg(msg.Content,&requestClientPing,conn.PlayerId)
 		case "playerOver":
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerOver)
+			err = netWay.parserContentMsg(msg.Content,&requestPlayerOver,conn.PlayerId)
 		default:
 			mylog.Error("Router err:",msg)
 			return data,nil
@@ -75,32 +73,32 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 	mylog.Info("Router ",msg.Action)
 	switch msg.Action {
 		case "login"://
-			jwtData ,err := netWay.login(requestLogin,wsConn)
+			jwtData ,err := netWay.login(requestLogin,conn)
 			return jwtData,err
 		case "clientPong"://
-			netWay.ClientPong(requestClientPong,wsConn)
+			netWay.ClientPong(requestClientPong,conn)
 		case "clientHeartbeat"://心跳
-			netWay.heartbeat(requestClientHeartbeat,wsConn)
+			netWay.heartbeat(requestClientHeartbeat,conn)
 		case "playerMatchSign"://
-			myMatch.addOnePlayer(requestPlayerMatchSign,wsConn)
+			myMatch.addOnePlayer(requestPlayerMatchSign,conn)
 		case "clientPing"://
-			netWay.clientPing(requestClientPing,wsConn)
+			netWay.clientPing(requestClientPing,conn)
 		case "playerResumeGame"://恢复未结束的游戏
-			netWay.mySync.PlayerResumeGame(requestPlayerResumeGame,wsConn )
+			netWay.mySync.PlayerResumeGame(requestPlayerResumeGame,conn )
 		case "playerOperations"://玩家推送操作指令
-			netWay.mySync.ReceivePlayerOperation(requestPlayerOperations,wsConn,msg.Content)
+			netWay.mySync.ReceivePlayerOperation(requestPlayerOperations,conn,msg.Content)
 		case "playerMatchSignCancel"://玩家取消报名等待
-			myMatch.delOnePlayer(requestPlayerMatchSignCancel,wsConn)
+			myMatch.delOnePlayer(requestPlayerMatchSignCancel,conn)
 		case "gameOver"://游戏结束
-			netWay.mySync.GameOver(requestGameOver,wsConn)
+			netWay.mySync.GameOver(requestGameOver,conn)
 		case "playerReady"://玩家进入状态状态
-			netWay.mySync.PlayerReady(requestPlayerReady,wsConn)
+			netWay.mySync.PlayerReady(requestPlayerReady,conn)
 		case "roomHistory"://一局副本的，所有历史操作记录
-			netWay.mySync.RoomHistory(requestRoomHistory,wsConn)
+			netWay.mySync.RoomHistory(requestRoomHistory,conn)
 		case "getRoom":
-			netWay.mySync.GetRoom(requestGetRoom,wsConn)
+			netWay.mySync.GetRoom(requestGetRoom,conn)
 		case "playerOver":
-			netWay.mySync.PlayerOver(requestPlayerOver,wsConn)
+			netWay.mySync.PlayerOver(requestPlayerOver,conn)
 		default:
 			mylog.Error("Router err:",msg)
 
@@ -110,76 +108,93 @@ func(netWay *NetWay) Router(msg Message,wsConn *WsConn)(data interface{},err err
 	return data,nil
 }
 //发送一条消息给一个玩家FD，同时将消息内容进行编码与压缩
-func(netWay *NetWay)SendMsgCompressByConn(wsConn *WsConn,action string , contentStruct interface{}){
+func(netWay *NetWay)SendMsgCompressByConn(conn *Conn,action string , contentStruct interface{}){
 	mylog.Info("SendMsgCompressByConn ", "" , " action:",action)
-	contentByte ,_ := netWay.CompressContent(contentStruct)
-	netWay.SendMsg(wsConn,action,contentByte)
+	contentByte ,_ := netWay.CompressContent(contentStruct,conn.PlayerId)
+	netWay.SendMsg(conn,action,contentByte)
 }
 //发送一条消息给一个玩家FD，同时将消息内容进行编码与压缩
-func(netWay *NetWay)SendMsgCompressByUid(uid int32,action string , contentStruct interface{}){
-	mylog.Info("SendMsgCompressByUid uid:",uid , " action:",action)
-	contentByte ,_ := netWay.CompressContent(contentStruct)
-	netWay.SendMsgByUid(uid,action,contentByte)
+func(netWay *NetWay)SendMsgCompressByUid(playerId int32,action string , contentStruct interface{}){
+	mylog.Info("SendMsgCompressByUid playerId:",playerId , " action:",action)
+	contentByte ,_ := netWay.CompressContent(contentStruct,playerId)
+	netWay.SendMsgByUid(playerId,action,contentByte)
 }
-func(netWay *NetWay)SendMsg(wsConn *WsConn,action string,content []byte){
+func(netWay *NetWay)SendMsg(conn *Conn,action string,content []byte){
 	//获取协议号结构体
 	actionMapT,empty := netWay.ProtocolActions.GetActionId(action,"server")
-	mylog.Info("SendMsg",actionMapT.Id,wsConn.PlayerId,action)
+	mylog.Info("SendMsg",actionMapT.Id,conn.PlayerId,action)
 	if empty{
 		mylog.Error("GetActionId empty",action)
 		return
 	}
+	protocolCtrlInfo := netWay.PlayerManager.GetPlayerCtrlInfoById(conn.PlayerId)
+	contentType := protocolCtrlInfo.ContentType
+	protocolType := protocolCtrlInfo.ProtocolType
+	player ,_ := netWay.PlayerManager.GetById(conn.PlayerId)
+	SessionIdBtye := []byte(player.SessionId)
+	content  = zlib.BytesCombine(SessionIdBtye,content)
 	//协议号
 	strId := strconv.Itoa(int(actionMapT.Id))
 	//合并 协议号 + 消息内容体
 	content = zlib.BytesCombine([]byte(strId),content)
-	if wsConn.Status == CONN_STATUS_CLOSE {
+	if conn.Status == CONN_STATUS_CLOSE {
 		mylog.Error("wsConn status =CONN_STATUS_CLOSE.")
 		return
 	}
+
+	//var protocolCtrlFirstByteArr []byte
+	//contentTypeByte := byte(contentType)
+	//protocolTypeByte := byte(player.ProtocolType)
+	//contentTypeByteRight := contentTypeByte >> 5
+	//protocolCtrlFirstByte := contentTypeByteRight | protocolTypeByte
+	//protocolCtrlFirstByteArr = append(protocolCtrlFirstByteArr,protocolCtrlFirstByte)
+	//content = zlib.BytesCombine(protocolCtrlFirstByteArr,content)
+	contentTypeStr := strconv.Itoa(int(contentType))
+	protocolTypeStr := strconv.Itoa(int(protocolType))
+	contentTypeAndprotocolType := contentTypeStr + protocolTypeStr
+	content = zlib.BytesCombine([]byte(contentTypeAndprotocolType),content)
 	//myMetrics.IncNode("output_num")
 	//myMetrics.PlusNode("output_size",len(content))
 	//房间做统计处理
 	if action =="pushLogicFrame"{
-		roomId := netWay.PlayerManager.GetRoomIdByPlayerId(wsConn.PlayerId)
+		roomId := netWay.PlayerManager.GetRoomIdByPlayerId(conn.PlayerId)
 		roomSyncMetrics := RoomSyncMetricsPool[roomId]
 		roomSyncMetrics.OutputNum++
 		roomSyncMetrics.OutputSize = roomSyncMetrics.OutputSize + len(content)
 	}
-	if mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF {
-		wsConn.Write(content,websocket.BinaryMessage)
+	mylog.Debug("final sendmsg ctrlInfo: contentType-",contentTypeStr," protocolType-",protocolTypeStr," pid-",strId)
+	mylog.Debug("final sendmsg content:",content)
+	if contentType == CONTENT_TYPE_PROTOBUF {
+		conn.Write(content,websocket.BinaryMessage)
 		//netWay.myWriteMessage(wsConn,websocket.BinaryMessage,content)
 	}else{
-		wsConn.Write(content,websocket.TextMessage)
+		conn.Write(content,websocket.TextMessage)
 		//netWay.myWriteMessage(wsConn,websocket.TextMessage,content)
 	}
 }
 //发送一条消息给一个玩家FD，
 func(netWay *NetWay)SendMsgByUid(playerId int32,action string , content []byte){
-	wsConn,ok := wsConnManager.getConnPoolById(playerId)
+	wsConn,ok := connManager.getConnPoolById(playerId)
 	if !ok {
 		mylog.Error("wsConn not in pool,maybe del.")
 		return
 	}
 	netWay.SendMsg(wsConn,action,content)
 }
-//真的发送一条消息给sock FD
-//func(netWay *NetWay) myWriteMessage(wsConn *WsConn ,msgCate int ,content []byte){
-//	defer func() {
-//		if err := recover(); err != nil {
-//			mylog.Error("wsConn.Conn.WriteMessage failed:",err)
-//			netWay.CloseOneConn(wsConn,CLOSE_SOURCE_SEND_MESSAGE)
-//		}
-//	}()
-//	wsConn.Write(content,msgCate)
-//}
-//解析C端发送的数据，这一层只解析前4个字节，找到对应的action，对于content不做处理
-func  (netWay *NetWay)parserContentProtocol(content string)(message Message,err error){
-	if len(content)<4{
-		return message,errors.New("content < 4")
+//解析C端发送的数据，这一层，对于用户层的content数据不做处理
+//前2个字节控制流，3-6为协议号，7-38为sessionId
+func  (netWay *NetWay)parserContentProtocol(content string)(message myproto.Msg,err error){
+	protocolSum := 6
+	if len(content)<protocolSum{
+		return message,errors.New("content < "+ strconv.Itoa(protocolSum))
 	}
-
-	actionIdStr := content[0:4]
+	if len(content)==protocolSum{
+		errMsg := "content = "+strconv.Itoa(protocolSum)+" ,body is empty"
+		return message,errors.New(errMsg)
+	}
+	ctrlStream := content[0:2]
+	ctrlInfo := netWay.parserProtocolCtrlInfo([]byte(ctrlStream))
+	actionIdStr := content[2:6]
 	actionId,_ := strconv.Atoi(actionIdStr)
 	actionName,empty := netWay.ProtocolActions.GetActionName(int32(actionId),"client")
 	if empty{
@@ -187,25 +202,55 @@ func  (netWay *NetWay)parserContentProtocol(content string)(message Message,err 
 		mylog.Error(errMsg,actionId)
 		return message,errors.New("actionId ProtocolActions.GetActionName empty!!!")
 	}
-	if len(content)==4{
-		errMsg := "content = 4 ,body is empty"
-		return message,errors.New(errMsg)
-	}
-	mylog.Info("parserContent",actionName.Action)
 
-	msg := Message{
-		Action: actionName.Action,
-		Content: content[4:],
+	mylog.Info("parserContent actionid:",actionId, ",actionName:",actionName.Action)
+
+	sessionId := ""
+	userData := ""
+	if actionName.Action != "login"{
+		sessionId = content[6:38]
+		userData = content[38:]
+	}else{
+		userData = content[6:]
 	}
+
+	msg := myproto.Msg{
+		Action: actionName.Action,
+		Content:userData,
+		ContentType : ctrlInfo.ContentType,
+		ProtocolType: ctrlInfo.ProtocolType,
+		SessionId: sessionId,
+	}
+	mylog.Debug("msg:",msg)
 	return msg,nil
 }
+type ProtocolCtrlInfo struct {
+	ContentType int32
+	ProtocolType int32
+}
+func (netWay *NetWay)parserProtocolCtrlInfo(stream []byte)ProtocolCtrlInfo{
+	//firstByte := stream[0:1][0]
+	//mylog.Debug("firstByte:",firstByte)
+	//firstByteHighThreeBit := (firstByte >> 5 ) & 7
+	//firstByteLowThreeBit := ((firstByte << 5 ) >> 5 )  & 7
+	firstByteHighThreeBit , _:= strconv.Atoi(string(stream[0:1]))
+	firstByteLowThreeBit , _:= strconv.Atoi(string(stream[1:2]))
+	protocolCtrlInfo := ProtocolCtrlInfo{
+		ContentType : int32(firstByteHighThreeBit),
+		ProtocolType : int32(firstByteLowThreeBit),
+	}
+	mylog.Info("parserProtocolCtrlInfo ContentType:",protocolCtrlInfo.ContentType,",ProtocolType:",protocolCtrlInfo.ProtocolType)
+	return protocolCtrlInfo
+}
 //协议层的解包已经结束，这个时候需要将content内容进行转换成MSG结构
-func (netWay *NetWay)parserContentMsg(content string ,out interface{})error{
+func (netWay *NetWay)parserContentMsg(content string ,out interface{},playerId int32)error{
 	var err error
-	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON {
+	protocolCtrlInfo := netWay.PlayerManager.GetPlayerCtrlInfoById(playerId)
+	contentType := protocolCtrlInfo.ContentType
+	if contentType == CONTENT_TYPE_JSON {
 		unTrunVarJsonContent := zlib.CamelToSnake([]byte(content))
 		err = json.Unmarshal(unTrunVarJsonContent,out)
-	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF {
+	}else if  contentType == CONTENT_TYPE_PROTOBUF {
 		aaa := out.(proto.Message)
 		err = proto.Unmarshal([]byte(content),aaa)
 	}else{
@@ -222,8 +267,12 @@ func (netWay *NetWay)parserContentMsg(content string ,out interface{})error{
 	return nil
 }
 //将 结构体 压缩成 字符串
-func (netWay *NetWay)CompressContent(contentStruct interface{})(content []byte  ,err error){
-	if mynetWay.Option.ContentType == CONTENT_TYPE_JSON {
+func (netWay *NetWay)CompressContent(contentStruct interface{},playerId int32)(content []byte  ,err error){
+	protocolCtrlInfo := netWay.PlayerManager.GetPlayerCtrlInfoById(playerId)
+	contentType := protocolCtrlInfo.ContentType
+
+	mylog.Debug("CompressContent contentType:",contentType)
+	if contentType == CONTENT_TYPE_JSON {
 		//这里有个问题：纯JSON格式与PROTOBUF格式在PB文件上 不兼容
 		//严格来说是GO语言与protobuf不兼容，即：PB文件的  结构体中的 JSON-TAG
 		//PROTOBUF如果想使用驼峰式变量名，即：成员变量名区分出大小写，那必须得用<下划线>分隔，编译后，下划线转换成大写字母
@@ -232,8 +281,8 @@ func (netWay *NetWay)CompressContent(contentStruct interface{})(content []byte  
 
 		//所以，先将content 字符串 由下划线转成 驼峰式
 		content, err = json.Marshal(JsonCamelCase{contentStruct})
-		mylog.Info("CompressContent json:",string(content),err )
-	}else if  mynetWay.Option.ContentType == CONTENT_TYPE_PROTOBUF {
+		//mylog.Info("CompressContent json:",string(content),err )
+	}else if  contentType == CONTENT_TYPE_PROTOBUF {
 		contentStruct := contentStruct.(proto.Message)
 		content, err = proto.Marshal(contentStruct)
 	}else{

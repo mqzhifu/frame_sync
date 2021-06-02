@@ -59,6 +59,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		ResponseStatusCode(w,500,"RequestURI is null or uir is :  '/'")
 		return
 	}
+	//zlib.MyPrint(r.Header)
 	uri = uriTurnPath(uri)
 	query := r.URL.Query()
 	var jsonStr []byte
@@ -75,7 +76,8 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 			cfgServer := myproto.CfgServer{
 				ListenIp			:options.ListenIp,
 				OutIp				:options.OutIp,
-				Port				:options.Port,
+				WsPort				:options.WsPort,
+				TcpPort				:options.TcpPort,
 				UdpPort				:options.UdpPort,
 				ContentType			:options.ContentType,
 				LoginAuthType		:options.LoginAuthType,
@@ -128,24 +130,11 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		}
 
 	}else if uri == "/www/getMetrics"{
-		//myMetrics := MyMetrics{
-		//	Rooms :      len(MySyncRoomPool),
-		//	Players:     len(PlayerPool),
-		//	Conns:       len(wsConnManager.Pool),
-		//	InputNum:    myMetrics.GetOneNode("input_num"),
-		//	InputSize:   myMetrics.GetOneNode("input_size"),
-		//	OutputNum:   myMetrics.GetOneNode("output_num"),
-		//	OutputSize:  myMetrics.GetOneNode("output_size"),
-		//	InputErrNum: myMetrics.GetOneNode("input_err_num"),
-		//
-		//}
-		//jsonStr,_ = json.Marshal(&myMetrics)
 		pool:= myMetrics.Pool
 		pool["execTime"] = int(int(zlib.GetNowMillisecond()) - pool["starupTime"])
 		jsonStr,_ = json.Marshal(&pool)
 		zlib.MyPrint(string(jsonStr))
 	}else if uri == "/www/getFD"{
-		//pool := wsConnManager.Pool
 	}else if uri == "/www/getRoomList"{
 		type RoomList struct {
 			Rooms map[string]Room              `json:"rooms"`

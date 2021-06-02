@@ -6,10 +6,29 @@
 </head>
 <body>
 
-2021-05-27
+2021-06-2
 <table>
     <p>
-        ResponseEnterBattle 增加属性：udp_port、session_id
+        zlib库增加CmdArgs方法，处理指令行参数<br/>
+        增加UDP基础方法，但没写完<br/>
+        原WsConn变量名全改成Conn<br/>
+        原，只能监听WS或者TCP，现改成同时可以监听WS 和TCP<br/>
+        传输内容格式变更，增加3个字段：contentType protocolType sessionId<br/>
+        JS-DEMO，同上，兼容新的传输内容格式<br/>
+        原netway.option中的port字段删除，同时增加：WsPort TcpPort<br/>
+        整理了一所有的常量值和加注释<br/>
+        .proto 增加一个新的方法：Msg<br/>
+        .proto player方法增加字段：session_id timeout content_type protocol_type<br/>
+    </p>
+
+
+</table>
+
+2021-05-28
+<table>
+    <p>
+        .proto:删除player 中的 ip、udp_port字段，同时增加session_id字段、timeout
+        ResponseEnterBattle 增加属性：udp_port
 
         .proto文件增加两个接口类型：CfgServer、CfgProtocolActions<br/>
         getApilist http请求，获取配置信息接口:<br/>

@@ -38,7 +38,7 @@ func (match *Match)getOneSignPlayerById(playerId int32 ) (playerSign PlayerSign,
 	return playerSign,true
 }
 
-func (match *Match) addOnePlayer(requestPlayerMatchSign myproto.RequestPlayerMatchSign,wsConn *WsConn){
+func (match *Match) addOnePlayer(requestPlayerMatchSign myproto.RequestPlayerMatchSign,wsConn *Conn){
 	playerId := wsConn.PlayerId
 	player ,empty := mynetWay.PlayerManager.GetById(requestPlayerMatchSign.PlayerId)
 	if empty{
@@ -75,7 +75,7 @@ func (match *Match) addOnePlayer(requestPlayerMatchSign myproto.RequestPlayerMat
 }
 //玩家报名时，可能因为BUG，造成一些系统级的错误，如：丢失玩家状态等
 //出现这种S端异常的情况，除了报错还要通知一下C端
-func (match *Match)matchSignErrAndSend(msg string,wsConn *WsConn){
+func (match *Match)matchSignErrAndSend(msg string,wsConn *Conn){
 	mylog.Error(msg)
 	playerMatchSignFailed := myproto.ResponsePlayerMatchSignFailed{
 		PlayerId: wsConn.PlayerId,
@@ -84,7 +84,7 @@ func (match *Match)matchSignErrAndSend(msg string,wsConn *WsConn){
 	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"playerMatchSignFailed",&playerMatchSignFailed)
 }
 
-func (match *Match) delOnePlayer(requestCancelSign myproto.RequestPlayerMatchSignCancel,wsConn *WsConn){
+func (match *Match) delOnePlayer(requestCancelSign myproto.RequestPlayerMatchSignCancel,wsConn *Conn){
 	match.realDelOnePlayer(requestCancelSign.PlayerId)
 }
 func (match *Match) realDelOnePlayer(playerId int32){

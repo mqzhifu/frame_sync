@@ -2,7 +2,6 @@ package netway
 
 import (
 	"context"
-	"flag"
 	"frame_sync/myproto"
 	"frame_sync/myprotocol"
 	"github.com/gorilla/websocket"
@@ -25,12 +24,13 @@ type NetWay struct {
 type NetWayOption struct {
 	ListenIp			string		`json:"listenIp"`		//程序启动时监听的IP
 	OutIp				string		`json:"outIp"`			//对外访问的IP
-	Port 				string		`json:"port"`			//监听端口号
+	WsPort 				string		`json:"wsPort"`			//监听端口号
+	TcpPort 			string		`json:"tcpPort"`		//监听端口号
 	UdpPort				string 		`json:"udpPort"`		//UDP端口号
 	Mylog 				*zlib.Log	`json:"-"`
-	Protocol 			int32		`json:"protocol"`		//协议  ，ws tcp udp
+	Protocol 			int32		`json:"protocol"`		//默认协议：ws tcp udp
 	WsUri				string		`json:"wsUri"`			//接HOST的后面的URL地址
-	ContentType 		int32		`json:"contentType"`	//json protobuf
+	ContentType 		int32		`json:"contentType"`	//默认内容格式 ：json protobuf
 
 	LoginAuthType		string		`json:"loginAuthType"`	//jwt
 	LoginAuthSecretKey	string								//密钥
@@ -54,10 +54,13 @@ type NetWayOption struct {
 	Store 				int32 		`json:"store"`			//持久化：players room
 }
 //网络间的通信内容，最终被转换成的结构体
-type Message struct {
-	Action  string	`json:"action"`
-	Content	string	`json:"content"`
-}
+//type Message struct {
+//	Action  		string	`json:"action"`
+//	Content			string	`json:"content"`
+//	ContentType 	int32	`json:"contentType"`
+//	ProtocolType 	int32	`json:"protocolType"`
+//	SessionId 		string	`json:"sessionId"`
+//}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -72,11 +75,11 @@ var upgrader = websocket.Upgrader{
 //var mySync 		*Sync
 var mynetWay	*NetWay
 var myMatch		*Match
-var wsConnManager *WsConnManager
+var connManager *ConnManager
 var myMetrics *Metrics
 var mylog *zlib.Log
 var prototolManager *PrototolManager
-var myTcpServer *TcpServer
+
 func NewNetWay(option NetWayOption)*NetWay {
 	option.Mylog.Info("New NetWay instance :")
 	zlib.PrintStruct(option," : ")
@@ -100,7 +103,7 @@ func NewNetWay(option NetWayOption)*NetWay {
 	}
 	netWay.mySync = NewSync(syncOptions)
 	//ws conn 管理
-	wsConnManager = NewWsConnManager()
+	connManager = NewConnManager()
 	//玩家信息管理模块
 	netWay.PlayerManager = PlayerManagerNew()
 	//传输内容体的配置
@@ -112,11 +115,11 @@ func NewNetWay(option NetWayOption)*NetWay {
 }
 //启动 - 入口
 func (netWay *NetWay)Startup(){
-	myTcpServer =  TcpServerNew()
-	prototolManager = PrototolManagerNew()
 	//启动时间
 	s_time := zlib.GetNowMillisecond()
 	myMetrics.fastLog("starupTime",METRICS_OPT_PLUS,int(s_time))
+	//协议管理适配器
+	prototolManager =  PrototolManagerNew()
 	//从外层调用的CTX上，派生netway自己的根ctx
 	startupCtx ,cancel := context.WithCancel(netWay.Option.Cxt)
 	netWay.MyCtx = startupCtx
@@ -126,7 +129,7 @@ func (netWay *NetWay)Startup(){
 	//开启匹配服务
 	go myMatch.doingAndCreateRoom  (startupCtx,netWay.MatchSuccessChan)
 	//监听超时的WS连接
-	go wsConnManager.checkConnPoolTimeout(startupCtx)
+	go connManager.checkConnPoolTimeout(startupCtx)
 	//接收<匹配成功>的房间信息，并分发
 	go netWay.recviceMatchSuccess(startupCtx)
 	//统计模块，消息监听开启
@@ -142,29 +145,6 @@ func (netWay *NetWay)Startup(){
 	}()
 }
 
-
-
-//启动HTTP 服务
-func (netWay *NetWay)startHttpServer( ){
-	netWay.Option.Mylog.Info("ws Startup : ",netWay.Option.WsUri,netWay.Option.ListenIp+":"+netWay.Option.Port)
-
-	dns := netWay.Option.ListenIp + ":" + netWay.Option.Port
-	var addr = flag.String("server addr", dns, "server address")
-
-	httpServer := & http.Server{
-		Addr:*addr,
-	}
-	//监听WS请求
-	http.HandleFunc(netWay.Option.WsUri,netWay.wsHandler)
-	//监听普通HTTP请求
-	http.HandleFunc("/www/", wwwHandler)
-
-	netWay.httpServer = httpServer
-	err := httpServer.ListenAndServe()
-	if err != nil {
-		netWay.Option.Mylog.Error("ListenAndServe:", err)
-	}
-}
 func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
 	netWay.Option.Mylog.Info("wsHandler: have a new client http request")
 	//http 升级 ws
@@ -189,7 +169,7 @@ func(netWay *NetWay)udpHandler(){
 //一个客户端连接请求进入
 func(netWay *NetWay)OpenNewConn( wsConnFD FDAdapter) {
 	//创建一个连接元素，将WS FD 保存到该容器中
-	NewWsConn ,err := wsConnManager.CreateOneWsConn(wsConnFD)
+	NewWsConn ,err := connManager.CreateOneConn(wsConnFD)
 	if err !=nil{
 		netWay.Option.Mylog.Error(err.Error())
 		NewWsConn.Write([]byte(err.Error()),websocket.TextMessage)
@@ -197,7 +177,7 @@ func(netWay *NetWay)OpenNewConn( wsConnFD FDAdapter) {
 		return
 	}
 	//登陆验证
-	jwtData,err := mynetWay.loginPre(NewWsConn)
+	jwtData,err,firstMsg := mynetWay.loginPre(NewWsConn)
 	if err != nil{
 		return
 	}
@@ -205,7 +185,7 @@ func(netWay *NetWay)OpenNewConn( wsConnFD FDAdapter) {
 	//登陆验证通过，开始添加各种状态及初始化
 	NewWsConn.PlayerId = jwtData.Payload.Uid
 	//将新的连接加入到连接池中，并且与玩家ID绑定
-	err = wsConnManager.addConnPool( NewWsConn)
+	err = connManager.addConnPool( NewWsConn)
 	if err != nil{
 		loginRes = myproto.ResponseLoginRes{
 			Code: 500,
@@ -216,12 +196,13 @@ func(netWay *NetWay)OpenNewConn( wsConnFD FDAdapter) {
 		return
 	}
 	//给用户再绑定到 用户状态池,该池与连接池的区分 是：连接一但关闭，该元素即删除~而用户状态得需要保存
-	playerConnInfo ,_ :=netWay.PlayerManager.addPlayer(jwtData.Payload.Uid)
+	playerConnInfo ,_ :=netWay.PlayerManager.addPlayer(jwtData.Payload.Uid,firstMsg)
 	loginRes = myproto.ResponseLoginRes{
 		Code: 200,
 		ErrMsg: "",
 		Player: &playerConnInfo,
 	}
+	NewWsConn.SessionId = playerConnInfo.SessionId
 	//告知玩家：登陆结果
 	netWay.SendMsgCompressByUid(jwtData.Payload.Uid,"loginRes",&loginRes)
 	//统计 当前FD 数量/历史FD数量
@@ -263,18 +244,18 @@ func(netWay *NetWay)recviceMatchSuccess(ctx context.Context){
 	mylog.Warning("recviceMatchSuccessone close")
 }
 
-func(netWay *NetWay)heartbeat(requestClientHeartbeat myproto.RequestClientHeartbeat,wsConn *WsConn){
+func(netWay *NetWay)heartbeat(requestClientHeartbeat myproto.RequestClientHeartbeat,wsConn *Conn){
 	now := zlib.GetNowTimeSecondToInt()
 	wsConn.UpTime = int32(now)
 }
 //=================================
 //监听到某个FD被关闭后，回调函数
-func  (wsConn *WsConn)CloseHandler(code int, text string) error{
-	mynetWay.CloseOneConn(wsConn, CLOSE_SOURCE_CLIENT)
+func  (conn *Conn)CloseHandler(code int, text string) error{
+	mynetWay.CloseOneConn(conn, CLOSE_SOURCE_CLIENT)
 	return nil
 }
 
-func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
+func (netWay *NetWay)CloseOneConn(wsConn *Conn,source int){
 	netWay.Option.Mylog.Info("wsConn close ,source : ",source,wsConn.PlayerId)
 	if wsConn.Status == CONN_STATUS_CLOSE {
 		netWay.Option.Mylog.Error("CloseOneConn error :wsConn.Status == CLOSE")
@@ -294,8 +275,7 @@ func (netWay *NetWay)CloseOneConn(wsConn *WsConn,source int){
 
 	netWay.Option.Mylog.Info("wsConn.Conn.Close err:",err)
 
-	wsConnManager.delConnPool(wsConn.PlayerId)
-
+	connManager.delConnPool(wsConn.PlayerId)
 	//处理掉-已报名的玩家
 	myMatch.realDelOnePlayer(wsConn.PlayerId)
 	//mySleepSecond(2,"CloseOneConn")
@@ -309,38 +289,12 @@ func  (netWay *NetWay)Quit() {
 
 	netWay.MyCtxCancel() //关闭 所有  startup开启的协程
 
-	if len(wsConnManager.Pool) == 0 {
+	if len(connManager.Pool) == 0 {
 		netWay.Option.Mylog.Warning("ConnPool is 0")
 		return
 	}
-	for _, v := range wsConnManager.Pool {
+	for _, v := range connManager.Pool {
 		netWay.CloseOneConn(v, CLOSE_SOURCE_SIGNAL_QUIT)
 	}
 	netWay.Option.Mylog.Warning("quit finish")
 }
-
-//func StrToUnicode(str string) (string) {
-//	DD := []rune(str)  //需要分割的字符串内容，将它转为字符，然后取长度。
-//	finallStr := ""
-//	for i := 0; i < len(DD); i++ {
-//		if unicode.Is(unicode.Scripts["Han"], DD[i]) {
-//			textQuoted := strconv.QuoteToASCII(string(DD[i]))
-//			finallStr += textQuoted[1 : len(textQuoted)-1]
-//		} else {
-//			h := fmt.Sprintf("%x",DD[i])
-//			finallStr += `\u` + isFullFour(h)
-//		}
-//	}
-//	return finallStr
-//}
-//
-//func isFullFour(str string) (string) {
-//	if len(str) == 1 {
-//		str = "000" + str
-//	} else if len(str) == 2 {
-//		str = "00" + str
-//	} else if len(str) == 3 {
-//		str = "0" + str
-//	}
-//	return str
-//}

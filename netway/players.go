@@ -4,17 +4,22 @@ import (
 	"context"
 	"errors"
 	"frame_sync/myproto"
+	"math/rand"
+	"strconv"
+	"time"
 	"zlib"
 )
 
 type PlayerManager struct {
 	Pool  map[int32]*myproto.Player //玩家 状态池
+	SidMapPid map[string]int32	//sessionId 映射 playerId
 }
 
 func PlayerManagerNew()*PlayerManager {
 	mylog.Info("new Players instance")
 	playerManager := new(PlayerManager)
 	playerManager.Pool = make(map[int32]*myproto.Player)
+	playerManager.SidMapPid = make(map[string]int32)
 	playerManager.initPool()
 	return playerManager
 }
@@ -54,7 +59,7 @@ func (playerManager *PlayerManager)checkOfflineTimeout(ctx context.Context){
 //	mylog.Warning("checkOfflineTimeout close")
 }
 
-func  (playerManager *PlayerManager)addPlayer(id int32)(existPlayer myproto.Player,err error){
+func  (playerManager *PlayerManager)addPlayer(id int32,firstMsg myproto.Msg)(existPlayer myproto.Player,err error){
 	mylog.Info("addPlayerPool :",id)
 	hasPlayer,empty  := playerManager.GetById(id)
 	if !empty{
@@ -70,18 +75,54 @@ func  (playerManager *PlayerManager)addPlayer(id int32)(existPlayer myproto.Play
 		}
 	}else{
 		mylog.Info("new player add pool...")
+		timeout := int32(zlib.GetNowTimeSecondToInt() + 60 * 60)
 		player := myproto.Player{
 			Id:       id,
 			AddTime:  int32(zlib.GetNowTimeSecondToInt()),
 			Nickname: "",
 			Status:   PLAYER_STATUS_ONLINE,
+			Timeout: timeout,
+			SessionId: playerManager.createNewSessionId(),
+			ContentType: int32(firstMsg.ContentType),
+			ProtocolType: int32(firstMsg.ProtocolType),
 		}
 		playerManager.Pool[id] = &player
+		playerManager.SidMapPid[player.SessionId] = id
 		return player,nil
 	}
 	return existPlayer,nil
 }
+func  (playerManager *PlayerManager)createNewSessionId()string{
+	nano := time.Now().UnixNano()
+	rand.Seed(nano)
+	rndNum := rand.Int63()
+	sessionId := zlib.Md5( zlib.Md5(strconv.FormatInt(nano, 10))+ zlib.Md5(strconv.FormatInt(rndNum, 10)))
+	return sessionId
+}
+func (playerManager *PlayerManager)GetPlayerCtrlInfoById(playerId int32)ProtocolCtrlInfo{
+	var contentType  int32
+	var protocolType int32
+	if playerId == 0{
+		contentType = mynetWay.Option.ContentType
+		protocolType = mynetWay.Option.Protocol
+	}else{
+		player ,empty := playerManager.GetById(playerId)
+		mylog.Debug("GetContentTypeById player",player)
+		if empty{
+			contentType = mynetWay.Option.ContentType
+			protocolType = mynetWay.Option.Protocol
+		}else{
+			contentType = player.ContentType
+			protocolType = player.ProtocolType
+		}
+	}
 
+	protocolCtrlInfo := ProtocolCtrlInfo{
+		ContentType: contentType,
+		ProtocolType: protocolType,
+	}
+	return protocolCtrlInfo
+}
 func  (playerManager *PlayerManager)GetById(playerId int32)(player *myproto.Player,empty bool){
 	myPlayer ,ok := playerManager.Pool[playerId]
 	if ok {

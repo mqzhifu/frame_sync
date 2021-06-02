@@ -3,15 +3,21 @@ package netway
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"zlib"
 )
+type UdpSessionPlayerConn struct {
+	Ip string
+	Port int
+	SessionId string
+	PlayerId int32
+	Atime 	int
+}
 
 type UdpServer struct {
 	netWayOption NetWayOption
-
+	UdpSessionPlayerConnPool map[string]*UdpSessionPlayerConn
 	//listener *net.UDPConn
 	//pool []*TcpConn
 }
@@ -20,7 +26,7 @@ func UdpServerNew(netWayOption NetWayOption,mylogP *zlib.Log)*UdpServer{
 	udpServer := new (UdpServer)
 	//tcpServer.pool = []*TcpConn{}
 	udpServer.netWayOption = netWayOption
-
+	udpServer.UdpSessionPlayerConnPool = make(map[string]*UdpSessionPlayerConn)
 	return udpServer
 }
 
@@ -38,23 +44,57 @@ func  (udpServer *UdpServer)Start(){
 	}
 	mylog.Info("start ListenUDP and loop read...",UdpPort)
 	for {
-
 		var data [1024]byte
 		n,addr,err := udpConn.ReadFromUDP(data[:])
 		mylog.Info("have a new msg ",n,addr,err)
 		if err != nil{
-			log.Printf("Read from udp server:%s failed,err:%s",addr,err)
+			mylog.Error("udpConn.ReadFromUDP:",n,addr,err)
 			break
 		}
-		go func() {
-			// 返回数据
-			fmt.Printf("Addr:%s,data:%v count:%d \n",addr,string(data[:n]),n)
-			_,err := udpConn.WriteToUDP([]byte("msg recived."),addr)
-			if err != nil{
-				fmt.Println("write to udp server failed,err:",err)
+
+		if n == 0{
+			mylog.Error("udpConn.ReadFromUDP n = 0" )
+			continue
+		}
+
+		readlData := []byte{}
+		for k,v := range data{
+			if k > n {
+				readlData = append(readlData,v)
 			}
-		}()
+		}
+
+		udpServer.processOneMsg(string(readlData),addr)
 	}
+}
+func  (udpServer *UdpServer)processOneMsg(data string,addr *net.UDPAddr){
+	msg ,err := mynetWay.parserContentProtocol( data)
+	if err != nil{
+		mylog.Error("parserContentProtocol err",err)
+	}
+	playerId ,ok := mynetWay.PlayerManager.SidMapPid[msg.SessionId]
+	if !ok{
+		mylog.Error("mynetWay.PlayerManager.SidMapPid is empty")
+		return
+	}
+	myUdpSessionPlayerConn,ok := udpServer.UdpSessionPlayerConnPool[msg.SessionId]
+	if !ok {
+		udpSessionPlayerConn := UdpSessionPlayerConn{
+			Ip: string(addr.IP),
+			Port: addr.Port,
+			SessionId: msg.SessionId,
+			PlayerId: playerId,
+			Atime: zlib.GetNowTimeSecondToInt(),
+		}
+		udpServer.UdpSessionPlayerConnPool[msg.SessionId] = &udpSessionPlayerConn
+	}else{
+		myUdpSessionPlayerConn.Ip = string(addr.IP)
+		myUdpSessionPlayerConn.Port= addr.Port
+	}
+
+	wsConn,_ := connManager.getConnPoolById(playerId)
+	wsConn.UdpConn = true
+	mynetWay.Router(msg,wsConn)
 }
 
 func  (udpServer *UdpServer)StartClient(){

@@ -44,9 +44,6 @@ S端配置信息
     var serverHostUri = "http://"+domain + "/www/getServer";
     var actionMapHostUri = "http://"+domain + "/www/apilist";
     $.ajax({
-        // url: "http://127.0.0.1:2222/www/getServer",
-        // data: {username:$("#username").val(), content:$("#content").val()},
-        // dataType: "json",
         type: "GET",
         url:serverHostUri,
         success: function(data){
@@ -54,13 +51,8 @@ S端配置信息
         }
     });
 
-
     function initActionMap(data){
-
         $.ajax({
-            // url: "http://127.0.0.1:2222/www/getServer",
-            // data: {username:$("#username").val(), content:$("#content").val()},
-            // dataType: "json",
             type: "GET",
             url:actionMapHostUri,
             success: function(dataActionMap){
@@ -68,7 +60,6 @@ S端配置信息
                 init(data);
             }
         });
-
     }
 
 
@@ -107,15 +98,16 @@ S端配置信息
     }
 
     function initPlayer(player,divId,data){
-        var host = "ws://"+data.outIp + ":"+ data.port;
-        var hostUri = data.wsUri;
-        var matchGroupPeople = data.roomPeople;
-        var tableMax = data.mapSize;
-        var offLineWaitTime = data.offLineWaitTime;
-
         var DomIdPreObj = getPlayerDomIdPreObj(player.id);
         DomIdPreObj.playerId = player.id;
-        var wsObj = new ws(player.id,player.token,host,hostUri,matchGroupPeople,tableMax,DomIdPreObj,offLineWaitTime,data.ActionMap,data.fps,data.contentTypeStr);
+
+        var wsObj = new Sync(
+            player.id,
+            player.token,
+            data,
+            DomIdPreObj
+        );
+
         var html = getTemplateHtml();
         html = ReplaceTemplateHtml(html,DomIdPreObj);
         $("#"+divId).html(html);
@@ -128,7 +120,8 @@ S端配置信息
 
         wsObj.getMap("mapId_"+player.id);
     }
-
+    var contentType = 2;
+    var protocolType = 2;
     function init(data){
         var serverConfigTable = $("#server_config_table");
         var host = "ws://"+data.outIp + ":"+ data.port;
@@ -137,9 +130,10 @@ S端配置信息
         var tableMax = data.mapSize;
         var offLineWaitTime = data.offLineWaitTime;
 
-        var html = "<tr><td>hostUri</td><td>"+host + hostUri+"</td></tr>";
+        var html = "";
         // html += "<tr><td>hostUri</td><td>"+hostUri+"</td></tr>";
         // html += "<tr><td>tableMax</td><td>"+tableMax+"</td></tr>";
+        html += "<tr><td>hostUri</td><td>"+host + hostUri+"</td></tr>";
         html += "<tr><td>OffLineWaitTime</td><td>"+offLineWaitTime+"</td></tr>";
         html += "<tr><td>matchGroupPeople</td><td>"+matchGroupPeople+"</td></tr>";
         html += "<tr><td>FPS</td><td>"+ data.fps+"</td></tr>";
@@ -147,13 +141,23 @@ S端配置信息
         html += "<tr><td>ready-timeout</td><td>"+ data.roomReadyTimeout+"</td></tr>";
         html += "<tr><td>ConnTimeout</td><td>"+ data.connTimeout+"</td></tr>";
 
-        if (data.contentType == 1){
+        if (contentType == 1){
             data.contentTypeStr = "json";
         }else{
             data.contentTypeStr = "protobuf";
         }
 
+        if (protocolType == 1){
+            data.protocolTypeStr = "tcp";
+        }else if (protocolType == 2){
+            data.protocolTypeStr = "websocket";
+        }else{
+            return alert("protocolType err");
+        }
+
+
         html += "<tr><td>contentType</td><td>"+ data.contentTypeStr+"</td></tr>";
+        html += "<tr><td>protocolType</td><td>"+ data.protocolTypeStr+"</td></tr>";
 
         serverConfigTable.html(html);
 
@@ -220,6 +224,18 @@ S端配置信息
             '    </tr>\n' +
             '</table>';
         return html;
+    }
+
+    function intToByte(i) {
+        var b = i & 0xFF;
+        var c = 0;
+        if (b >= 128) {
+            c = b % 128;
+            c = -1 * (128 - c);
+        } else {
+            c = b;
+        }
+        return c;
     }
 
 </script>

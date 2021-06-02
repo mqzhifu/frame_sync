@@ -8,7 +8,7 @@ import (
 	"zlib"
 )
 func StartTcpClient(netWayOption NetWayOption,log *zlib.Log){
-	ipPort := netWayOption.ListenIp + ":" +netWayOption.Port
+	ipPort := netWayOption.ListenIp + ":" +netWayOption.TcpPort
 	//ipPort := netWayOption.ListenIp + ":11111"
 	mylog := log
 	var buf [512]byte

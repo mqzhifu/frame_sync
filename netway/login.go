@@ -5,7 +5,7 @@ import (
 	"zlib"
 )
 
-func  (netWay *NetWay)loginPre(wsConn *WsConn)(jwt zlib.JwtData,err error){
+func  (netWay *NetWay)loginPre(wsConn *Conn)(jwt zlib.JwtData,err error,firstMsg myproto.Msg){
 	//这里有个问题，连接成功后，C端立刻就得发消息，不然就异常~bug
 	var loginRes myproto.ResponseLoginRes
 
@@ -43,13 +43,13 @@ func  (netWay *NetWay)loginPre(wsConn *WsConn)(jwt zlib.JwtData,err error){
 		//NewWsConn.SendMsg(loginRes)
 		netWay.SendMsgCompressByUid(wsConn.PlayerId,"loginRes",&loginRes)
 		netWay.CloseOneConn(wsConn, CLOSE_SOURCE_AUTH_FAILED)
-		return jwt ,err
+		return jwt ,err,firstMsg
 	}
 	netWay.Option.Mylog.Info("login jwt auth ok~~")
-	return jwt,nil
+	return jwt,nil,msg
 }
 
-func(netWay *NetWay)login(requestLogin myproto.RequestLogin,wsConn *WsConn)(JwtData zlib.JwtData,err error){
+func(netWay *NetWay)login(requestLogin myproto.RequestLogin,wsConn *Conn)(JwtData zlib.JwtData,err error){
 	token := ""
 	if netWay.Option.LoginAuthType == "jwt"{
 		token = requestLogin.Token

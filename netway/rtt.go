@@ -9,7 +9,7 @@ type RttCallbackCancel func()
 type RttCallbackTimerTimeout func()
 var rttMinTimeSecond = 1
 //==================================
-func  (netWay *NetWay)serverPingRtt(second time.Duration ,wsConn *WsConn,times int ){
+func  (netWay *NetWay)serverPingRtt(second time.Duration ,conn *Conn,times int ){
 	//ping 一下，测试下RTT
 	millisecond  := zlib.GetNowMillisecond()
 	//超时时间 = rtt最小时间
@@ -27,16 +27,16 @@ func  (netWay *NetWay)serverPingRtt(second time.Duration ,wsConn *WsConn,times i
 	RttCallbackTimerTimeoutFunc := func(){
 		mylog.Error("RttCallbackTimerTimeoutFunc")
 		if times >= 2{
-			netWay.CloseOneConn(wsConn,CLOSE_SOURCE_RTT_TIMER_OUT)
+			netWay.CloseOneConn(conn,CLOSE_SOURCE_RTT_TIMER_OUT)
 			return
 		}
 	}
 	//创建一个定时器
-	getOnetimerCtrl(second,wsConn.RTTCancelChan,RttCallbackCancelFunc,RttCallbackTimerTimeoutFunc)
-	netWay.SendMsgCompressByUid(wsConn.PlayerId,"serverPing",&responseServerPing)
+	getOnetimerCtrl(second,conn.RTTCancelChan,RttCallbackCancelFunc,RttCallbackTimerTimeoutFunc)
+	netWay.SendMsgCompressByUid(conn.PlayerId,"serverPing",&responseServerPing)
 }
 
-func(netWay *NetWay) ClientPong(requestClientPong myproto.RequestClientPong,wsConn *WsConn){
+func(netWay *NetWay) ClientPong(requestClientPong myproto.RequestClientPong,conn *Conn){
 	RTT := requestClientPong.ClientReceiveTime -  requestClientPong.AddTime
 	//wsConn.RTT = RTT
 	now := zlib.GetNowMillisecond()
@@ -49,19 +49,19 @@ func(netWay *NetWay) ClientPong(requestClientPong myproto.RequestClientPong,wsCo
 		return
 	}
 	//未超时的话，此RTT时间才是可用的时间
-	wsConn.RTT = RTT
+	conn.RTT = RTT
 	//既然RTT未超时且无异常，即取消到定时器
-	wsConn.RTTCancelChan <- 1
+	conn.RTTCancelChan <- 1
 	if RTT > int64(rttMinTimeSecond * 1000){
 		//虽然没有触发超时机制，但是大于1秒，囚徒 模式的同步，游戏已毫无体验感了
 		mylog.Error("RTT >= 1000ms")
 		//如果重试2次以上的RTT ，还是超时，直接放弃了...关闭FD
 		if requestClientPong.RttTimes >= 2{
-			netWay.CloseOneConn(wsConn,CLOSE_SOURCE_RTT_TIMEOUT)
+			netWay.CloseOneConn(conn,CLOSE_SOURCE_RTT_TIMEOUT)
 			return
 		}
 		timeSecond := rttMinTimeSecond * 2 //放大两倍再试一次
-		netWay.serverPingRtt(time.Duration(timeSecond),wsConn,2)
+		netWay.serverPingRtt(time.Duration(timeSecond),conn,2)
 		return
 	}
 	//小于500ms,证明网络还可以，没必要太频繁RTT测试 ，会造成大批量的PING/PONG，占用带宽、影响正常消息发送
@@ -71,10 +71,10 @@ func(netWay *NetWay) ClientPong(requestClientPong myproto.RequestClientPong,wsCo
 		time.Sleep(500 * time.Millisecond)
 	}
 	//再开启一个新的TIMER
-	netWay.serverPingRtt(time.Duration(rttMinTimeSecond),wsConn,1)
+	netWay.serverPingRtt(time.Duration(rttMinTimeSecond),conn,1)
 }
 
-func(netWay *NetWay)clientPing(pingRTT myproto.RequestClientPing,wsConn *WsConn){
+func(netWay *NetWay)clientPing(pingRTT myproto.RequestClientPing,conn *Conn){
 	responseServerPong := myproto.ResponseServerPong{
 		AddTime: pingRTT.AddTime,
 		ClientReceiveTime :pingRTT.ClientReceiveTime,
@@ -82,7 +82,7 @@ func(netWay *NetWay)clientPing(pingRTT myproto.RequestClientPing,wsConn *WsConn)
 		RttTimes: pingRTT.RttTimes,
 		RttTimeout: pingRTT.RttTimeout,
 	}
-	netWay.SendMsgCompressByUid(wsConn.PlayerId,"serverPong",&responseServerPong)
+	netWay.SendMsgCompressByUid(conn.PlayerId,"serverPong",&responseServerPong)
 }
 
 func getOnetimerCtrl(timeoutSecond time.Duration,cancel chan int,cancelCallback RttCallbackCancel ,timeoutCallback RttCallbackTimerTimeout){

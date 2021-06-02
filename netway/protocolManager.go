@@ -1,7 +1,11 @@
 package netway
 
 import (
+	"flag"
 	"github.com/gorilla/websocket"
+	"log"
+	"net/http"
+	"os"
 )
 
 //type PrototolFD struct {
@@ -10,6 +14,7 @@ import (
 //}
 
 type PrototolManager struct {
+	TcpServer *TcpServer
 }
 //
 func PrototolManagerNew()*PrototolManager{
@@ -17,11 +22,35 @@ func PrototolManagerNew()*PrototolManager{
 	return prototolManager
 }
 func (prototolManager *PrototolManager)Start(){
-	if mynetWay.Option.Protocol == PROTOCOL_WEBSOCKET{
-		//开始HTTP 监听 模块
-		go mynetWay.startHttpServer()
-	}else if mynetWay.Option.Protocol == PROTOCOL_TCP{
-		go myTcpServer.Start()
+	//开始HTTP 监听 模块
+	go prototolManager.startHttpServer()
+	//tcp server
+	myTcpServer :=  TcpServerNew()
+	prototolManager.TcpServer = myTcpServer
+	go myTcpServer.Start()
+}
+
+//启动HTTP 服务
+func (prototolManager *PrototolManager)startHttpServer( ){
+	mynetWay.Option.Mylog.Info("ws Startup : ",mynetWay.Option.WsUri,mynetWay.Option.ListenIp+":"+mynetWay.Option.WsPort)
+
+	dns := mynetWay.Option.ListenIp + ":" + mynetWay.Option.WsPort
+	var addr = flag.String("server addr", dns, "server address")
+
+	logger := log.New(os.Stdout,"h_s_err",log.Ldate)
+	httpServer := & http.Server{
+		Addr:*addr,
+		ErrorLog: logger,
+	}
+	//监听WS请求
+	http.HandleFunc(mynetWay.Option.WsUri,mynetWay.wsHandler)
+	//监听普通HTTP请求
+	http.HandleFunc("/www/", wwwHandler)
+
+	mynetWay.httpServer = httpServer
+	err := httpServer.ListenAndServe()
+	if err != nil {
+		mynetWay.Option.Mylog.Error("ListenAndServe:", err)
 	}
 }
 
@@ -30,7 +59,7 @@ func (prototolManager *PrototolManager)Quit( ){
 	if mynetWay.Option.Protocol == PROTOCOL_WEBSOCKET{
 		mynetWay.httpServer.Shutdown(mynetWay.MyCtx)
 	}else if mynetWay.Option.Protocol == PROTOCOL_TCP{
-		myTcpServer.Shutdown(mynetWay.MyCtx)
+		prototolManager.TcpServer.Shutdown(mynetWay.MyCtx)
 	}
 }
 

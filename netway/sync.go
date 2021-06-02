@@ -79,7 +79,7 @@ func (sync *Sync) delPoolElement(roomId string){
 	//}
 }
 //进入战后，场景渲染完后，进入准确状态
-func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,wsConn *WsConn) {
+func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,conn *Conn) {
 	roomId := mynetWay.PlayerManager.GetRoomIdByPlayerId(requestPlayerReady.PlayerId)
 	mylog.Debug(" roomId :",roomId)
 	room,empty := sync.getPoolElementById(roomId)
@@ -337,13 +337,13 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 	return fpsTime
 }
 //定时，接收玩家的操作记录
-func  (sync *Sync)ReceivePlayerOperation(logicFrame myproto.RequestPlayerOperations,wsConn *WsConn,content string){
+func  (sync *Sync)ReceivePlayerOperation(logicFrame myproto.RequestPlayerOperations,conn *Conn,content string){
 	//mylog.Debug(logicFrame)
 	room,empty := sync.getPoolElementById(logicFrame.RoomId)
 	if empty{
 		mylog.Error("getPoolElementById is empty",logicFrame.RoomId)
 	}
-	err := sync.checkReceiveOperation(room,logicFrame,wsConn)
+	err := sync.checkReceiveOperation(room,logicFrame,conn)
 	if err != nil{
 		mylog.Error("receivePlayerOperation check error:",err.Error())
 		return
@@ -359,11 +359,11 @@ func  (sync *Sync)ReceivePlayerOperation(logicFrame myproto.RequestPlayerOperati
 	logicFrameStr ,_ := json.Marshal(logicFrame.Operations)
 	room.PlayersOperationQueue.PushBack(string(logicFrameStr))
 	room.PlayersAckListLock.Lock()
-	room.PlayersAckList[wsConn.PlayerId] = 1
+	room.PlayersAckList[conn.PlayerId] = 1
 	room.PlayersAckListLock.Unlock()
 }
 //检测玩家发送的操作是否合规
-func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPlayerOperations,wsConn *WsConn)error{
+func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPlayerOperations,conn *Conn)error{
 	if room.Status == ROOM_STATUS_INIT {
 		return errors.New("room status err is  ROOM_STATUS_INIT  "+strconv.Itoa(int(room.Status)))
 	}else if room.Status == ROOM_STATUS_END {
@@ -378,7 +378,7 @@ func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPla
 			mylog.Warning("logicFrame.SequenceNumber  == room.SequenceNumber")
 			//只有掉线的玩家，最后这一帧的数据没有发出来，才会到这个条件里
 			//但，其它正常玩家如果还是一直不停的在发 这一帧，QUEUE 就爆了
-			if room.PlayersAckList[wsConn.PlayerId] == 1{
+			if room.PlayersAckList[conn.PlayerId] == 1{
 				msg := "(offline) last frame Players has ack ,don'send... "
 				mylog.Error(msg)
 				return errors.New(msg)
@@ -443,7 +443,7 @@ func  (sync *Sync)roomEnd(roomId string,sendCloseChan int){
 	}
 }
 //玩家操作后，触发C端主动发送游戏结束事件
-func  (sync *Sync)GameOver(requestGameOver myproto.RequestGameOver,wsConn *WsConn){
+func  (sync *Sync)GameOver(requestGameOver myproto.RequestGameOver,conn *Conn){
 	responseGameOver := myproto.ResponseGameOver{
 		PlayerId : requestGameOver.PlayerId,
 		RoomId:requestGameOver.RoomId,
@@ -455,7 +455,7 @@ func  (sync *Sync)GameOver(requestGameOver myproto.RequestGameOver,wsConn *WsCon
 	sync.roomEnd(requestGameOver.RoomId,1)
 }
 //玩家触发了该角色死亡
-func  (sync *Sync)PlayerOver(requestGameOver myproto.RequestPlayerOver,wsConn *WsConn){
+func  (sync *Sync)PlayerOver(requestGameOver myproto.RequestPlayerOver,conn *Conn){
 	//roomId := mySyncPlayerRoom[requestGameOver.PlayerId]
 	roomId := mynetWay.PlayerManager.GetRoomIdByPlayerId(requestGameOver.PlayerId)
 	responseOtherPlayerOver := myproto.ResponseOtherPlayerOver{PlayerId: requestGameOver.PlayerId}
@@ -486,12 +486,12 @@ func (sync *Sync)roomOnlinePlayers(room *Room)[]int32{
 	return playerOnLine
 }
 //玩家断开连接后
-func (sync *Sync)Close(wsConn *WsConn){
+func (sync *Sync)Close(conn *Conn){
 	mylog.Warning("sync.close")
-	roomId := mynetWay.PlayerManager.GetRoomIdByPlayerId(wsConn.PlayerId)
+	roomId := mynetWay.PlayerManager.GetRoomIdByPlayerId(conn.PlayerId)
 	if roomId == ""{
 		//这里会先执行roomEnd，然后清空了player roomId 所有获取不到
-		mylog.Warning("roomid = empty ",wsConn.PlayerId)
+		mylog.Warning("roomid = empty ",conn.PlayerId)
 		return
 	}
 	//判断下所有玩家是否均下线了
@@ -513,7 +513,7 @@ func (sync *Sync)Close(wsConn *WsConn){
 			if room.Status == ROOM_STATUS_EXECING {
 				room.UpStatus(ROOM_STATUS_PAUSE)
 				responseOtherPlayerOffline := myproto.ResponseOtherPlayerOffline{
-					PlayerId: wsConn.PlayerId,
+					PlayerId: conn.PlayerId,
 				}
 				sync.boardCastInRoom(roomId,"otherPlayerOffline",&responseOtherPlayerOffline)
 			}
@@ -583,15 +583,15 @@ func (sync *Sync)addOneRoomHistory(room *Room,action,content string){
 	room.LogicFrameHistory = append(room.LogicFrameHistory,&logicFrameHistory)
 }
 //一个房间的玩家的所有操作记录，一般用于C端断线重连时，恢复
-func  (sync *Sync)RoomHistory(requestRoomHistory myproto.RequestRoomHistory,wsConn *WsConn){
+func  (sync *Sync)RoomHistory(requestRoomHistory myproto.RequestRoomHistory,conn *Conn){
 	roomId := requestRoomHistory.RoomId
 	room,_ := sync.getPoolElementById(roomId)
 	responsePushRoomHistory := myproto.ResponsePushRoomHistory{}
 	responsePushRoomHistory.List = room.LogicFrameHistory
-	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"pushRoomHistory",&responsePushRoomHistory)
+	mynetWay.SendMsgCompressByUid(conn.PlayerId,"pushRoomHistory",&responsePushRoomHistory)
 }
 //玩家掉线了，重新连接后，恢复游戏了~这个时候，要通知另外的玩家
-func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayerResumeGame,wsConn *WsConn){
+func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayerResumeGame,conn *Conn){
 	room ,empty := sync.getPoolElementById(requestPlayerResumeGame.RoomId)
 	if empty{
 		mylog.Error("playerResumeGame get room empty")
@@ -627,7 +627,7 @@ func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayer
 
 }
 //C端获取一个房间的信息
-func  (sync *Sync)GetRoom(requestGetRoom myproto.RequestGetRoom,wsConn *WsConn){
+func  (sync *Sync)GetRoom(requestGetRoom myproto.RequestGetRoom,conn *Conn){
 	roomId := requestGetRoom.RoomId
 	room,_ := sync.getPoolElementById(roomId)
 	ResponsePushRoomInfo := myproto.ResponsePushRoomInfo{
@@ -640,5 +640,5 @@ func  (sync *Sync)GetRoom(requestGetRoom myproto.RequestGetRoom,wsConn *WsConn){
 		RandSeek:room.RandSeek,
 		RoomId: room.Id,
 	}
-	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"pushRoomInfo",&ResponsePushRoomInfo)
+	mynetWay.SendMsgCompressByUid(conn.PlayerId,"pushRoomInfo",&ResponsePushRoomInfo)
 }
