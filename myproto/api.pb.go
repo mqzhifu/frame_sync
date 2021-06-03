@@ -25,7 +25,7 @@ type RequestLogin struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token"`
 }
 
 func (x *RequestLogin) Reset() {
@@ -72,11 +72,11 @@ type RequestClientPong struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
-	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time,omitempty"`
-	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time,omitempty"`
-	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout,omitempty"`
-	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times,omitempty"`
+	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time"`
+	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time"`
+	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time"`
+	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout"`
+	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times"`
 }
 
 func (x *RequestClientPong) Reset() {
@@ -151,10 +151,10 @@ type RequestPlayerOperations struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id             int32        `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	RoomId         string       `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	SequenceNumber int32        `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
-	Operations     []*Operation `protobuf:"bytes,4,rep,name=operations,proto3" json:"operations,omitempty"`
+	Id             int32        `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
+	RoomId         string       `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	SequenceNumber int32        `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
+	Operations     []*Operation `protobuf:"bytes,4,rep,name=operations,proto3" json:"operations"`
 }
 
 func (x *RequestPlayerOperations) Reset() {
@@ -222,10 +222,10 @@ type Operation struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Event    string `protobuf:"bytes,2,opt,name=event,proto3" json:"event,omitempty"`
-	Value    string `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
-	PlayerId int32  `protobuf:"varint,4,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
+	Event    string `protobuf:"bytes,2,opt,name=event,proto3" json:"event"`
+	Value    string `protobuf:"bytes,3,opt,name=value,proto3" json:"value"`
+	PlayerId int32  `protobuf:"varint,4,opt,name=player_id,json=playerId,proto3" json:"player_id"`
 }
 
 func (x *Operation) Reset() {
@@ -293,11 +293,11 @@ type RequestClientPing struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
-	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time,omitempty"`
-	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time,omitempty"`
-	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout,omitempty"`
-	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times,omitempty"`
+	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time"`
+	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time"`
+	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time"`
+	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout"`
+	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times"`
 }
 
 func (x *RequestClientPing) Reset() {
@@ -372,9 +372,9 @@ type RequestPlayerResumeGame struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
 }
 
 func (x *RequestPlayerResumeGame) Reset() {
@@ -435,7 +435,7 @@ type RequestPlayerMatchSign struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
 }
 
 func (x *RequestPlayerMatchSign) Reset() {
@@ -482,8 +482,8 @@ type RequestPlayerReady struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	RoomId   string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	RoomId   string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
 }
 
 func (x *RequestPlayerReady) Reset() {
@@ -537,8 +537,8 @@ type RequestGetRoom struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	RoomId   string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	RoomId   string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
 }
 
 func (x *RequestGetRoom) Reset() {
@@ -592,10 +592,10 @@ type RequestRoomHistory struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId            int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	RoomId              string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	SequenceNumberStart int32  `protobuf:"varint,3,opt,name=sequence_numberStart,json=sequenceNumberStart,proto3" json:"sequence_numberStart,omitempty"`
-	SequenceNumberEnd   int32  `protobuf:"varint,4,opt,name=sequence_numberEnd,json=sequenceNumberEnd,proto3" json:"sequence_numberEnd,omitempty"`
+	PlayerId            int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	RoomId              string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	SequenceNumberStart int32  `protobuf:"varint,3,opt,name=sequence_numberStart,json=sequenceNumberStart,proto3" json:"sequence_numberStart"`
+	SequenceNumberEnd   int32  `protobuf:"varint,4,opt,name=sequence_numberEnd,json=sequenceNumberEnd,proto3" json:"sequence_numberEnd"`
 }
 
 func (x *RequestRoomHistory) Reset() {
@@ -663,7 +663,7 @@ type RequestPlayerMatchSignCancel struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
 }
 
 func (x *RequestPlayerMatchSignCancel) Reset() {
@@ -710,7 +710,7 @@ type RequestClientHeartbeat struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Time int64 `protobuf:"varint,1,opt,name=time,proto3" json:"time,omitempty"`
+	Time int64 `protobuf:"varint,1,opt,name=time,proto3" json:"time"`
 }
 
 func (x *RequestClientHeartbeat) Reset() {
@@ -757,10 +757,10 @@ type RequestGameOver struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
-	Result         string `protobuf:"bytes,4,opt,name=result,proto3" json:"result,omitempty"`
+	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
+	Result         string `protobuf:"bytes,4,opt,name=result,proto3" json:"result"`
 }
 
 func (x *RequestGameOver) Reset() {
@@ -828,8 +828,8 @@ type RequestPlayerOver struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	SequenceNumber int32 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	PlayerId       int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	SequenceNumber int32 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
 }
 
 func (x *RequestPlayerOver) Reset() {
@@ -883,9 +883,9 @@ type ResponseLoginRes struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Code   int32   `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
-	ErrMsg string  `protobuf:"bytes,2,opt,name=errMsg,proto3" json:"errMsg,omitempty"`
-	Player *Player `protobuf:"bytes,3,opt,name=player,proto3" json:"player,omitempty"`
+	Code   int32   `protobuf:"varint,1,opt,name=code,proto3" json:"code"`
+	ErrMsg string  `protobuf:"bytes,2,opt,name=errMsg,proto3" json:"errMsg"`
+	Player *Player `protobuf:"bytes,3,opt,name=player,proto3" json:"player"`
 }
 
 func (x *ResponseLoginRes) Reset() {
@@ -946,12 +946,12 @@ type ResponsePlayerStatus struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Nickname string `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname,omitempty"`
-	Status   int32  `protobuf:"varint,3,opt,name=status,proto3" json:"status,omitempty"`
-	RoomId   string `protobuf:"bytes,4,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	AddTime  int32  `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
-	UpTime   int32  `protobuf:"varint,6,opt,name=up_time,json=upTime,proto3" json:"up_time,omitempty"`
+	Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
+	Nickname string `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname"`
+	Status   int32  `protobuf:"varint,3,opt,name=status,proto3" json:"status"`
+	RoomId   string `protobuf:"bytes,4,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	AddTime  int32  `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time"`
+	UpTime   int32  `protobuf:"varint,6,opt,name=up_time,json=upTime,proto3" json:"up_time"`
 }
 
 func (x *ResponsePlayerStatus) Reset() {
@@ -1033,7 +1033,7 @@ type ResponseOtherPlayerOffline struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	PlayerId int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
 }
 
 func (x *ResponseOtherPlayerOffline) Reset() {
@@ -1080,7 +1080,7 @@ type ResponseKickOff struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Time int64 `protobuf:"varint,1,opt,name=time,proto3" json:"time,omitempty"`
+	Time int64 `protobuf:"varint,1,opt,name=time,proto3" json:"time"`
 }
 
 func (x *ResponseKickOff) Reset() {
@@ -1127,7 +1127,7 @@ type ResponseStartBattle struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SequenceNumberStart int32 `protobuf:"varint,1,opt,name=sequence_number_start,json=sequenceNumberStart,proto3" json:"sequence_number_start,omitempty"`
+	SequenceNumberStart int32 `protobuf:"varint,1,opt,name=sequence_number_start,json=sequenceNumberStart,proto3" json:"sequence_number_start"`
 }
 
 func (x *ResponseStartBattle) Reset() {
@@ -1174,11 +1174,11 @@ type ResponseServerPing struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
-	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time,omitempty"`
-	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time,omitempty"`
-	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout,omitempty"`
-	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times,omitempty"`
+	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time"`
+	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time"`
+	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time"`
+	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout"`
+	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times"`
 }
 
 func (x *ResponseServerPing) Reset() {
@@ -1253,11 +1253,11 @@ type ResponseServerPong struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
-	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time,omitempty"`
-	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time,omitempty"`
-	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout,omitempty"`
-	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times,omitempty"`
+	AddTime            int64 `protobuf:"varint,1,opt,name=add_time,json=addTime,proto3" json:"add_time"`
+	ClientReceiveTime  int64 `protobuf:"varint,2,opt,name=client_receive_time,json=clientReceiveTime,proto3" json:"client_receive_time"`
+	ServerResponseTime int64 `protobuf:"varint,3,opt,name=server_response_time,json=serverResponseTime,proto3" json:"server_response_time"`
+	RttTimeout         int64 `protobuf:"varint,4,opt,name=rtt_timeout,json=rttTimeout,proto3" json:"rtt_timeout"`
+	RttTimes           int32 `protobuf:"varint,5,opt,name=rtt_times,json=rttTimes,proto3" json:"rtt_times"`
 }
 
 func (x *ResponseServerPong) Reset() {
@@ -1332,14 +1332,14 @@ type ResponseEnterBattle struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RandSeek       int32     `protobuf:"varint,1,opt,name=rand_seek,json=randSeek,proto3" json:"rand_seek,omitempty"`
-	RoomId         string    `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	SequenceNumber int32     `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
-	Status         int32     `protobuf:"varint,4,opt,name=status,proto3" json:"status,omitempty"`
-	AddTime        int32     `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
-	Time           int64     `protobuf:"varint,6,opt,name=time,proto3" json:"time,omitempty"`
-	PlayerList     []*Player `protobuf:"bytes,7,rep,name=player_list,json=playerList,proto3" json:"player_list,omitempty"`
-	UdpPort        string    `protobuf:"bytes,8,opt,name=udp_port,json=udpPort,proto3" json:"udp_port,omitempty"`
+	RandSeek       int32     `protobuf:"varint,1,opt,name=rand_seek,json=randSeek,proto3" json:"rand_seek"`
+	RoomId         string    `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	SequenceNumber int32     `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
+	Status         int32     `protobuf:"varint,4,opt,name=status,proto3" json:"status"`
+	AddTime        int32     `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time"`
+	Time           int64     `protobuf:"varint,6,opt,name=time,proto3" json:"time"`
+	PlayerList     []*Player `protobuf:"bytes,7,rep,name=player_list,json=playerList,proto3" json:"player_list"`
+	UdpPort        string    `protobuf:"bytes,8,opt,name=udp_port,json=udpPort,proto3" json:"udp_port"`
 }
 
 func (x *ResponseEnterBattle) Reset() {
@@ -1435,10 +1435,10 @@ type ResponsePushLogicFrame struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id             int32        `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	RoomId         string       `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	SequenceNumber int32        `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
-	Operations     []*Operation `protobuf:"bytes,4,rep,name=operations,proto3" json:"operations,omitempty"`
+	Id             int32        `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
+	RoomId         string       `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	SequenceNumber int32        `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
+	Operations     []*Operation `protobuf:"bytes,4,rep,name=operations,proto3" json:"operations"`
 }
 
 func (x *ResponsePushLogicFrame) Reset() {
@@ -1506,8 +1506,8 @@ type ResponseOtherPlayerOver struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	SequenceNumber int32 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	PlayerId       int32 `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	SequenceNumber int32 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
 }
 
 func (x *ResponseOtherPlayerOver) Reset() {
@@ -1561,10 +1561,10 @@ type ResponseGameOver struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
-	Result         string `protobuf:"bytes,4,opt,name=result,proto3" json:"result,omitempty"`
+	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
+	Result         string `protobuf:"bytes,4,opt,name=result,proto3" json:"result"`
 }
 
 func (x *ResponseGameOver) Reset() {
@@ -1632,7 +1632,7 @@ type ResponseReadyTimeout struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RoomId string `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	RoomId string `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id"`
 }
 
 func (x *ResponseReadyTimeout) Reset() {
@@ -1679,16 +1679,16 @@ type ResponsePushRoomInfo struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id             string    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	AddTime        int32     `protobuf:"varint,2,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
-	Status         int32     `protobuf:"varint,3,opt,name=status,proto3" json:"status,omitempty"`
-	Timeout        int32     `protobuf:"varint,4,opt,name=timeout,proto3" json:"timeout,omitempty"`
-	SequenceNumber int32     `protobuf:"varint,5,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
-	RandSeek       int32     `protobuf:"varint,6,opt,name=rand_seek,json=randSeek,proto3" json:"rand_seek,omitempty"`
-	PlayerList     []*Player `protobuf:"bytes,7,rep,name=player_list,json=playerList,proto3" json:"player_list,omitempty"`
-	RoomId         string    `protobuf:"bytes,8,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	StartTime      int32     `protobuf:"varint,9,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
-	EndTime        int32     `protobuf:"varint,10,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	Id             string    `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	AddTime        int32     `protobuf:"varint,2,opt,name=add_time,json=addTime,proto3" json:"add_time"`
+	Status         int32     `protobuf:"varint,3,opt,name=status,proto3" json:"status"`
+	Timeout        int32     `protobuf:"varint,4,opt,name=timeout,proto3" json:"timeout"`
+	SequenceNumber int32     `protobuf:"varint,5,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
+	RandSeek       int32     `protobuf:"varint,6,opt,name=rand_seek,json=randSeek,proto3" json:"rand_seek"`
+	PlayerList     []*Player `protobuf:"bytes,7,rep,name=player_list,json=playerList,proto3" json:"player_list"`
+	RoomId         string    `protobuf:"bytes,8,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	StartTime      int32     `protobuf:"varint,9,opt,name=start_time,json=startTime,proto3" json:"start_time"`
+	EndTime        int32     `protobuf:"varint,10,opt,name=end_time,json=endTime,proto3" json:"end_time"`
 }
 
 func (x *ResponsePushRoomInfo) Reset() {
@@ -1798,7 +1798,7 @@ type ResponsePushRoomHistory struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	List []*ResponseRoomHistory `protobuf:"bytes,1,rep,name=list,proto3" json:"list,omitempty"`
+	List []*ResponseRoomHistory `protobuf:"bytes,1,rep,name=list,proto3" json:"list"`
 }
 
 func (x *ResponsePushRoomHistory) Reset() {
@@ -1845,9 +1845,9 @@ type ResponseRoomHistory struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id      int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Action  string `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
-	Content string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	Id      int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
+	Action  string `protobuf:"bytes,2,opt,name=action,proto3" json:"action"`
+	Content string `protobuf:"bytes,3,opt,name=content,proto3" json:"content"`
 }
 
 func (x *ResponseRoomHistory) Reset() {
@@ -1908,9 +1908,9 @@ type ResponseOtherPlayerResumeGame struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	PlayerId       int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	RoomId         string `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	SequenceNumber int32  `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number"`
 }
 
 func (x *ResponseOtherPlayerResumeGame) Reset() {
@@ -1971,17 +1971,17 @@ type Player struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id           int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	RoleId       int32  `protobuf:"varint,2,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
-	Nickname     string `protobuf:"bytes,3,opt,name=nickname,proto3" json:"nickname,omitempty"`
-	Status       int32  `protobuf:"varint,4,opt,name=status,proto3" json:"status,omitempty"`
-	AddTime      int32  `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time,omitempty"`
-	UpTime       int32  `protobuf:"varint,6,opt,name=upTime,proto3" json:"upTime,omitempty"`
-	RoomId       string `protobuf:"bytes,7,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	SessionId    string `protobuf:"bytes,8,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	Timeout      int32  `protobuf:"varint,9,opt,name=timeout,proto3" json:"timeout,omitempty"`
-	ContentType  int32  `protobuf:"varint,10,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
-	ProtocolType int32  `protobuf:"varint,11,opt,name=protocol_type,json=protocolType,proto3" json:"protocol_type,omitempty"`
+	Id           int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
+	RoleId       int32  `protobuf:"varint,2,opt,name=role_id,json=roleId,proto3" json:"role_id"`
+	Nickname     string `protobuf:"bytes,3,opt,name=nickname,proto3" json:"nickname"`
+	Status       int32  `protobuf:"varint,4,opt,name=status,proto3" json:"status"`
+	AddTime      int32  `protobuf:"varint,5,opt,name=add_time,json=addTime,proto3" json:"add_time"`
+	UpTime       int32  `protobuf:"varint,6,opt,name=upTime,proto3" json:"upTime"`
+	RoomId       string `protobuf:"bytes,7,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	SessionId    string `protobuf:"bytes,8,opt,name=session_id,json=sessionId,proto3" json:"session_id"`
+	Timeout      int32  `protobuf:"varint,9,opt,name=timeout,proto3" json:"timeout"`
+	ContentType  int32  `protobuf:"varint,10,opt,name=content_type,json=contentType,proto3" json:"content_type"`
+	ProtocolType int32  `protobuf:"varint,11,opt,name=protocol_type,json=protocolType,proto3" json:"protocol_type"`
 }
 
 func (x *Player) Reset() {
@@ -2098,8 +2098,8 @@ type ResponseRestartGame struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RoomId    string  `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	PlayerIds []int32 `protobuf:"varint,2,rep,packed,name=player_ids,json=playerIds,proto3" json:"player_ids,omitempty"`
+	RoomId    string  `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id"`
+	PlayerIds []int32 `protobuf:"varint,2,rep,packed,name=player_ids,json=playerIds,proto3" json:"player_ids"`
 }
 
 func (x *ResponseRestartGame) Reset() {
@@ -2153,9 +2153,9 @@ type ResponsePlayerMatchSignFailed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	Msg      string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
-	Code     int32  `protobuf:"varint,3,opt,name=code,proto3" json:"code,omitempty"`
+	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	Msg      string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg"`
+	Code     int32  `protobuf:"varint,3,opt,name=code,proto3" json:"code"`
 }
 
 func (x *ResponsePlayerMatchSignFailed) Reset() {
@@ -2216,10 +2216,10 @@ type ResponsePlayerMatchingFailed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	Msg      string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
-	RoomId   string `protobuf:"bytes,3,opt,name=roomId,proto3" json:"roomId,omitempty"`
-	Code     int32  `protobuf:"varint,4,opt,name=code,proto3" json:"code,omitempty"`
+	PlayerId int32  `protobuf:"varint,1,opt,name=player_id,json=playerId,proto3" json:"player_id"`
+	Msg      string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg"`
+	RoomId   string `protobuf:"bytes,3,opt,name=roomId,proto3" json:"roomId"`
+	Code     int32  `protobuf:"varint,4,opt,name=code,proto3" json:"code"`
 }
 
 func (x *ResponsePlayerMatchingFailed) Reset() {
@@ -2287,28 +2287,28 @@ type CfgServer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ListenIp           string `protobuf:"bytes,1,opt,name=ListenIp,proto3" json:"ListenIp,omitempty"`
-	OutIp              string `protobuf:"bytes,2,opt,name=OutIp,proto3" json:"OutIp,omitempty"`
-	WsPort             string `protobuf:"bytes,3,opt,name=WsPort,proto3" json:"WsPort,omitempty"`
-	TcpPort            string `protobuf:"bytes,22,opt,name=TcpPort,proto3" json:"TcpPort,omitempty"`
-	UdpPort            string `protobuf:"bytes,4,opt,name=UdpPort,proto3" json:"UdpPort,omitempty"`
-	Protocol           int32  `protobuf:"varint,5,opt,name=Protocol,proto3" json:"Protocol,omitempty"`
-	WsUri              string `protobuf:"bytes,6,opt,name=WsUri,proto3" json:"WsUri,omitempty"`
-	ContentType        int32  `protobuf:"varint,7,opt,name=ContentType,proto3" json:"ContentType,omitempty"`
-	LoginAuthType      string `protobuf:"bytes,8,opt,name=LoginAuthType,proto3" json:"LoginAuthType,omitempty"`
-	LoginAuthSecretKey string `protobuf:"bytes,9,opt,name=LoginAuthSecretKey,proto3" json:"LoginAuthSecretKey,omitempty"`
-	MaxClientConnNum   int32  `protobuf:"varint,10,opt,name=MaxClientConnNum,proto3" json:"MaxClientConnNum,omitempty"`
-	MsgContentMax      int32  `protobuf:"varint,11,opt,name=MsgContentMax,proto3" json:"MsgContentMax,omitempty"`
-	IOTimeout          int64  `protobuf:"varint,12,opt,name=IOTimeout,proto3" json:"IOTimeout,omitempty"`
-	ConnTimeout        int32  `protobuf:"varint,13,opt,name=ConnTimeout,proto3" json:"ConnTimeout,omitempty"`
-	MapSize            int32  `protobuf:"varint,14,opt,name=MapSize,proto3" json:"MapSize,omitempty"`
-	RoomPeople         int32  `protobuf:"varint,15,opt,name=RoomPeople,proto3" json:"RoomPeople,omitempty"`
-	RoomTimeout        int32  `protobuf:"varint,16,opt,name=RoomTimeout,proto3" json:"RoomTimeout,omitempty"`
-	OffLineWaitTime    int32  `protobuf:"varint,17,opt,name=OffLineWaitTime,proto3" json:"OffLineWaitTime,omitempty"`
-	LockMode           int32  `protobuf:"varint,18,opt,name=LockMode,proto3" json:"LockMode,omitempty"`
-	FPS                int32  `protobuf:"varint,19,opt,name=FPS,proto3" json:"FPS,omitempty"`
-	RoomReadyTimeout   int32  `protobuf:"varint,20,opt,name=RoomReadyTimeout,proto3" json:"RoomReadyTimeout,omitempty"`
-	Store              int32  `protobuf:"varint,21,opt,name=Store,proto3" json:"Store,omitempty"`
+	ListenIp           string `protobuf:"bytes,1,opt,name=ListenIp,proto3" json:"ListenIp"`
+	OutIp              string `protobuf:"bytes,2,opt,name=OutIp,proto3" json:"OutIp"`
+	WsPort             string `protobuf:"bytes,3,opt,name=WsPort,proto3" json:"WsPort"`
+	TcpPort            string `protobuf:"bytes,22,opt,name=TcpPort,proto3" json:"TcpPort"`
+	UdpPort            string `protobuf:"bytes,4,opt,name=UdpPort,proto3" json:"UdpPort"`
+	Protocol           int32  `protobuf:"varint,5,opt,name=Protocol,proto3" json:"Protocol"`
+	WsUri              string `protobuf:"bytes,6,opt,name=WsUri,proto3" json:"WsUri"`
+	ContentType        int32  `protobuf:"varint,7,opt,name=ContentType,proto3" json:"ContentType"`
+	LoginAuthType      string `protobuf:"bytes,8,opt,name=LoginAuthType,proto3" json:"LoginAuthType"`
+	LoginAuthSecretKey string `protobuf:"bytes,9,opt,name=LoginAuthSecretKey,proto3" json:"LoginAuthSecretKey"`
+	MaxClientConnNum   int32  `protobuf:"varint,10,opt,name=MaxClientConnNum,proto3" json:"MaxClientConnNum"`
+	MsgContentMax      int32  `protobuf:"varint,11,opt,name=MsgContentMax,proto3" json:"MsgContentMax"`
+	IOTimeout          int64  `protobuf:"varint,12,opt,name=IOTimeout,proto3" json:"IOTimeout"`
+	ConnTimeout        int32  `protobuf:"varint,13,opt,name=ConnTimeout,proto3" json:"ConnTimeout"`
+	MapSize            int32  `protobuf:"varint,14,opt,name=MapSize,proto3" json:"MapSize"`
+	RoomPeople         int32  `protobuf:"varint,15,opt,name=RoomPeople,proto3" json:"RoomPeople"`
+	RoomTimeout        int32  `protobuf:"varint,16,opt,name=RoomTimeout,proto3" json:"RoomTimeout"`
+	OffLineWaitTime    int32  `protobuf:"varint,17,opt,name=OffLineWaitTime,proto3" json:"OffLineWaitTime"`
+	LockMode           int32  `protobuf:"varint,18,opt,name=LockMode,proto3" json:"LockMode"`
+	FPS                int32  `protobuf:"varint,19,opt,name=FPS,proto3" json:"FPS"`
+	RoomReadyTimeout   int32  `protobuf:"varint,20,opt,name=RoomReadyTimeout,proto3" json:"RoomReadyTimeout"`
+	Store              int32  `protobuf:"varint,21,opt,name=Store,proto3" json:"Store"`
 }
 
 func (x *CfgServer) Reset() {
@@ -2502,8 +2502,8 @@ type CfgProtocolActions struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Client map[int32]*CfgActions `protobuf:"bytes,1,rep,name=client,proto3" json:"client,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	Server map[int32]*CfgActions `protobuf:"bytes,2,rep,name=server,proto3" json:"server,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Client map[int32]*CfgActions `protobuf:"bytes,1,rep,name=client,proto3" json:"client" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Server map[int32]*CfgActions `protobuf:"bytes,2,rep,name=server,proto3" json:"server" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *CfgProtocolActions) Reset() {
@@ -2557,10 +2557,10 @@ type CfgActions struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id     int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Action string `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
-	Desc   string `protobuf:"bytes,3,opt,name=desc,proto3" json:"desc,omitempty"`
-	Demo   string `protobuf:"bytes,4,opt,name=demo,proto3" json:"demo,omitempty"`
+	Id     int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id"`
+	Action string `protobuf:"bytes,2,opt,name=action,proto3" json:"action"`
+	Desc   string `protobuf:"bytes,3,opt,name=desc,proto3" json:"desc"`
+	Demo   string `protobuf:"bytes,4,opt,name=demo,proto3" json:"demo"`
 }
 
 func (x *CfgActions) Reset() {
@@ -2628,12 +2628,12 @@ type Msg struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ActionId     int32  `protobuf:"varint,1,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`
-	Action       string `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
-	Content      string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
-	ContentType  int32  `protobuf:"varint,4,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
-	ProtocolType int32  `protobuf:"varint,5,opt,name=protocol_type,json=protocolType,proto3" json:"protocol_type,omitempty"`
-	SessionId    string `protobuf:"bytes,6,opt,name=sessionId,proto3" json:"sessionId,omitempty"`
+	ActionId     int32  `protobuf:"varint,1,opt,name=action_id,json=actionId,proto3" json:"action_id"`
+	Action       string `protobuf:"bytes,2,opt,name=action,proto3" json:"action"`
+	Content      string `protobuf:"bytes,3,opt,name=content,proto3" json:"content"`
+	ContentType  int32  `protobuf:"varint,4,opt,name=content_type,json=contentType,proto3" json:"content_type"`
+	ProtocolType int32  `protobuf:"varint,5,opt,name=protocol_type,json=protocolType,proto3" json:"protocol_type"`
+	SessionId    string `protobuf:"bytes,6,opt,name=sessionId,proto3" json:"sessionId"`
 }
 
 func (x *Msg) Reset() {

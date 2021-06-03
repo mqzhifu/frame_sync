@@ -32,37 +32,37 @@ func(netWay *NetWay) Router(msg myproto.Msg,conn *Conn)(data interface{},err err
 	//这里有个BUG，LOGIN 函数只能在第一次调用，回头加个限定
 	switch msg.Action {
 		case "login"://
-			err = netWay.parserContentMsg(msg.Content,&requestLogin,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestLogin,conn.PlayerId)
 		case "clientPong"://
-			err = netWay.parserContentMsg(msg.Content,&requestClientPong,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestClientPong,conn.PlayerId)
 		case "playerResumeGame"://恢复未结束的游戏
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerResumeGame,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestPlayerResumeGame,conn.PlayerId)
 		//case "playerStatus"://玩家检测是否有未结束的游戏
 		//	err = parserMsgContent(msg.Content,&requestPlayerStatus)
 		//netWay.Players.getPlayerStatus(requestPlayerStatus,wsConn)
 		case "playerOperations"://玩家推送操作指令
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerOperations,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestPlayerOperations,conn.PlayerId)
 		case "playerLogicFrameAck":
 			//err = parserMsgContent(msg.Content,&logicFrame)
 			//mySync.playerLogicFrameAck(logicFrame,wsConn)
 		case "playerMatchSignCancel"://玩家取消报名等待
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerMatchSignCancel,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestPlayerMatchSignCancel,conn.PlayerId)
 		case "gameOver"://游戏结束
-			err = netWay.parserContentMsg(msg.Content,&requestGameOver,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestGameOver,conn.PlayerId)
 		case "clientHeartbeat"://心跳
-			err = netWay.parserContentMsg(msg.Content,&requestClientHeartbeat,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestClientHeartbeat,conn.PlayerId)
 		case "playerMatchSign"://
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerMatchSign,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestPlayerMatchSign,conn.PlayerId)
 		case "playerReady"://玩家进入状态状态
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerReady,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestPlayerReady,conn.PlayerId)
 		case "roomHistory"://一局副本的，所有历史操作记录
-			err = netWay.parserContentMsg(msg.Content,&requestRoomHistory,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestRoomHistory,conn.PlayerId)
 		case "getRoom"://
-			err = netWay.parserContentMsg(msg.Content,&requestGetRoom,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestGetRoom,conn.PlayerId)
 		case "clientPing":
-			err = netWay.parserContentMsg(msg.Content,&requestClientPing,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestClientPing,conn.PlayerId)
 		case "playerOver":
-			err = netWay.parserContentMsg(msg.Content,&requestPlayerOver,conn.PlayerId)
+			err = netWay.parserContentMsg(msg,&requestPlayerOver,conn.PlayerId)
 		default:
 			mylog.Error("Router err:",msg)
 			return data,nil
@@ -243,14 +243,16 @@ func (netWay *NetWay)parserProtocolCtrlInfo(stream []byte)ProtocolCtrlInfo{
 	return protocolCtrlInfo
 }
 //协议层的解包已经结束，这个时候需要将content内容进行转换成MSG结构
-func (netWay *NetWay)parserContentMsg(content string ,out interface{},playerId int32)error{
+func (netWay *NetWay)parserContentMsg(msg myproto.Msg ,out interface{},playerId int32)error{
+	content := msg.Content
 	var err error
-	protocolCtrlInfo := netWay.PlayerManager.GetPlayerCtrlInfoById(playerId)
-	contentType := protocolCtrlInfo.ContentType
-	if contentType == CONTENT_TYPE_JSON {
+	//protocolCtrlInfo := netWay.PlayerManager.GetPlayerCtrlInfoById(playerId)
+	//contentType := protocolCtrlInfo.ContentType
+
+	if msg.ContentType == CONTENT_TYPE_JSON {
 		unTrunVarJsonContent := zlib.CamelToSnake([]byte(content))
 		err = json.Unmarshal(unTrunVarJsonContent,out)
-	}else if  contentType == CONTENT_TYPE_PROTOBUF {
+	}else if  msg.ContentType == CONTENT_TYPE_PROTOBUF {
 		aaa := out.(proto.Message)
 		err = proto.Unmarshal([]byte(content),aaa)
 	}else{

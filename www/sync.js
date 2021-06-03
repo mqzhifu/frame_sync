@@ -1,11 +1,22 @@
-var self = null;
-function Sync (playerId,token,data,DomIdPreObj){
+//=========
+function Sync (playerId,token,data,DomIdPreObj,contentType,protocolType){
     var self = this;
     this.wsObj = null;//js内置ws 对象
-
-
-    this.hostUri = "ws://"+data.outIp + ":"+ data.port + data.wsUri;//ws 连接地址
-    this.status = "init";//1初始化 2等待准备 3运行中  4结束
+    //ws 连接 s 端地址
+    this.hostUri = "ws://"+data.outIp + ":"+ data.wsPort + data.wsUri;
+    this.statusDesc = {
+        1:"init",
+        2:"wsLInkSuccess",
+        3:"loginSuccess",
+        4:"loginFailed",
+        5:"matchSign",
+        6:"cancelSign",
+        7:"ready",
+        8:"startBattle",
+        9:"end",
+        10:"close",
+    };
+    this.status = 1;//1初始化 2等待准备 3运行中  4结束
     this.playerId = playerId;//玩家ID
     this.matchGroupPeople = data.roomPeople;//一个副本的人数
     this.heartbeatLoopFunc = null;//心跳回调函数
@@ -24,27 +35,27 @@ function Sync (playerId,token,data,DomIdPreObj){
     this.playerLocation = new Object();//每个玩家的位置信息
     this.operationsInc = 0;//玩家操作指令自增ID
     this.logicFrameLoopTimeMs = 0;//毫秒，多少时间内收集一次玩家操作，推送到S端
-    this.FPS = data.FPS;//每秒多少逻辑帧
+    this.FPS = data.fps;//每秒多少逻辑帧
     this.playerCommandPushLock = 0;
     //下面是帧同步初始化信息，是由S端供给
     this.roomId = "";
-    this.actionMap = data.ActionMap;
+    this.actionMap = data.actionMap;
     this.sequenceNumber = 0;
     this.randSeek = 0;
     this.sessionId = "";
-    this.contentType = data.contentTypeStr;//protobuf|json
-    this.protocolType = data.protocolTypeStr;//tcp|ws
+    this.contentType = contentType;//protobuf|json
+    this.protocolType = protocolType;//tcp|ws
     //入口函数，必须得先建立连接后，都有后续的所有操作
     this.create  = function(){
-        console.log("create , this status :",self.status);
-        if (self.status != "init" && self.status != "close"){
+        // console.log("entrance : create ws , this status :",self.status);
+        if (self.status != 1 && self.status != 10){
             return alert(" status !=  init or close");
         }
         self.closeFlag = 0;//清空 关闭标识
         //根据帧数，计算出 秒数
-        self.logicFrameLoopTimeMs = parseInt( 1000 / this.FPS);
+        self.logicFrameLoopTimeMs = parseInt( 1000 / self.FPS);
 
-        console.log("create new WebSocket"+self.hostUri ," FPS:",this.FPS , " ms:",self.logicFrameLoopTimeMs, " contentType:",self.contentType, " protocolType:",self.protocolType)
+        console.log("create new WebSocket"+self.hostUri ," FPS:",self.FPS , " ms:",self.logicFrameLoopTimeMs, " contentType:",self.contentType, " protocolType:",self.protocolType)
         //创建ws连接
         self.wsObj = new WebSocket(self.hostUri);
         //设置 关闭回调
@@ -60,71 +71,29 @@ function Sync (playerId,token,data,DomIdPreObj){
             self.wsOpen();
         };
         self.wsObj.onerror = function(ev){
-            for(let key  in ev){
-                console.log(key + '---' + ev[key])
-            }
+            alert("wsObj.onerror");
+            console.log("error:"+ev);
         };
     };
     //连接成功后，会执行此函数
     this.wsOpen = function(){
-        console.log("onOpen : ws connect server : Success  ")
-        this.upStatus("wsLInkSuccess");
+        console.log("onOpen : ws connect server : Success  ");
+        this.upStatus(2);
 
         var requestLoginObj = new proto.myproto.RequestLogin();
         requestLoginObj.setToken(self.token) ;
         this.sendMsg("login",requestLoginObj);
     };
+    //更新当前状态
     this.upStatus = function(status){
-        console.log("up status:",status)
+        console.log("up status:"," old status:",this.status, " new status:" ,status,this.statusDesc[status]);
         this.status = status;
     };
-    //两个玩家，位移碰撞了，触发了游戏结束
-    this.gameOverAndClear = function(){
-        this.upStatus("end")
-
-        var requestGameOver = new proto.myproto.RequestGameOver()
-        requestGameOver.setRoomId(self.roomId);
-        requestGameOver.setSequenceNumber(self.sequenceNumber);
-        requestGameOver.setResult("ccccccWin");
-        this.sendMsg("gameOver", requestGameOver);
-
-        clearInterval(self.pushLogicFrameLoopFunc);
-        self.upOptBnt("游戏结束1",1)
-
-        return alert("完犊子了，撞车了...这游戏得结束了....");
-    };
-    this.getActionId = function (action,category){
-        // return alert(self.actionMap);
-        var data = self.actionMap[category];
-        // console.log(data);
-        for(let key  in data){
-            // console.log(data[key].Action);
-            if (data[key].action == action){
-                return data[key].id;
-            }
-        }
-        alert(action + ": no match");
-        return "";
-    };
-    this.getActionName = function (actionId,category){
-        var data = self.actionMap[category];
-        return data[actionId].action;
-    };
-    // this.sendMsgJson =  function ( action,content,jsonEncode  ){
-    //     // if (jsonEncode == 1){
-    //         content = JSON.stringify(content)
-    //     // }
-    //     var msg = {"action":action,"content":content};
-    //     // var jsonStr =  JSON.stringify(msg);
-    //     // var tmpcontent = content
-    //     self.wsObj.send(content);
-    //     return 111;
-    // }
     this.sendMsg =  function ( action,contentObj  ){
         var id = self.getActionId(action,"client");
         console.log( self.descPre , " <sendMsg>" ,  " actionName: "+action , " actionName:" , id  , " content:" ,contentObj.toObject());
         var content = null;
-        if (self.contentType == "json"){
+        if (contentTypeDesc[self.contentType] == "json"){
             content = contentObj.toObject();
             content = JSON.stringify(content);
             if(action == "playerOperations"){
@@ -152,7 +121,7 @@ function Sync (playerId,token,data,DomIdPreObj){
             console.log("<sendMsg final>",content);
 
             self.wsObj.send(content);
-        }else if (self.contentType == "protobuf"){
+        }else if ( contentTypeDesc[self.contentType]  == "protobuf"){
             content = contentObj.serializeBinary();
             var protocolCtrl = contentType +  "" + protocolType + id;
             if (action != "login" ){
@@ -166,39 +135,35 @@ function Sync (playerId,token,data,DomIdPreObj){
             self.wsObj.send(mergedArray);
         }
     };
+    //更新操作按钮文字，解除 点击事件
     this.upOptBnt = function(content,clearClick){
         $("#"+self.domIdObj.optBntId).html(content);
         if(clearClick == 1){
             $("#"+self.domIdObj.optBntId).unbind("click");
         }
     };
-    this.closeFD = function (){//主动关闭
+    //玩家操作 - 主动关闭
+    this.closeFD = function (){
         console.log("closeFD");
         // window.clearInterval(self.heartbeatLoopFunc);
         clearInterval(self.pushLogicFrameLoopFunc);
         self.myClose = 1;
         self.wsObj.close();
     };
-    this.onclose = function(ev){//接收到服务端关闭
+    //ws 接收到服务端关闭
+    this.onclose = function(ev){
         alert("receive server close:" +ev.code);
         clearInterval(self.pushLogicFrameLoopFunc);
-        self.upStatus("close")
+        self.upStatus(10);
         // window.clearInterval(self.heartbeatLoopFunc);
         if (self.myClose == 1){
             var reConnBntId = "reconn_"+self.playerId;
             var msg = "重连接";
-            self.upOptBntHref(reConnBntId,msg,self.create)
-            // self.upOptBnt("C端主动关闭WS，<a href='javascript:void(0);' id='"+reConnBntId+"'>重连接</a>",1)
-            // $("#"+reConnBntId).click(self.create);
+            self.upOptBntHref(reConnBntId,msg,self.create);
         }else{
             self.closeFlag = 2;
             self.upOptBnt("服务端关闭，游戏结束，连接断开",1)
         }
-    };
-
-    this.wsError = function(ev){
-        console.log("error:"+ev);
-        alert(ev);
     };
     //心跳执行函数
     this.heartbeat = function(){
@@ -213,51 +178,28 @@ function Sync (playerId,token,data,DomIdPreObj){
         console.log("onmessage:"+ pre + " " +ev.data);
         var msgObj = self.newMsgObj();
 
-        if (self.contentType == 'protobuf'){
+        if (contentTypeDesc[self.contentType] == 'protobuf'){
             var reader = new FileReader();
             reader.readAsArrayBuffer(ev.data);
             reader.onloadend = function(e) {
                 var dataBuffer = new Uint8Array(reader.result);
 
-                msgObj.contentType = self.processBufferString(dataBuffer,0,1);
-                msgObj.protocolType = self.processBufferString(dataBuffer,1,2);
-                msgObj.actionId = self.processBufferString(dataBuffer,2,6);
-                msgObj.sessionId = self.processBufferString(dataBuffer,6,38);
-                msgObj.content = self.processBuffer(dataBuffer,38);
+                msgObj.contentType = processBufferString(dataBuffer,0,1);
+                msgObj.protocolType = processBufferString(dataBuffer,1,2);
+                msgObj.actionId = processBufferString(dataBuffer,2,6);
+                msgObj.sessionId = processBufferString(dataBuffer,6,38);
+                var content = processBuffer(dataBuffer,38);
                 msgObj.action = self.getActionName(msgObj.actionId,"server")
                 //首字母转大写
-                var actionLow = action.substring(0, 1).toUpperCase() + action.substring(1)
+                var actionLow = msgObj.action.substring(0, 1).toUpperCase() + msgObj.action.substring(1)
                 //拼接成最终classname
                 var className =  "proto.myproto.Response" + actionLow;
                 var responseProtoClass = eval(className);
                 //将进制流转换成对象
-                content =  responseProtoClass.deserializeBinary(content).toObject();
+                msgObj.content =  responseProtoClass.deserializeBinary(content).toObject();
                 self.router(msgObj);
-
-
-                // var dataBuffer = new Uint8Array(reader.result);
-                // //创建content ArrayBuffer和Uint8Array
-                // var contentArrayBuffer = new ArrayBuffer( dataBuffer.length - 4 );
-                // var contentUint8Array = new Uint8Array(contentArrayBuffer);
-                // var j = 0;
-                // for (var i = 0; i < dataBuffer.length; i++) {
-                //     if (i < 4){
-                //         actionId += String.fromCharCode(dataBuffer[i]);
-                //     }else{
-                //         contentUint8Array[j] = dataBuffer[i];
-                //         j++;
-                //     }
-                // }
-                // content = contentUint8Array;
-                // action = self.getActionName(actionId,"server")
-                // var actionLow = action.substring(0, 1).toUpperCase() + action.substring(1)
-                // var className =  "proto.myproto.Response" + actionLow;
-                // var responseProtoClass = eval(className);
-                // content =  responseProtoClass.deserializeBinary(content).toObject();
-                // console.log(pre +" actionId:"+actionId , " content:",content , " actionName:",action, " protobufClassName:",className);
-                // self.router(action,content);
             };
-        }else if(self.contentType == "json"){
+        }else if(contentTypeDesc[self.contentType] == "json"){
             msgObj.contentType = ev.data.substr(0,1);
             msgObj.protocolType = ev.data.substr(1,1);
             msgObj.actionId = ev.data.substr(2,4);
@@ -270,37 +212,13 @@ function Sync (playerId,token,data,DomIdPreObj){
         }else{
             return alert("contentType err");
         }
-
-
-
-        // return alert(11);
     };
-    this.processBufferString = function (dataBuffer,start,end){
-        var str = "";
-        for (var i = start; i < dataBuffer.length; i++) {
-            if (i >= end){
-                break;
-            }
-            str += String.fromCharCode(dataBuffer[i]);
-        }
-        return str;
-    }
+    this.parserContent = function(){
 
-    this.processBuffer =  function (dataBuffer,start){
-        //创建content ArrayBuffer和Uint8Array
-        var contentArrayBuffer = new ArrayBuffer( dataBuffer.length - start );
-        var contentUint8Array = new Uint8Array(contentArrayBuffer);
-        var j = 0;
-        for (var i = start; i < dataBuffer.length; i++) {
-            contentUint8Array[j] = dataBuffer[i];
-            j++;
-        }
-        return contentUint8Array;
-    }
-    // this.tttt = function(aa){alert(aa);alert(self.contentType)};
+    };
     this.router = function(msgObj){
         console.log("router:",msgObj)
-        var action = msgObj.action;
+        var action  = msgObj.action;
         var content = msgObj.content;
 
         // var actionUp = msgObj.action.substring(0, 1).toUpperCase() + msgObj.action.substring(1)
@@ -327,7 +245,7 @@ function Sync (playerId,token,data,DomIdPreObj){
         }else if( "kickOff" == action){
             self.rKickOff(content);
         }else if( "pushLogicFrame" == action){
-            self.rPushLogicFrame(content)
+            self.rPushLogicFrame(content,"router")
         }else if( "readyTimeout" == action){
             self.rReadyTimeout(content)
         }else if( "serverPong" == action){
@@ -341,6 +259,7 @@ function Sync (playerId,token,data,DomIdPreObj){
             return alert("action error.");
         }
     };
+    //=================== 以下都是 接收S端的处理函数========================================
     this.rOtherPlayerResumeGame = function(content){
         if(content.playerId != self.playerId){
             var tdId = self.tableId + "_" + self.playerLocation[content.playerId];
@@ -351,27 +270,28 @@ function Sync (playerId,token,data,DomIdPreObj){
     this.rReadyTimeout= function(logicFrame){
         console.log("rReadyTimeout:",logicFrame);
 
-        this.upStatus("loginSuccess");
+        this.upStatus(3);
 
         var matchSignBntId = "matchSign_"+self.playerId;
         var hrefBody = "连接成功，匹配报名";
 
         self.upOptBntHref(matchSignBntId,hrefBody,self.matchSign);
 
-        return alert("抱歉，准确时间已超时");
+        return alert("抱歉，<准备时间>已超时");
     };
     this.rPushRoomHistory = function(logicFrame){
         console.log("rPushRoomHistory:");
-        if(self.contentType =="protobuf"){
+        if(contentTypeDesc[self.contentType] =="protobuf"){
             logicFrame.list = logicFrame.listList;
         }
         var list = logicFrame.list;
         for(var i=0;i<list.length;i++){
             // console.log( "rPushRoomHistory:" + logicFrame[i].Action);
             if (  list[i].action == "pushLogicFrame"){
-                var data = eval( "(" + list[i].content + ")" )
-                self.rPushLogicFrame(data);
-            }
+                var data = eval( "(" + list[i].content + ")" );
+                // console.log("rPushRoomHistory data:",data);
+                self.rPushLogicFrame(data,"rPushRoomHistory");
+                }
         }
         var requestPlayerResumeGame = new proto.myproto.RequestPlayerResumeGame();
         requestPlayerResumeGame.setRoomId(self.roomId);
@@ -384,10 +304,9 @@ function Sync (playerId,token,data,DomIdPreObj){
         self.upOptBnt(bntContent, 1);
         $("#"+domId).click(clickCallback);
     };
-    //=================== 以下都是 接收S端的处理函数========================================
     this.rLoginRes = function(logicFrame){
         if (logicFrame.code != 200) {
-            this.status = "loginFailed";
+            this.upStatus(4);
             return alert("loginRes failed!!!"+logicFrame.code + " , "+logicFrame.errMsg);
         }
 
@@ -398,7 +317,7 @@ function Sync (playerId,token,data,DomIdPreObj){
         var requestClientPing = new proto.myproto.RequestClientPing();
         requestClientPing.setAddTime(now);
         this.sendMsg("clientPing",requestClientPing);
-        this.upStatus("loginSuccess");
+        this.upStatus(3);
 
         if (playerConnInfo.roomId){
             alert("检测出，有未结束的一局游戏，开始恢复中...,先获取房间信息:rooId:"+playerConnInfo.roomId);
@@ -430,20 +349,14 @@ function Sync (playerId,token,data,DomIdPreObj){
         //     logicFrame.clientReceiveTime =  now
     };
     this.rStartBattle = function(logicFrame){
-        // logicFrame.playerList = logicFrame.
-
-        self.upStatus("startBattle");
+        self.upStatus(8);
         self.pushLogicFrameLoopFunc = setInterval(self.playerCommandPush,self.logicFrameLoopTimeMs);
-        // console.log("self.pushLogicFrameLoopFunc:",self.pushLogicFrameLoopFunc)
         var exceptionOffLineId = "exceptionOffLineId"+self.playerId;
-        // self.upOptBnt("游戏中...<a href='javascript:void(0);'  id='"+exceptionOffLineId+"'>异常掉线</a>",1)
-        // $("#"+exceptionOffLineId).click(self.closeFD);
-
         var msg = "异常掉线";
         self.upOptBntHref(exceptionOffLineId,msg,self.closeFD);
     };
     this.rPushRoomInfo = function(logicFrame){
-        if(this.contentType =="protobuf"){
+        if(contentTypeDesc[self.contentType] =="protobuf"){
             logicFrame.playerList = logicFrame.playerListList;
         }
         self.initLocalGlobalVar(logicFrame);
@@ -461,10 +374,13 @@ function Sync (playerId,token,data,DomIdPreObj){
 
         self.upOptBntHref(readySignBntId,hrefBody,self.ready);
     };
-    this.rPushLogicFrame = function(logicFrame){//接收S端逻辑帧
+    this.rPushLogicFrame = function(logicFrame,source){//接收S端逻辑帧
+        console.log("logicFrame:",logicFrame);
         var pre = self.descPre;
-        if(this.contentType =="protobuf"){
-            logicFrame.operations = logicFrame.operationsList;
+        if(contentTypeDesc[self.contentType] =="protobuf"){
+            if (source != "rPushRoomHistory"){
+                logicFrame.operations = logicFrame.operationsList;
+            }
         }
         var operations = logicFrame.operations;
         self.sequenceNumber  = logicFrame.sequenceNumber;
@@ -472,7 +388,7 @@ function Sync (playerId,token,data,DomIdPreObj){
 
         self.playerCommandPushLock = 0;
 
-        console.log("rPushLogicFrame ,sequenceNumber:"+self.sequenceNumber+ ", operationsLen:" +  operations.length)
+        console.log("rPushLogicFrame ,sequenceNumber:"+self.sequenceNumber+ ", operationsLen:" +  operations.length);
         for(var i=0;i<operations.length;i++){
             playerId= operations[i].playerId;
             var str = pre + " i=i , id: "+operations[i].id + " , event:"+operations[i].event + " , value:"+ operations[i].value + " , playerId:" + playerId;
@@ -529,31 +445,8 @@ function Sync (playerId,token,data,DomIdPreObj){
         //     tdObj.css("background", "red");
         // }
     };
-    this.initLocalGlobalVar = function(logicFrame){
-        var pre = self.descPre;
-        console.log("initLocalGlobalVar:",logicFrame)
-        for(var i=0;i<logicFrame.playerList.length;i++){
-            self.playerLocation[""+logicFrame.playerList[i].id+""] = "empty"
-        }
-        // return 1;
-        self.randSeek  = logicFrame.randSeek;
-        // $("#randseek").html(self.randSeek);
-        $("#"+self.domIdObj.randSeekId).html(self.randSeek);
-
-
-        self.sequenceNumber  = logicFrame.sequenceNumber;
-        // $("#sid").html(self.sequenceNumber);
-        $("#"+self.domIdObj.seqId).html(self.sequenceNumber);
-
-        self.roomId = logicFrame.roomId;
-        // $("#rid").html(logicFrame.RoomId);
-        $("#"+self.domIdObj.roomId).html(self.roomId);
-
-        var str =  pre+", roomId:" +logicFrame.roomId+ ", RandSeek:"+    self.randSeek +" , SequenceNumber"+    self.sequenceNumber ;
-        console.log(str);
-    };
     this.rEnterBattle = function(logicFrame){
-        if(this.contentType =="protobuf"){
+        if(contentTypeDesc[self.contentType] =="protobuf"){
             logicFrame.playerList = logicFrame.playerListList;
         }
 
@@ -563,8 +456,6 @@ function Sync (playerId,token,data,DomIdPreObj){
         var hrefBody = "匹配成功，准备";
 
         self.upOptBntHref(readySignBntId,hrefBody,self.ready);
-
-
     };
     this.rGameOver = function(ev){
         clearInterval(self.pushLogicFrameLoopFunc);
@@ -577,6 +468,26 @@ function Sync (playerId,token,data,DomIdPreObj){
     };
 
     //=================== 以上都是 接收S端的处理函数========================================
+    this.initLocalGlobalVar = function(logicFrame){
+        var pre = self.descPre;
+        console.log("initLocalGlobalVar:",logicFrame)
+        for(var i=0;i<logicFrame.playerList.length;i++){
+            self.playerLocation[""+logicFrame.playerList[i].id+""] = "empty"
+        }
+        // return 1;
+        self.randSeek  = logicFrame.randSeek;
+        $("#"+self.domIdObj.randSeekId).html(self.randSeek);
+
+
+        self.sequenceNumber  = logicFrame.sequenceNumber;
+        $("#"+self.domIdObj.seqId).html(self.sequenceNumber);
+
+        self.roomId = logicFrame.roomId;
+        $("#"+self.domIdObj.roomId).html(self.roomId);
+
+        var str =  pre+", roomId:" +logicFrame.roomId+ ", RandSeek:"+    self.randSeek +" , SequenceNumber"+    self.sequenceNumber ;
+        console.log(str);
+    };
 
     this.getMap = function (tableId) {
         // var tableDivPre = "map";
@@ -600,58 +511,36 @@ function Sync (playerId,token,data,DomIdPreObj){
         }
     };
     this.ready = function(){
-        self.upStatus("ready");
+        self.upStatus(7);
         var requestPlayerReady = new proto.myproto.RequestPlayerReady();
         requestPlayerReady.setPlayerId(self.playerId);
         requestPlayerReady.setRoomId(self.roomId);
         self.sendMsg("playerReady",requestPlayerReady);
-        // var msg = {"playerId" :self.playerId};
-        // self.sendMsg("playerReady",msg)
-
-        // var cancelBntId = "cancelSign_"+self.playerId;
-        // var bntContent = "<a href='javascript:void(0);' onclick='' id='"+cancelBntId+"'>取消报名/准备</a>";
-        // self.upOptBnt(bntContent, 1);
-        // $("#"+cancelBntId).click(self.cancelSign);
         self.upOptBntHref("","等待其它玩家准备",this.ready);
     };
     this.cancelSign = function(){
-        self.upStatus("cancelSign");
+        self.upStatus(6);
 
         var requestPlayerMatchSignCancel = new proto.myproto.RequestPlayerMatchSignCancel();
         requestPlayerMatchSignCancel.setPlayerId(self.playerId);
         self.sendMsg("playerMatchSignCancel",requestPlayerMatchSignCancel);
-        // var msg = {"playerId" :self.playerId};
-        // self.sendMsg("playerMatchSignCancel",msg)
 
         var matchSignBntId = "matchSign_"+self.playerId;
         var hrefBody = "连接成功，匹配报名";
 
         self.upOptBntHref(matchSignBntId,hrefBody,self.matchSign);
-
-        // var readyBntId = "ready_"+self.playerId;
-        // var bntContent = "连接成功，<a href='javascript:void(0);' onclick='' id='"+readyBntId+"'>准备/报名</a>";
-        // self.upOptBnt(bntContent, 1);
-        // $("#"+readyBntId).click(self.ready);
     };
     this.matchSign = function(){
-        self.upStatus("matchSign")
+        self.upStatus(5)
 
         var requestPlayerMatchSign = new proto.myproto.RequestPlayerMatchSign();
         requestPlayerMatchSign.setPlayerId(self.playerId);
         self.sendMsg("playerMatchSign",requestPlayerMatchSign);
 
-        // var msg = {"playerId" :self.playerId};
-        // self.sendMsg("playerMatchSign",msg);
-
         var cancelBntId = "cancelSign_"+self.playerId;
         var hrefBody = "取消匹配报名";
 
         self.upOptBntHref(cancelBntId,hrefBody,self.cancelSign);
-
-        // var cancelBntId = "cancelSign_"+self.playerId;
-        // var bntContent = "<a href='javascript:void(0);' onclick='' id='"+cancelBntId+"'>取消报名/准备</a>";
-        // self.upOptBnt(bntContent, 1);
-        // $("#"+cancelBntId).click(self.cancelSign);
     };
     this.move = function ( dirObj ){
 
@@ -663,7 +552,7 @@ function Sync (playerId,token,data,DomIdPreObj){
             return alert("WS FD 已关闭...");
         }
 
-        if (self.status != "startBattle"){
+        if (self.status != 8){
             return alert("status err , != startBattle ， 游戏还未开始，请等待一下...");
         }
 
@@ -714,8 +603,6 @@ function Sync (playerId,token,data,DomIdPreObj){
         }
 
         console.log("dir:"+dir+"oldLocation"+nowLocationStr+" , newLocation:"+newLocation);
-        // var commands ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"commands": [{"id":1,"action":"move","value":newLocation,"playerId":self.playerId}]};
-        // self.sendMsg("playerCommandPush",commands)
         self.playerOperationsQueue.push({"id":self.operationsInc,"event":"move","value":newLocation,"playerId":self.playerId});
         self.operationsInc++;
         var playerLocationArr = playerLocation[self.playerId].split("_");
@@ -729,7 +616,6 @@ function Sync (playerId,token,data,DomIdPreObj){
         requestPlayerOperations.setRoomId(self.roomId);
         requestPlayerOperations.setSequenceNumber(self.sequenceNumber);
 
-        // var loginFrame ={"id":3,"roomId":self.roomId,"sequenceNumber":self.sequenceNumber,"operations": []};
         if(self.playerCommandPushLock == 1){
             console.log("send msg lock...please wait server back login frame");
             return
@@ -770,6 +656,21 @@ function Sync (playerId,token,data,DomIdPreObj){
         // self.sendMsg("playerOperations",loginFrame);
     };
 
+    //两个玩家，位移碰撞了，触发了游戏结束
+    this.gameOverAndClear = function(){
+        this.upStatus(9);
+
+        var requestGameOver = new proto.myproto.RequestGameOver()
+        requestGameOver.setRoomId(self.roomId);
+        requestGameOver.setSequenceNumber(self.sequenceNumber);
+        requestGameOver.setResult("ccccccWin");
+        this.sendMsg("gameOver", requestGameOver);
+
+        clearInterval(self.pushLogicFrameLoopFunc);
+        self.upOptBnt("游戏结束1",1)
+
+        return alert("完犊子了，撞车了...这游戏得结束了....");
+    };
 
     this.getPlayerDescById = function (id){
         return "(player_"+ id+")";
@@ -777,6 +678,21 @@ function Sync (playerId,token,data,DomIdPreObj){
     this.getMapTdId = function (tableId,i,j){
         return tableId + "_" + i +"_" + j;
     }
+
+    this.getActionId = function (action,category){
+        var data = self.actionMap[category];
+        for(let key  in data){
+            if (data[key].action == action){
+                return data[key].id;
+            }
+        }
+        alert(action + ": no match");
+        return "";
+    };
+    this.getActionName = function (actionId,category){
+        var data = self.actionMap[category];
+        return data[actionId].action;
+    };
 
     this.descPre = this.getPlayerDescById(playerId);
     this.newMsgObj = function (){
@@ -801,4 +717,27 @@ function stringToUint8Array(str){
 
     var tmpUint8Array = new Uint8Array(arr);
     return tmpUint8Array
+}
+
+function processBufferString (dataBuffer,start,end){
+    var str = "";
+    for (var i = start; i < dataBuffer.length; i++) {
+        if (i >= end){
+            break;
+        }
+        str += String.fromCharCode(dataBuffer[i]);
+    }
+    return str;
+}
+
+function processBuffer(dataBuffer,start){
+    //创建content ArrayBuffer和Uint8Array
+    var contentArrayBuffer = new ArrayBuffer( dataBuffer.length - start );
+    var contentUint8Array = new Uint8Array(contentArrayBuffer);
+    var j = 0;
+    for (var i = start; i < dataBuffer.length; i++) {
+        contentUint8Array[j] = dataBuffer[i];
+        j++;
+    }
+    return contentUint8Array;
 }
