@@ -10,6 +10,63 @@ import (
 	"time"
 	"zlib"
 )
+
+func tc (c chan int)<- chan int{
+	return c
+}
+
+func testChan(){
+	c:= make(chan int)
+	go func(c1 chan int ){
+		xx := <- c1
+		zlib.MyPrint(xx," exit 1")
+	}(c)
+
+	go func(c2 chan int ){
+		xx := <- c2
+		zlib.MyPrint(xx," exit 2")
+	}(c)
+
+	time.Sleep(time.Second * 1)
+
+	close(c)
+	time.Sleep(time.Second * 1)
+	zlib.ExitPrint(111)
+}
+
+func testContext(){
+	//context.WithValue(bg,"a","b")
+
+
+
+	testChan()
+
+
+
+
+	bg := context.Background()
+	bgChildCtx,bgChildCancel := context.WithCancel(bg)
+	go func(myBgChildCtx context.Context ){
+
+		xx := <- myBgChildCtx.Done()
+		zlib.MyPrint(xx," exit 1")
+	}(bgChildCtx)
+
+
+	bgChildChildCtx,bgChildChildCancel := context.WithCancel(bgChildCtx)
+
+	go func(mybgChildChildCtx context.Context ){
+
+		xx := <- mybgChildChildCtx.Done()
+		zlib.MyPrint(xx," exit 2")
+	}(bgChildChildCtx)
+
+	time.Sleep(time.Second * 1)
+	bgChildChildCancel()
+	time.Sleep(time.Second * 1)
+	zlib.ExitPrint(3333)
+	bgChildCancel()
+}
 //创建唯一ID
 
 var mylog *zlib.Log
@@ -40,6 +97,7 @@ func main(){
 		zlib.ExitPrint("env is err , list:",list)
 	}
 
+	//testContext()
 	enter(cmsArg)
 }
 
@@ -49,14 +107,17 @@ func enter(cmsArg map[string]string){
 	wsPort:= cmsArg["WsPort"]
 	tcpPort:= cmsArg["TcpPort"]
 	ClientServer:= cmsArg["ClientServer"]
-
-	rootCtx := context.Background()
-
+	//创建一个根-空 ctx
+	rootBackgroundCtx := context.Background()
+	//继承上面的根CTX，合建一个 cancel ctx ，后续所有的协程均要从此CTX继承
+	rootCancelCtx,rootCancelFunc  := context.WithCancel(rootBackgroundCtx)
 	logOption := zlib.LogOption{
 		OutFilePath : log_base_path,
 		OutFileName: "frame_sync.log",
 		Level : 511,
-		Target : 1,
+		Target : 3,
+		OutFileHashType: zlib.FILE_HASH_HOUR,
+
 	}
 	newlog,errs  := zlib.NewLog(logOption)
 	if errs != nil{
@@ -77,7 +138,7 @@ func enter(cmsArg map[string]string){
 		LoginAuthType		:"jwt",
 		LoginAuthSecretKey	:"chukong",
 		IOTimeout			:3,
-		Cxt 				:rootCtx,
+		OutCxt 				:rootCancelCtx,
 		ConnTimeout			: 60,
 		//Protocol			: netway.PROTOCOL_TCP,
 		Protocol			: netway.PROTOCOL_WEBSOCKET,
@@ -97,15 +158,16 @@ func enter(cmsArg map[string]string){
 	newNetWay := netway.NewNetWay(newNetWayOption)
 	go newNetWay.Startup()
 	//创建main信号
-	mainCtx,mainCancel := context.WithCancel(rootCtx)
+	//mainCtx,mainCancel := context.WithCancel(rootCtx)
 	//开启信号监听
-	go DemonSignal(newNetWay,mainCtx,mainCancel)
-	//阻塞，如果有信号终止了，最后要把main正常结束
-	<-mainCtx.Done()
+	go DemonSignal(newNetWay,rootCancelFunc)
+	//阻塞main主线程，停止的话，只有一种可能：接收到了信号
+	<-rootCancelCtx.Done()
 	//这里做个容错，可能会遗漏掉的协程未结束 或 结束程序有点慢
 	time.Sleep(1 * time.Second)
 
 	mylog.CloseChan <- 1
+	time.Sleep(500 * time.Millisecond)
 	mylog.Warning("main end...")
 }
 //测试使用，开始TCP/UDP client端
@@ -131,7 +193,7 @@ func testSwitchClientServer(clientServer string,newNetWayOption netway.NetWayOpt
 	}
 }
 //信号 处理
-func  DemonSignal(newNetWay *netway.NetWay,mainCtx context.Context,mainCancel context.CancelFunc){
+func  DemonSignal(newNetWay *netway.NetWay,mainCancelFuc context.CancelFunc){
 	mylog.Warning("SIGNAL init : ")
 	c := make(chan os.Signal)
 	//syscall.SIGHUP :ssh 挂断会造成这个信号被捕获，先注释掉吧
@@ -143,7 +205,7 @@ func  DemonSignal(newNetWay *netway.NetWay,mainCtx context.Context,mainCancel co
 		switch sign {
 			case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
 				mylog.Warning(prefix+" exit!!!")
-				newNetWay.CloseChan <- 1
+				//newNetWay.CloseChan <- 1
 				goto end
 			case syscall.SIGUSR1:
 				mylog.Warning(prefix+" usr1!!!")
@@ -155,8 +217,8 @@ func  DemonSignal(newNetWay *netway.NetWay,mainCtx context.Context,mainCancel co
 		mySleepSecond(1,prefix)
 	}
 end :
-	mylog.Warning("DemonSignal end")
-	mainCancel()
+	mylog.Alert(netway.CTX_DONE_PRE + " DemonSignal end")
+	mainCancelFuc()
 }
 
 //睡眠 - 协程

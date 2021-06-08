@@ -1,6 +1,7 @@
 package netway
 
 import (
+	"context"
 	"flag"
 	"github.com/gorilla/websocket"
 	"log"
@@ -21,18 +22,18 @@ func PrototolManagerNew()*PrototolManager{
 	prototolManager := new (PrototolManager)
 	return prototolManager
 }
-func (prototolManager *PrototolManager)Start(){
+func (prototolManager *PrototolManager)Start(outCtx context.Context){
 	//开始HTTP 监听 模块
 	go prototolManager.startHttpServer()
 	//tcp server
-	myTcpServer :=  TcpServerNew()
+	myTcpServer :=  TcpServerNew(outCtx)
 	prototolManager.TcpServer = myTcpServer
 	go myTcpServer.Start()
 }
 
 //启动HTTP 服务
 func (prototolManager *PrototolManager)startHttpServer( ){
-	mynetWay.Option.Mylog.Info("ws Startup : ",mynetWay.Option.WsUri,mynetWay.Option.ListenIp+":"+mynetWay.Option.WsPort)
+	mynetWay.Option.Mylog.Info("ws Startup : ",mynetWay.Option.ListenIp+":"+mynetWay.Option.WsPort,mynetWay.Option.WsUri)
 
 	dns := mynetWay.Option.ListenIp + ":" + mynetWay.Option.WsPort
 	var addr = flag.String("server addr", dns, "server address")
@@ -50,17 +51,18 @@ func (prototolManager *PrototolManager)startHttpServer( ){
 	mynetWay.httpServer = httpServer
 	err := httpServer.ListenAndServe()
 	if err != nil {
-		mynetWay.Option.Mylog.Error("ListenAndServe:", err)
+		mynetWay.Option.Mylog.Error(" ListenAndServe err:", err)
 	}
 }
 
-func (prototolManager *PrototolManager)Quit( ){
+func (prototolManager *PrototolManager)Quit( startupCtx context.Context){
 	//ctx, _ := context.WithCancel(mynetWay.Option.Cxt)
-	if mynetWay.Option.Protocol == PROTOCOL_WEBSOCKET{
-		mynetWay.httpServer.Shutdown(mynetWay.MyCtx)
-	}else if mynetWay.Option.Protocol == PROTOCOL_TCP{
-		prototolManager.TcpServer.Shutdown(mynetWay.MyCtx)
-	}
+	//if mynetWay.Option.Protocol == PROTOCOL_WEBSOCKET{
+		mynetWay.httpServer.Shutdown(startupCtx)
+		mylog.Alert(CTX_DONE_PRE + " httpServer")
+	//}else if mynetWay.Option.Protocol == PROTOCOL_TCP{
+		prototolManager.TcpServer.Shutdown()
+	//}
 }
 
 

@@ -147,7 +147,7 @@ func  (conn *Conn)IOLoop(){
 	mynetWay.Option.Mylog.Info("set conn status :", CONN_STATUS_EXECING, " make close chan")
 	conn.Status = CONN_STATUS_EXECING
 	conn.CloseChan = make(chan int)
-	ctx,cancel := context.WithCancel(mynetWay.Option.Cxt)
+	ctx,cancel := context.WithCancel(mynetWay.Option.OutCxt)
 	go conn.ReadLoop(ctx)
 	go conn.ProcessMsgLoop(ctx)
 	<- conn.CloseChan
@@ -229,6 +229,6 @@ func (connManager *ConnManager)checkConnPoolTimeout(ctx context.Context){
 		}
 	}
 end:
-	mylog.Warning("checkConnPoolTimeout close")
+	mylog.Alert(CTX_DONE_PRE+"checkConnPoolTimeout close")
 }
 

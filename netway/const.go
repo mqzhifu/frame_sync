@@ -17,6 +17,9 @@ const (
 	CLOSE_SOURCE_RTT_TIMEOUT 		= 91//S端已收到了RTT的响应，但已超时
 	CLOSE_SOURCE_RTT_TIMER_OUT 		= 92//RTT超时，定时器触发
 
+	TCP_MSG_SEPARATOR   = "-|"
+
+	CTX_DONE_PRE = "ctx.done() "
 
 	CONTENT_TYPE_JSON 		= 1		//内容类型 json
 	CONTENT_TYPE_PROTOBUF 	= 2		//proto_buf

@@ -19,6 +19,7 @@ type NetWay struct {
 	ProtocolActions 	*myprotocol.ProtocolActions
 	CloseChan       	chan int32
 	MatchSuccessChan    chan *Room
+	Status 				int
 }
 
 type NetWayOption struct {
@@ -38,7 +39,7 @@ type NetWayOption struct {
 	MaxClientConnNum	int32		`json:"maxClientConnMum"`//客户端最大连接数
 	MsgContentMax		int32								//一条消息内容最大值
 	IOTimeout			int64								//read write sock fd 超时时间
-	Cxt 				context.Context						//调用方的CTX，用于所有协程的退出操作
+	OutCxt 				context.Context `-`					//调用方的CTX，用于所有协程的退出操作
 	MainChan			chan int32	`json:"-"`
 	ConnTimeout 		int32		`json:"connTimeout"`	//检测FD最后更新时间
 
@@ -86,6 +87,7 @@ func NewNetWay(option NetWayOption)*NetWay {
 
 	netWay := new(NetWay)
 	netWay.Option = option
+	netWay.Status = 1
 	mynetWay = netWay
 	//日志
 	mylog = option.Mylog
@@ -118,14 +120,15 @@ func (netWay *NetWay)Startup(){
 	//启动时间
 	s_time := zlib.GetNowMillisecond()
 	myMetrics.fastLog("starupTime",METRICS_OPT_PLUS,int(s_time))
+	netWay.Status = 2
 	//协议管理适配器
 	prototolManager =  PrototolManagerNew()
-	//从外层调用的CTX上，派生netway自己的根ctx
-	startupCtx ,cancel := context.WithCancel(netWay.Option.Cxt)
+	//在外层的CTX上，派生netway自己的根ctx
+	startupCtx ,cancel := context.WithCancel(netWay.Option.OutCxt)
 	netWay.MyCtx = startupCtx
 	netWay.MyCtxCancel = cancel
 	//匹配模块，成功匹配一组玩家后，推送消息的管道
-	netWay.MatchSuccessChan = make(chan *Room)
+	netWay.MatchSuccessChan = make(chan *Room,10)
 	//开启匹配服务
 	go myMatch.doingAndCreateRoom  (startupCtx,netWay.MatchSuccessChan)
 	//监听超时的WS连接
@@ -136,12 +139,17 @@ func (netWay *NetWay)Startup(){
 	go myMetrics.start(startupCtx)
 	//玩家缓存状态，下线后，超时清理
 	go netWay.PlayerManager.checkOfflineTimeout(startupCtx)
-	go prototolManager.Start()
+	go prototolManager.Start(startupCtx)
 
 	netWay.CloseChan = make(chan int32)
 	go func() {
-		<- netWay.CloseChan
-		netWay.Quit()
+		//这里是2种关闭方式，可以通过内置的管道，也可以使用上下文
+		select {
+			case <- netWay.CloseChan:
+				netWay.Quit()
+			case <- netWay.Option.OutCxt.Done():
+				netWay.Quit()
+		}
 	}()
 }
 
@@ -241,7 +249,7 @@ func(netWay *NetWay)recviceMatchSuccess(ctx context.Context){
 			break
 		}
 	}
-	mylog.Warning("recviceMatchSuccessone close")
+	mylog.Alert(CTX_DONE_PRE+"recviceMatchSuccessone close")
 }
 
 func(netWay *NetWay)heartbeat(requestClientHeartbeat myproto.RequestClientHeartbeat,wsConn *Conn){
@@ -285,16 +293,21 @@ func (netWay *NetWay)CloseOneConn(wsConn *Conn,source int){
 //退出
 func  (netWay *NetWay)Quit() {
 	mylog.Warning("netWay.Quit")
-	prototolManager.Quit()
-
-	netWay.MyCtxCancel() //关闭 所有  startup开启的协程
-
-	if len(connManager.Pool) == 0 {
-		netWay.Option.Mylog.Warning("ConnPool is 0")
+	if netWay.Status == 3{
+		mylog.Error("netWay.Status ==  3")
 		return
 	}
-	for _, v := range connManager.Pool {
-		netWay.CloseOneConn(v, CLOSE_SOURCE_SIGNAL_QUIT)
-	}
-	netWay.Option.Mylog.Warning("quit finish")
+	netWay.Status = 3//关闭中
+	prototolManager.Quit(netWay.MyCtx)
+	//
+	//netWay.MyCtxCancel() //关闭 所有  startup开启的协程
+	//
+	//if len(connManager.Pool) == 0 {
+	//	netWay.Option.Mylog.Warning("ConnPool is 0")
+	//	return
+	//}
+	//for _, v := range connManager.Pool {
+	//	netWay.CloseOneConn(v, CLOSE_SOURCE_SIGNAL_QUIT)
+	//}
+	//netWay.Option.Mylog.Warning("quit finish")
 }

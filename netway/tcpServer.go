@@ -7,17 +7,17 @@ import (
 	"strings"
 	"time"
 )
-
 type TcpServer struct {
 	listener net.Listener
-	//pool []*TcpConn
+	OutCxt   context.Context
 }
-func TcpServerNew()*TcpServer{
+func TcpServerNew(outCtx context.Context)*TcpServer{
 	tcpServer := new (TcpServer)
+	tcpServer.OutCxt = outCtx
 	//tcpServer.pool = []*TcpConn{}
 	return tcpServer
 }
-
+//outCtx:这里没用上，因为accept是阻塞的模式，只能用另外的方式close
 func  (tcpServer *TcpServer)Start(){
 	ipPort := mynetWay.Option.ListenIp + ":" +mynetWay.Option.TcpPort
 	listener,err :=net.Listen("tcp",ipPort)
@@ -31,14 +31,15 @@ func  (tcpServer *TcpServer)Start(){
 
 }
 
-func   (tcpServer *TcpServer)Shutdown( ctx context.Context){
-	mylog.Warning("tcpServer Shutdown wait ctx.Done... ")
-	<- ctx.Done()
-	mylog.Error("tcpServer.listener.Close")
+func   (tcpServer *TcpServer)Shutdown( ){
+	//mylog.Warning("tcpServer Shutdown wait ctx.Done... ")
+	<- tcpServer.OutCxt.Done()
+	//mylog.Error("tcpServer.listener.Close")
 	err := tcpServer.listener.Close()
 	if err != nil{
 		mylog.Error("tcpServer.listener.Close err :",err)
 	}
+	mylog.Alert(CTX_DONE_PRE+" tcpServer Shutdown")
 }
 
 func (tcpServer *TcpServer)Accept( ){
@@ -64,6 +65,7 @@ type TcpConn struct {
 	conn net.Conn
 	MsgQueue [][]byte
 	callbackCloseHandle func(code int, text string)error
+	BufferContent string
 }
 
 func TcpConnNew(conn net.Conn)*TcpConn{
@@ -105,17 +107,27 @@ func  (tcpConn *TcpConn)readLoop(){
 	//创建消息缓冲区
 	buffer := make([]byte, 1024)
 	isBreak := 0
+	loopReadCnt := 0
 	for {
+
 		if isBreak == 1{
 			break
 		}
+		loopReadCnt++
 		//读取客户端发来的消息放入缓冲区
 		n,err := tcpConn.conn.Read(buffer)
+		if loopReadCnt == 1000{
+			if tcpConn.BufferContent != ""{
+				mylog.Error("loopReadCnt == 1000 clear")
+				tcpConn.BufferContent = ""
+			}
+			loopReadCnt = 0
+		}
 		if err != nil{
 			mylog.Error("conn.read buffer:",err.Error())
 			if err == io.EOF{
 				tcpConn.realClose(2)
-				return
+				isBreak = 1
 			}
 			continue
 		}
@@ -124,13 +136,75 @@ func  (tcpConn *TcpConn)readLoop(){
 		}
 		//转化为字符串输出
 		clientMsg := buffer[0:n]
+
+		//tcpConn.processMsgBuff(clientMsg)
+
 		mylog.Info("read msg :",n,string(clientMsg))
 		//fmt.Printf("收到消息",conn.RemoteAddr(),clientMsg)
 		tcpConn.MsgQueue = append(tcpConn.MsgQueue,clientMsg)
 		tcpConn.conn.Write([]byte("im server"))
 	}
 }
+//防止粘包，每条消息加上分隔符
+func  (tcpConn *TcpConn)processMsgBuff(buffMsg []byte){
+	if len( tcpConn.BufferContent) > 10240 {
+		mylog.Error("tcpConn.BufferContent > 1024B clear.")
+		tcpConn.BufferContent = ""
+	}
+	for i:=0;i<len(buffMsg);i++{
+		if string(buffMsg[i]) == TCP_MSG_SEPARATOR{
+			oneMsg := tcpConn.BufferContent
+			tcpConn.MsgQueue = append(tcpConn.MsgQueue,[]byte(oneMsg))
+			tcpConn.BufferContent = ""
+		}else{
+			tcpConn.BufferContent +=  string(buffMsg[i])
+		}
+	}
+	//if len(buffMsg) <= len(TCP_MSG_SEPARATOR) {
+	//	tcpConn.BufferContent = tcpConn.BufferContent + string(buffMsg)
+	//	return
+	//}
 
+
+	//if tcpConn.BufferContent != ""{//之前还有buff未接收全的数据，将：第一个元素得取出来，跟上一个包合并一下
+	//	tcpConn.BufferContent = tcpConn.BufferContent + string(buffMsg[0])
+	//	if len(msgArr) == 1{
+	//		return
+	//	}
+	//	msgArr = msgArr[1:]
+	//}
+	//msgArr := strings.Split(string(buffMsg),TCP_MSG_SEPARATOR)
+	////取出最后一个元素
+	//lastElement := msgArr[len(msgArr) - 1]
+	//if string(lastElement) == ""{
+	//	for i:=0;i<len(msgArr)-1;i++{
+	//		tcpConn.MsgQueue = append(tcpConn.MsgQueue,[]byte(msgArr[i]))
+	//	}
+	//}else{
+	//	if len(msgArr) == 1{
+	//		tcpConn.BufferContent = tcpConn.BufferContent + string(buffMsg)
+	//		return
+	//	}else{
+	//
+	//	}
+	//}
+	//
+	//tcpConn.BufferContent = tcpConn.BufferContent + string(lastElement)
+	//lastLocation := len(msgArr) - 1 - 1
+	//msgArr = msgArr[0:lastLocation]
+	//
+	//for i:=0;i<len(msgArr)-1;i++{
+	//	tcpConn.MsgQueue = append(tcpConn.MsgQueue,[]byte(msgArr[i]))
+	//}
+
+
+
+	//lastLocation := len(buffMsg)-len(TCP_MSG_SEPARATOR)
+	//lastStr := buffMsg[lastLocation: ]
+	//if string(lastStr) != TCP_MSG_SEPARATOR{
+	//
+	//}
+}
 func  (tcpConn *TcpConn)ReadMessage()(messageType int, p []byte, err error){
 	if len(tcpConn.MsgQueue) == 0 {
 		str := ""

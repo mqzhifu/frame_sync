@@ -2,7 +2,6 @@ package netway
 
 import (
 	"context"
-	"zlib"
 )
 
 type Metrics struct {
@@ -61,15 +60,13 @@ func  (metrics *Metrics)start(ctx context.Context){
 				metrics.processMsg(metricsChanMsg)
 			case <- ctx.Done():
 				ctxHasDone = 1
-				mylog.Warning("checkRoomTimeoutLoop done.")
 		}
 		if ctxHasDone == 1{
 			goto end
 		}
 	}
 	end:
-		zlib.MyPrint("end:checkRoomTimeoutLoop done.")
-
+		mylog.Alert(CTX_DONE_PRE+" metrics.")
 }
 
 func (metrics *Metrics)processMsg(metricsChanMsg MetricsChanMsg){

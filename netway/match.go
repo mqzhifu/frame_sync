@@ -140,10 +140,10 @@ func (match *Match) doingAndCreateRoom(ctx context.Context,matchSuccessChan chan
 				mylog.Info("create a room :",newRoom)
 				//将该房间添加到管道中
 				matchSuccessChan <- newRoom
-				time.Sleep(time.Millisecond * 100)
+				//time.Sleep(time.Millisecond * 100)
 		}
 	}
 end:
-	mylog.Info("matchingPlayerCreateRoom close")
+	mylog.Alert(CTX_DONE_PRE+"matchingPlayerCreateRoom close")
 }
 
