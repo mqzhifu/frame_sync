@@ -10,16 +10,23 @@ import (
 type TcpServer struct {
 	listener net.Listener
 	OutCxt   context.Context
+	Ip 		string
+	Port 	string
 }
-func TcpServerNew(outCtx context.Context)*TcpServer{
+func NewTcpServer(outCtx context.Context,ip string,port string)*TcpServer{
+	mylog.Info("NewTcpServer instance:")
 	tcpServer := new (TcpServer)
 	tcpServer.OutCxt = outCtx
+	tcpServer.Ip = ip
+	tcpServer.Port = port
 	//tcpServer.pool = []*TcpConn{}
 	return tcpServer
 }
 //outCtx:这里没用上，因为accept是阻塞的模式，只能用另外的方式close
 func  (tcpServer *TcpServer)Start(){
-	ipPort := mynetWay.Option.ListenIp + ":" +mynetWay.Option.TcpPort
+	ipPort := tcpServer.Ip + ":" + tcpServer.Port
+	mylog.Alert("tcpServer start:",ipPort)
+
 	listener,err :=net.Listen("tcp",ipPort)
 	if err !=nil{
 		mylog.Error("net.Listen tcp err")
@@ -32,9 +39,7 @@ func  (tcpServer *TcpServer)Start(){
 }
 
 func   (tcpServer *TcpServer)Shutdown( ){
-	//mylog.Warning("tcpServer Shutdown wait ctx.Done... ")
 	<- tcpServer.OutCxt.Done()
-	//mylog.Error("tcpServer.listener.Close")
 	err := tcpServer.listener.Close()
 	if err != nil{
 		mylog.Error("tcpServer.listener.Close err :",err)
@@ -55,7 +60,7 @@ func (tcpServer *TcpServer)Accept( ){
 			}
 			continue
 		}
-		tcpConn := TcpConnNew(conn)
+		tcpConn := NewTcpConn(conn)
 		//myTcpServer.pool = append(myTcpServer.pool,tcpConn)
 		go tcpConn.start()
 	}
@@ -68,7 +73,7 @@ type TcpConn struct {
 	BufferContent string
 }
 
-func TcpConnNew(conn net.Conn)*TcpConn{
+func NewTcpConn(conn net.Conn)*TcpConn{
 	mylog.Info("TcpConnNew")
 	tcpConn := new (TcpConn)
 	tcpConn.conn = conn
@@ -77,10 +82,10 @@ func TcpConnNew(conn net.Conn)*TcpConn{
 }
 
 func  (tcpConn *TcpConn)start(){
-	mylog.Info("TcpConnNew.start")
-	go tcpConn.readLoop();
+	mylog.Info("TcpConn.start")
+	go tcpConn.readLoop()
 	time.Sleep(time.Millisecond * 500)
-	mynetWay.tcpHandler(tcpConn)
+	myProtocolManager.tcpHandler(tcpConn)
 }
 
 func  (tcpConn *TcpConn)SetCloseHandler(h func(code int, text string)error) {

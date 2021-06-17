@@ -35,7 +35,8 @@ type RoomSyncMetrics struct{
 	OutputSize	int `json:"outputSize"`
 }
 
-func MetricsNew()*Metrics{
+func NewMetrics()*Metrics{
+	mylog.Info("NewMetrics instance:")
 	metrics := new (Metrics)
 	metrics.input = make(chan MetricsChanMsg ,100)
 	metrics.totalMetrics = TotalMetrics{}
@@ -53,6 +54,7 @@ func  (metrics *Metrics)fastLog(key string,opt int ,value int ){
 	metrics.input <- metricsChanMsg
 }
 func  (metrics *Metrics)start(ctx context.Context){
+	mylog.Alert("metrics start:")
 	ctxHasDone := 0
 	for{
 		select {

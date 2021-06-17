@@ -10,13 +10,14 @@ import (
 )
 
 type Sync struct {
-	Options Options
+	Option SyncOption
 }
 
-type Options struct {
+type SyncOption struct {
 	FPS 				int32 		`json:"fps"`			//frame pre second
 	LockMode  			int32 		`json:"lockMode"`		//锁模式，乐观|悲观
 	MapSize				int32		`json:"mapSize"`		//地址大小，给前端初始化使用
+	Store 				int32 		`json:"store"`
 	Log *zlib.Log
 }
 //断点调试
@@ -31,13 +32,13 @@ var logicFrameMsgDefaultId int32
 var operationDefaultId int32
 var RoomSyncMetricsPool map[string]RoomSyncMetrics
 
-func NewSync(options Options)*Sync {
-	mylog = options.Log
+func NewSync(Option SyncOption)*Sync {
+	mylog = Option.Log
 	mylog.Info("NewSync instance")
 	MySyncRoomPool = make(map[string]*Room)
 	//mySyncPlayerRoom = make(map[int32]string)
 	sync := new(Sync)
-	sync.Options = options
+	sync.Option = Option
 
 	debugBreakPoint = 0
 	logicFrameMsgDefaultId = 16
@@ -50,7 +51,7 @@ func NewSync(options Options)*Sync {
 }
 
 func (sync *Sync)initPool(){
-	if mynetWay.Option.Store == 1{
+	if sync.Option.Store == 1{
 
 	}
 }
@@ -80,7 +81,7 @@ func (sync *Sync) delPoolElement(roomId string){
 }
 //进入战后，场景渲染完后，进入准确状态
 func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,conn *Conn) {
-	roomId := mynetWay.PlayerManager.GetRoomIdByPlayerId(requestPlayerReady.PlayerId)
+	roomId := myPlayerManager.GetRoomIdByPlayerId(requestPlayerReady.PlayerId)
 	mylog.Debug(" roomId :",roomId)
 	room,empty := sync.getPoolElementById(roomId)
 	if empty{
@@ -120,7 +121,7 @@ func  (sync *Sync)testFirstLogicFrame(room *Room){
 	if room.PlayerList[0].Id < 999{
 		var operations []*myproto.Operation
 		for _,player:= range room.PlayerList{
-			location := strconv.Itoa(zlib.GetRandInt32Num(sync.Options.MapSize)) + "," + strconv.Itoa(zlib.GetRandInt32Num(sync.Options.MapSize))
+			location := strconv.Itoa(zlib.GetRandInt32Num(sync.Option.MapSize)) + "," + strconv.Itoa(zlib.GetRandInt32Num(sync.Option.MapSize))
 			operation := myproto.Operation{
 				Id:       logicFrameMsgDefaultId,
 				Event:    "move",
@@ -200,19 +201,19 @@ func  (sync *Sync)Start(roomId string){
 		PlayerList		:room.PlayerList,
 		RandSeek		:room.RandSeek,
 		Time			:time.Now().UnixNano() / 1e6,
-		UdpPort			:mynetWay.Option.UdpPort,
+		UdpPort			:myNetWay.Option.UdpPort,
 	}
 
 	for _,player :=range room.PlayerList{
 		player.RoomId = room.Id
 		room.PlayersReadyList[player.Id] = 0
-		if mynetWay.Option.Store == 1{
+		if sync.Option.Store == 1{
 			//推送玩家缓存状态
 		}
 		//mySyncPlayerRoom[v.Id] = roomId
 	}
 
-	if mynetWay.Option.Store == 1{
+	if sync.Option.Store == 1{
 		//推送房间信息
 	}
 
@@ -241,11 +242,11 @@ func (sync *Sync) getPoolElementById(roomId string)(SyncRoomPoolElement *Room,em
 }
 //同步 玩家 操作 定时器
 func  (sync *Sync)logicFrameLoop(room *Room){
-	if sync.Options.FPS > 1000 {
+	if sync.Option.FPS > 1000 {
 		zlib.ExitPrint("fps > 1000 ms")
 	}
 
-	fpsTime :=  1000 /  sync.Options.FPS
+	fpsTime :=  1000 /  sync.Option.FPS
 	i := 0
 	for{
 		select {
@@ -275,7 +276,7 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 		return fpsTime
 	}
 
-	if sync.Options.LockMode == LOCK_MODE_PESSIMISTIC {
+	if sync.Option.LockMode == LOCK_MODE_PESSIMISTIC {
 		ack := 0
 		for _, v := range room.PlayersAckList {
 			if v == 1 {
@@ -430,11 +431,11 @@ func  (sync *Sync)roomEnd(roomId string,sendCloseChan int){
 	room.UpStatus(ROOM_STATUS_END)
 	room.EndTime = int32(zlib.GetNowTimeSecondToInt())
 	for _,v:= range room.PlayerList{
-		mynetWay.PlayerManager.UpPlayerRoomId(v.Id,"")
+		myPlayerManager.UpPlayerRoomId(v.Id,"")
 		//delete(mySyncPlayerRoom,v.Id)
 	}
 
-	if mynetWay.Option.Store == 1{
+	if sync.Option.Store == 1{
 
 	}
 
@@ -457,7 +458,7 @@ func  (sync *Sync)GameOver(requestGameOver myproto.RequestGameOver,conn *Conn){
 //玩家触发了该角色死亡
 func  (sync *Sync)PlayerOver(requestGameOver myproto.RequestPlayerOver,conn *Conn){
 	//roomId := mySyncPlayerRoom[requestGameOver.PlayerId]
-	roomId := mynetWay.PlayerManager.GetRoomIdByPlayerId(requestGameOver.PlayerId)
+	roomId := myPlayerManager.GetRoomIdByPlayerId(requestGameOver.PlayerId)
 	responseOtherPlayerOver := myproto.ResponseOtherPlayerOver{PlayerId: requestGameOver.PlayerId}
 	sync.boardCastInRoom(roomId,"otherPlayerOver",&responseOtherPlayerOver)
 }
@@ -471,7 +472,7 @@ func (sync *Sync)upSyncRoomPoolElementPlayersAckStatus(roomId string,status int)
 func (sync *Sync)roomOnlinePlayers(room *Room)[]int32{
 	var playerOnLine []int32
 	for _, v := range room.PlayerList {
-		player, empty := mynetWay.PlayerManager.GetById(v.Id)
+		player, empty := myPlayerManager.GetById(v.Id)
 		//mylog.Debug("pinfo::",player," empty:",empty," ,pid:",v.Id)
 		if empty {
 			continue
@@ -488,7 +489,7 @@ func (sync *Sync)roomOnlinePlayers(room *Room)[]int32{
 //玩家断开连接后
 func (sync *Sync)Close(conn *Conn){
 	mylog.Warning("sync.close")
-	roomId := mynetWay.PlayerManager.GetRoomIdByPlayerId(conn.PlayerId)
+	roomId := myPlayerManager.GetRoomIdByPlayerId(conn.PlayerId)
 	if roomId == ""{
 		//这里会先执行roomEnd，然后清空了player roomId 所有获取不到
 		mylog.Warning("roomid = empty ",conn.PlayerId)
@@ -531,7 +532,7 @@ func  (sync *Sync)boardCastInRoom(roomId string,action string ,contentStruct int
 			mylog.Error("player offline")
 			continue
 		}
-		mynetWay.SendMsgCompressByUid(player.Id,action,contentStruct)
+		myNetWay.SendMsgCompressByUid(player.Id,action,contentStruct)
 	}
 	//content ,_:= json.Marshal(contentStruct)
 	content ,_ := json.Marshal(JsonCamelCase{contentStruct})
@@ -544,7 +545,7 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,contentStruc
 	if empty {
 		zlib.ExitPrint("syncRoomPoolElement is empty!!!")
 	}
-	if sync.Options.LockMode == LOCK_MODE_PESSIMISTIC {
+	if sync.Option.LockMode == LOCK_MODE_PESSIMISTIC {
 		if syncRoomPoolElement.PlayersAckStatus == PLAYERS_ACK_STATUS_WAIT {
 			mylog.Error("syncRoomPoolElement PlayersAckStatus = ", PLAYERS_ACK_STATUS_WAIT,syncRoomPoolElement.PlayersAckList)
 			return
@@ -557,11 +558,11 @@ func  (sync *Sync)boardCastFrameInRoom(roomId string,action string ,contentStruc
 			mylog.Error("player offline")
 			continue
 		}
-		mynetWay.SendMsgCompressByUid(player.Id,action,contentStruct)
+		myNetWay.SendMsgCompressByUid(player.Id,action,contentStruct)
 
 	}
 
-	if sync.Options.LockMode == LOCK_MODE_PESSIMISTIC {
+	if sync.Option.LockMode == LOCK_MODE_PESSIMISTIC {
 		syncRoomPoolElement.PlayersAckList = PlayersAckList
 		sync.upSyncRoomPoolElementPlayersAckStatus(roomId, PLAYERS_ACK_STATUS_WAIT)
 	}
@@ -588,7 +589,7 @@ func  (sync *Sync)RoomHistory(requestRoomHistory myproto.RequestRoomHistory,conn
 	room,_ := sync.getPoolElementById(roomId)
 	responsePushRoomHistory := myproto.ResponsePushRoomHistory{}
 	responsePushRoomHistory.List = room.LogicFrameHistory
-	mynetWay.SendMsgCompressByUid(conn.PlayerId,"pushRoomHistory",&responsePushRoomHistory)
+	myNetWay.SendMsgCompressByUid(conn.PlayerId,"pushRoomHistory",&responsePushRoomHistory)
 }
 //玩家掉线了，重新连接后，恢复游戏了~这个时候，要通知另外的玩家
 func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayerResumeGame,conn *Conn){
@@ -616,7 +617,6 @@ func  (sync *Sync)PlayerResumeGame(requestPlayerResumeGame myproto.RequestPlayer
 		RoomId:requestPlayerResumeGame.RoomId,
 	}
 	sync.boardCastInRoom(room.Id,"otherPlayerResumeGame",&responseOtherPlayerResumeGame)
-	//mynetWay.SendMsgCompressByUid(wsConn.PlayerId,)
 	if restartGame == 1{
 		responseRestartGame := myproto.ResponseRestartGame{
 			RoomId: requestPlayerResumeGame.RoomId,
@@ -640,5 +640,5 @@ func  (sync *Sync)GetRoom(requestGetRoom myproto.RequestGetRoom,conn *Conn){
 		RandSeek:room.RandSeek,
 		RoomId: room.Id,
 	}
-	mynetWay.SendMsgCompressByUid(conn.PlayerId,"pushRoomInfo",&ResponsePushRoomInfo)
+	myNetWay.SendMsgCompressByUid(conn.PlayerId,"pushRoomInfo",&ResponsePushRoomInfo)
 }

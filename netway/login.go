@@ -20,7 +20,7 @@ func  (netWay *NetWay)loginPre(wsConn *Conn)(jwt zlib.JwtData,err error,firstMsg
 		netWay.CloseOneConn(wsConn, CLOSE_SOURCE_FD_READ_EMPTY)
 		return
 	}
-	msg,err := netWay.parserContentProtocol(content)
+	msg,err := myProtocolManager.parserContentProtocol(content)
 	if err != nil{
 		netWay.CloseOneConn(wsConn, CLOSE_SOURCE_FD_PARSE_CONTENT)
 		return

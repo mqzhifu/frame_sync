@@ -12,19 +12,22 @@ import (
 type NetWay struct {
 	Option          	NetWayOption
 	mySync 				*Sync
-	httpServer      	*http.Server
+	//httpServer      	*http.Server
 	MyCtx           	context.Context
-	MyCtxCancel     	context.CancelFunc
-	PlayerManager      	*PlayerManager
-	ProtocolActions 	*myprotocol.ProtocolActions
+
 	CloseChan       	chan int32
 	MatchSuccessChan    chan *Room
 	Status 				int
+
+	//MyCtxCancel     	context.CancelFunc
+	//PlayerManager      *PlayerManager
+	//ProtocolActions 	*myprotocol.ProtocolActions
 }
 
 type NetWayOption struct {
 	ListenIp			string		`json:"listenIp"`		//程序启动时监听的IP
 	OutIp				string		`json:"outIp"`			//对外访问的IP
+	HttpPort 			string 		`json:"httpPort"`		//短连接端口号
 	WsPort 				string		`json:"wsPort"`			//监听端口号
 	TcpPort 			string		`json:"tcpPort"`		//监听端口号
 	UdpPort				string 		`json:"udpPort"`		//UDP端口号
@@ -53,6 +56,7 @@ type NetWayOption struct {
 	RoomReadyTimeout	int32		`json:"roomReadyTimeout"`//一个房间的，玩家的准备，超时时间
 
 	Store 				int32 		`json:"store"`			//持久化：players room
+	LogOption 			zlib.LogOption `json:"-"`
 }
 //网络间的通信内容，最终被转换成的结构体
 //type Message struct {
@@ -63,7 +67,7 @@ type NetWayOption struct {
 //	SessionId 		string	`json:"sessionId"`
 //}
 
-var upgrader = websocket.Upgrader{
+var httpUpGrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	// 允许所有的CORS 跨域请求，正式环境可以关闭
@@ -73,60 +77,86 @@ var upgrader = websocket.Upgrader{
 }
 
 //下面是全局变量，主要是快捷方便使用，没实际意义
-//var mySync 		*Sync
-var mynetWay	*NetWay
+var myNetWay	*NetWay
 var myMatch		*Match
+var myMetrics 	*Metrics
+var myProtocolActions *myprotocol.ProtocolActions
+var myProtocolManager *ProtocolManager
+var myPlayerManager  *PlayerManager
+
+var mylog 		*zlib.Log
+var myhttpd 	*Httpd
 var connManager *ConnManager
-var myMetrics *Metrics
-var mylog *zlib.Log
-var prototolManager *PrototolManager
+
+
 
 func NewNetWay(option NetWayOption)*NetWay {
 	option.Mylog.Info("New NetWay instance :")
-	zlib.PrintStruct(option," : ")
+	option.Mylog.Debug("option:",option)
 
 	netWay := new(NetWay)
 	netWay.Option = option
 	netWay.Status = 1
-	mynetWay = netWay
+	myNetWay = netWay
+
 	//日志
 	mylog = option.Mylog
+	//http 工具
+	httpdOption := HttpdOption {
+		LogOption : netWay.Option.LogOption,
+		RootPath : "/www/",
+		Ip: netWay.Option.ListenIp,
+		Port: netWay.Option.HttpPort,
+		ParentCtx : option.OutCxt,
+	}
+	myhttpd = NewHttpd(httpdOption)
 	//匹配
 	matchOption := MatchOption{
 		RoomPeople: option.RoomPeople,
+		RoomReadyTimeout: option.RoomReadyTimeout,
 	}
 	myMatch = NewMatch(matchOption)
 	//同步
-	syncOptions := Options{
-		Log: mylog,
-		FPS: option.FPS,
-		MapSize: option.MapSize,
-		LockMode : option.LockMode,
+	syncOptions := SyncOption{
+		Log			: mylog,
+		FPS			: option.FPS,
+		MapSize		: option.MapSize,
+		LockMode 	: option.LockMode,
 	}
 	netWay.mySync = NewSync(syncOptions)
 	//ws conn 管理
-	connManager = NewConnManager()
+	connManager = NewConnManager(option.MaxClientConnNum,option.ConnTimeout)
 	//玩家信息管理模块
-	netWay.PlayerManager = PlayerManagerNew()
+	myPlayerManager = NewPlayerManager(option.Store,option.ContentType,option.Protocol)
 	//传输内容体的配置
-	netWay.ProtocolActions = myprotocol.ProtocolActionsNew()
+	myProtocolActions = myprotocol.NewProtocolActions(mylog)
+	//协议管理适配器
+	protocolManagerOption := ProtocolManagerOption{
+		Ip				: netWay.Option.ListenIp,
+		HttpPort		: netWay.Option.WsPort,
+		TcpPort			: netWay.Option.TcpPort,
+		WsUri			: netWay.Option.WsUri,
+		OpenNewConnBack	: netWay.OpenNewConn,
+	}
+	myProtocolManager =  NewProtocolManager(protocolManagerOption)
 	//统计模块
-	myMetrics = MetricsNew()
+	myMetrics = NewMetrics()
 
 	return netWay
 }
 //启动 - 入口
 func (netWay *NetWay)Startup(){
+	mylog.Alert("netWay Startup:")
 	//启动时间
-	s_time := zlib.GetNowMillisecond()
-	myMetrics.fastLog("starupTime",METRICS_OPT_PLUS,int(s_time))
+	startTime := zlib.GetNowMillisecond()
+	myMetrics.fastLog("netWay starUpTime",METRICS_OPT_PLUS,int(startTime))
 	netWay.Status = 2
-	//协议管理适配器
-	prototolManager =  PrototolManagerNew()
 	//在外层的CTX上，派生netway自己的根ctx
-	startupCtx ,cancel := context.WithCancel(netWay.Option.OutCxt)
+	//startupCtx ,cancel := context.WithCancel(netWay.Option.OutCxt)
+	startupCtx , _ := context.WithCancel(netWay.Option.OutCxt)
 	netWay.MyCtx = startupCtx
-	netWay.MyCtxCancel = cancel
+	//netWay.MyCtxCancel = cancel
+	go myhttpd.start()
 	//匹配模块，成功匹配一组玩家后，推送消息的管道
 	netWay.MatchSuccessChan = make(chan *Room,10)
 	//开启匹配服务
@@ -134,16 +164,19 @@ func (netWay *NetWay)Startup(){
 	//监听超时的WS连接
 	go connManager.checkConnPoolTimeout(startupCtx)
 	//接收<匹配成功>的房间信息，并分发
-	go netWay.recviceMatchSuccess(startupCtx)
+	go netWay.receiveMatchSuccess(startupCtx)
 	//统计模块，消息监听开启
 	go myMetrics.start(startupCtx)
 	//玩家缓存状态，下线后，超时清理
-	go netWay.PlayerManager.checkOfflineTimeout(startupCtx)
-	go prototolManager.Start(startupCtx)
+	//go netWay.PlayerManager.checkOfflineTimeout(startupCtx)
+	myProtocolManager.Start(startupCtx)
 
 	netWay.CloseChan = make(chan int32)
 	go func() {
-		//这里是2种关闭方式，可以通过内置的管道，也可以使用上下文
+		mylog.Alert(" Listening sign...")
+		//这里是2种关闭方式
+		//1. 内置的关闭管道接收外部直接发送的信号
+		//2. 监听外部给context管道信号
 		select {
 			case <- netWay.CloseChan:
 				netWay.Quit()
@@ -151,28 +184,6 @@ func (netWay *NetWay)Startup(){
 				netWay.Quit()
 		}
 	}()
-}
-
-func(netWay *NetWay)wsHandler( resp http.ResponseWriter, req *http.Request) {
-	netWay.Option.Mylog.Info("wsHandler: have a new client http request")
-	//http 升级 ws
-	wsConnFD, err := upgrader.Upgrade(resp, req, nil)
-	netWay.Option.Mylog.Info("Upgrade this http req to websocket")
-	if err != nil {
-		netWay.Option.Mylog.Error("Upgrade websocket failed: ", err.Error())
-		return
-	}
-	imp := WebsocketConnImpNew(wsConnFD)
-	netWay.OpenNewConn(imp)
-}
-
-func(netWay *NetWay)tcpHandler(tcpConn *TcpConn){
-	imp := TcpConnImpNew(tcpConn)
-	netWay.OpenNewConn(imp)
-}
-
-func(netWay *NetWay)udpHandler(){
-
 }
 //一个客户端连接请求进入
 func(netWay *NetWay)OpenNewConn( wsConnFD FDAdapter) {
@@ -185,7 +196,7 @@ func(netWay *NetWay)OpenNewConn( wsConnFD FDAdapter) {
 		return
 	}
 	//登陆验证
-	jwtData,err,firstMsg := mynetWay.loginPre(NewWsConn)
+	jwtData,err,firstMsg := netWay.loginPre(NewWsConn)
 	if err != nil{
 		return
 	}
@@ -204,7 +215,7 @@ func(netWay *NetWay)OpenNewConn( wsConnFD FDAdapter) {
 		return
 	}
 	//给用户再绑定到 用户状态池,该池与连接池的区分 是：连接一但关闭，该元素即删除~而用户状态得需要保存
-	playerConnInfo ,_ :=netWay.PlayerManager.addPlayer(jwtData.Payload.Uid,firstMsg)
+	playerConnInfo ,_ := myPlayerManager.addPlayer(jwtData.Payload.Uid,firstMsg)
 	loginRes = myproto.ResponseLoginRes{
 		Code: 200,
 		ErrMsg: "",
@@ -223,8 +234,8 @@ func(netWay *NetWay)OpenNewConn( wsConnFD FDAdapter) {
 
 }
 
-func(netWay *NetWay)recviceMatchSuccess(ctx context.Context){
-	mylog.Info("recviceMatchSuccess start:")
+func(netWay *NetWay)receiveMatchSuccess(ctx context.Context){
+	mylog.Alert("receiveMatchSuccess start:")
 	isBreak := 0
 	for{
 		select {
@@ -249,7 +260,7 @@ func(netWay *NetWay)recviceMatchSuccess(ctx context.Context){
 			break
 		}
 	}
-	mylog.Alert(CTX_DONE_PRE+"recviceMatchSuccessone close")
+	mylog.Alert(CTX_DONE_PRE+"receiveMatchSuccessOne close")
 }
 
 func(netWay *NetWay)heartbeat(requestClientHeartbeat myproto.RequestClientHeartbeat,wsConn *Conn){
@@ -257,14 +268,8 @@ func(netWay *NetWay)heartbeat(requestClientHeartbeat myproto.RequestClientHeartb
 	wsConn.UpTime = int32(now)
 }
 //=================================
-//监听到某个FD被关闭后，回调函数
-func  (conn *Conn)CloseHandler(code int, text string) error{
-	mynetWay.CloseOneConn(conn, CLOSE_SOURCE_CLIENT)
-	return nil
-}
-
 func (netWay *NetWay)CloseOneConn(wsConn *Conn,source int){
-	netWay.Option.Mylog.Info("wsConn close ,source : ",source,wsConn.PlayerId)
+	mylog.Info("wsConn close ,source : ",source,wsConn.PlayerId)
 	if wsConn.Status == CONN_STATUS_CLOSE {
 		netWay.Option.Mylog.Error("CloseOneConn error :wsConn.Status == CLOSE")
 		return
@@ -275,7 +280,7 @@ func (netWay *NetWay)CloseOneConn(wsConn *Conn,source int){
 	wsConn.CloseChan <- 1
 	//netWay.Players.delById(wsConn.PlayerId)//这个不能删除，用于玩家掉线恢复的记录
 	//先把玩家的在线状态给变更下，不然 mySync.close 里面获取房间在线人数，会有问题
-	netWay.PlayerManager.upPlayerStatus(wsConn.PlayerId, PLAYER_STATUS_OFFLINE)
+	myPlayerManager.upPlayerStatus(wsConn.PlayerId, PLAYER_STATUS_OFFLINE)
 	//通知同步服务，先做构造处理
 	netWay.mySync.Close(wsConn)
 
@@ -290,7 +295,8 @@ func (netWay *NetWay)CloseOneConn(wsConn *Conn,source int){
 	myMetrics.fastLog("total.fd.num",METRICS_OPT_DIM,0)
 	myMetrics.fastLog("history.fd.destroy",METRICS_OPT_INC,0)
 }
-//退出
+//退出，目前能直接调用此函数的，就只有一种情况：
+//MAIN 接收到了中断信号，并执行了：context-cancel()，然后，startup函数的守护监听到，调用些方法
 func  (netWay *NetWay)Quit() {
 	mylog.Warning("netWay.Quit")
 	if netWay.Status == 3{
@@ -298,7 +304,8 @@ func  (netWay *NetWay)Quit() {
 		return
 	}
 	netWay.Status = 3//关闭中
-	prototolManager.Quit(netWay.MyCtx)
+	myhttpd.shutdown()
+	myProtocolManager.Quit(netWay.MyCtx)
 	//
 	//netWay.MyCtxCancel() //关闭 所有  startup开启的协程
 	//

@@ -13,6 +13,8 @@ import (
 
 type ConnManager struct {
 	Pool map[int32]*Conn //ws 连接池
+	MaxClientConnNum int32
+	ConnTimeout		int32
 }
 
 type Conn struct {
@@ -29,16 +31,19 @@ type Conn struct {
 	UdpConn 		bool
 }
 
-func NewConnManager()*ConnManager {
+func NewConnManager(maxClientConnNum int32,connTimeout int32)*ConnManager {
+	mylog.Info("NewConnManager instance:")
 	connManager :=  new(ConnManager)
 	//全局变量
 	connManager.Pool = make(map[int32]*Conn)
+	connManager.MaxClientConnNum = maxClientConnNum
+	connManager.ConnTimeout = connTimeout
 	return connManager
 }
 //创建一个新的连接结构体
 func (connManager *ConnManager)CreateOneConn(connFd FDAdapter)(myConn *Conn,err error ){
 	mylog.Info("Create one conn  client struct")
-	if int32(len(connManager.Pool))   > mynetWay.Option.MaxClientConnNum{
+	if int32(len(connManager.Pool))   > connManager.MaxClientConnNum{
 		mylog.Error("more MaxClientConnNum")
 		return myConn,errors.New("more MaxClientConnNum")
 	}
@@ -74,7 +79,7 @@ func  (connManager *ConnManager)addConnPool( NewConn *Conn)error{
 		responseKickOff := myproto.ResponseKickOff{
 			Time: zlib.GetNowMillisecond(),
 		}
-		mynetWay.SendMsgCompressByConn(oldConn,"kickOff",&responseKickOff)
+		myNetWay.SendMsgCompressByConn(oldConn,"kickOff",&responseKickOff)
 		//return err
 	}
 	mylog.Info("addConnPool : ",NewConn.PlayerId)
@@ -91,7 +96,7 @@ func   (conn *Conn)Write(content []byte,messageType int){
 	defer func() {
 		if err := recover(); err != nil {
 			mylog.Error("conn.Conn.WriteMessage failed:",err)
-			mynetWay.CloseOneConn(conn,CLOSE_SOURCE_SEND_MESSAGE)
+			myNetWay.CloseOneConn(conn,CLOSE_SOURCE_SEND_MESSAGE)
 		}
 	}()
 
@@ -111,7 +116,7 @@ func   (conn *Conn)UpLastTime(){
 func   (conn *Conn)ReadBinary()(content []byte,err error){
 	messageType , dataByte  , err  := conn.Conn.ReadMessage()
 	if err != nil{
-		mynetWay.Option.Mylog.Error("conn.Conn.ReadMessage err: ",err.Error())
+		mylog.Error("conn.Conn.ReadMessage err: ",err.Error())
 		return content,err
 	}
 	mylog.Debug("conn.ReadMessage Binary messageType:",messageType , " len :",len(dataByte) , " data:" ,string(dataByte))
@@ -125,7 +130,7 @@ func   (conn *Conn)Read()(content string,err error){
 	messageType , dataByte  , err  := conn.Conn.ReadMessage()
 	if err != nil{
 		myMetrics.fastLog("total.input.err.num",METRICS_OPT_INC,0)
-		mynetWay.Option.Mylog.Error("conn.Conn.ReadMessage err: ",err.Error())
+		mylog.Error("conn.Conn.ReadMessage err: ",err.Error())
 		return content,err
 	}
 	myMetrics.fastLog("total.input.num",METRICS_OPT_INC,0)
@@ -143,15 +148,15 @@ func   (conn *Conn)Read()(content string,err error){
 }
 
 func  (conn *Conn)IOLoop(){
-	mynetWay.Option.Mylog.Info("IOLoop:")
-	mynetWay.Option.Mylog.Info("set conn status :", CONN_STATUS_EXECING, " make close chan")
+	mylog.Info("IOLoop:")
+	mylog.Info("set conn status :", CONN_STATUS_EXECING, " make close chan")
 	conn.Status = CONN_STATUS_EXECING
 	conn.CloseChan = make(chan int)
-	ctx,cancel := context.WithCancel(mynetWay.Option.OutCxt)
+	ctx,cancel := context.WithCancel(myNetWay.Option.OutCxt)
 	go conn.ReadLoop(ctx)
 	go conn.ProcessMsgLoop(ctx)
 	<- conn.CloseChan
-	mynetWay.Option.Mylog.Warning("IOLoop receive chan quit~~~")
+	mylog.Warning("IOLoop receive chan quit~~~")
 	cancel()
 }
 func  (conn *Conn)ReadLoop(ctx context.Context){
@@ -167,7 +172,7 @@ func  (conn *Conn)ReadLoop(ctx context.Context){
 				IsUnexpectedCloseError := websocket.IsUnexpectedCloseError(err)
 				mylog.Warning("connReadLoop connRead err:",err,"IsUnexpectedCloseError:",IsUnexpectedCloseError)
 				if IsUnexpectedCloseError{
-					mynetWay.CloseOneConn(conn, CLOSE_SOURCE_CLIENT_WS_FD_GONE)
+					myNetWay.CloseOneConn(conn, CLOSE_SOURCE_CLIENT_WS_FD_GONE)
 					goto end
 				}else{
 					continue
@@ -179,7 +184,7 @@ func  (conn *Conn)ReadLoop(ctx context.Context){
 			}
 
 			conn.UpLastTime()
-			msg,err  := mynetWay.parserContentProtocol(content)
+			msg,err  := myProtocolManager.parserContentProtocol(content)
 			if err !=nil{
 				mylog.Warning("parserContent err :",err.Error())
 				continue
@@ -188,7 +193,7 @@ func  (conn *Conn)ReadLoop(ctx context.Context){
 		}
 	}
 end :
-	mynetWay.Option.Mylog.Warning("connReadLoop receive signal: done.")
+	mylog.Warning("connReadLoop receive signal: done.")
 }
 
 func  (conn *Conn)ProcessMsgLoop(ctx context.Context){
@@ -199,19 +204,23 @@ func  (conn *Conn)ProcessMsgLoop(ctx context.Context){
 				ctxHasDone = 1
 			case msg := <-conn.MsgInChan:
 				mylog.Info("ProcessMsgLoop receive msg",msg.Action)
-				mynetWay.Router(msg,conn)
+				myNetWay.Router(msg,conn)
 		}
 		if ctxHasDone == 1{
 			goto end
 		}
 	}
 end :
-	mynetWay.Option.Mylog.Warning("ProcessMsgLoop receive signal: done.")
+	mylog.Warning("ProcessMsgLoop receive signal: done.")
+}
+//监听到某个FD被关闭后，回调函数
+func  (conn *Conn)CloseHandler(code int, text string) error{
+	myNetWay.CloseOneConn(conn, CLOSE_SOURCE_CLIENT)
+	return nil
 }
 
-
 func (connManager *ConnManager)checkConnPoolTimeout(ctx context.Context){
-	mylog.Info("checkConnPoolTimeout start:")
+	mylog.Alert("checkConnPoolTimeout start:")
 	for{
 		select {
 			case   <-ctx.Done():
@@ -219,9 +228,9 @@ func (connManager *ConnManager)checkConnPoolTimeout(ctx context.Context){
 			default:
 				for _,v := range connManager.Pool{
 					now := int32 (zlib.GetNowTimeSecondToInt())
-					x := v.UpTime + mynetWay.Option.ConnTimeout
+					x := v.UpTime + connManager.ConnTimeout
 					if now  > x {
-						mynetWay.CloseOneConn(v, CLOSE_SOURCE_TIMEOUT)
+						myNetWay.CloseOneConn(v, CLOSE_SOURCE_TIMEOUT)
 					}
 				}
 				time.Sleep(time.Second * 1)

@@ -14,6 +14,7 @@ type Match struct {
 
 type MatchOption struct {
 	RoomPeople	int32
+	RoomReadyTimeout int32
 }
 
 type PlayerSign struct {
@@ -25,6 +26,9 @@ var signPlayerPool []PlayerSign
 func NewMatch(matchOption MatchOption)*Match {
 	mylog.Info("NewMatch instance")
 	match  := new(Match)
+	if matchOption.RoomPeople <= 1{
+		zlib.ExitPrint("roomPeople <= 1")
+	}
 	match.Option = matchOption
 	return match
 }
@@ -40,7 +44,7 @@ func (match *Match)getOneSignPlayerById(playerId int32 ) (playerSign PlayerSign,
 
 func (match *Match) addOnePlayer(requestPlayerMatchSign myproto.RequestPlayerMatchSign,wsConn *Conn){
 	playerId := wsConn.PlayerId
-	player ,empty := mynetWay.PlayerManager.GetById(requestPlayerMatchSign.PlayerId)
+	player ,empty := myPlayerManager.GetById(requestPlayerMatchSign.PlayerId)
 	if empty{
 		msg := "playerMatchSign getPlayById is empty~id:"+strconv.Itoa(int(requestPlayerMatchSign.PlayerId))
 		match.matchSignErrAndSend(msg,wsConn)
@@ -81,7 +85,7 @@ func (match *Match)matchSignErrAndSend(msg string,wsConn *Conn){
 		PlayerId: wsConn.PlayerId,
 		Msg: msg,
 	}
-	mynetWay.SendMsgCompressByUid(wsConn.PlayerId,"playerMatchSignFailed",&playerMatchSignFailed)
+	myNetWay.SendMsgCompressByUid(wsConn.PlayerId,"playerMatchSignFailed",&playerMatchSignFailed)
 }
 
 func (match *Match) delOnePlayer(requestCancelSign myproto.RequestPlayerMatchSignCancel,wsConn *Conn){
@@ -104,7 +108,7 @@ func (match *Match) realDelOnePlayer(playerId int32){
 }
 
 func (match *Match) doingAndCreateRoom(ctx context.Context,matchSuccessChan chan *Room){
-	mylog.Info("matchingPlayerCreateRoom:start")
+	mylog.Alert("matchingPlayerCreateRoom:start")
 	for{
 		select {
 			case   <-ctx.Done():
@@ -120,10 +124,10 @@ func (match *Match) doingAndCreateRoom(ctx context.Context,matchSuccessChan chan
 				newRoom := NewRoom()
 				//timeout := int32(zlib.GetNowTimeSecondToInt()) + mynetWay.Option.RoomTimeout
 				//newRoom.Timeout = int32(timeout)
-				readyTimeout := int32(zlib.GetNowTimeSecondToInt()) + mynetWay.Option.RoomReadyTimeout
+				readyTimeout := int32(zlib.GetNowTimeSecondToInt()) + match.Option.RoomReadyTimeout
 				newRoom.ReadyTimeout = readyTimeout
 				for i:=0;i < len(signPlayerPool);i++{
-					player,empty := mynetWay.PlayerManager.GetById(signPlayerPool[i].PlayerId)
+					player,empty := myPlayerManager.GetById(signPlayerPool[i].PlayerId)
 					if empty{
 						mylog.Error("matching Players.getById empty , ", signPlayerPool[i].PlayerId)
 					}

@@ -2,125 +2,239 @@ package netway
 
 import (
 	"context"
-	"flag"
-	"github.com/gorilla/websocket"
+	"encoding/json"
+	"errors"
+	"frame_sync/myproto"
+	"github.com/golang/protobuf/proto"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"zlib"
 )
 
-//type PrototolFD struct {
-//	WSFD
-//	TCPFD 		*net.Conn
-//}
-
-type PrototolManager struct {
+type ProtocolManager struct {
 	TcpServer *TcpServer
+	httpServer      	*http.Server
+	Option ProtocolManagerOption
+}
+type ProtocolManagerOption struct {
+	Ip 				string
+	HttpPort 		string
+	TcpPort 		string
+	WsUri 			string
+	OpenNewConnBack	func ( wsConnFD FDAdapter)
 }
 //
-func PrototolManagerNew()*PrototolManager{
-	prototolManager := new (PrototolManager)
-	return prototolManager
+func NewProtocolManager(option ProtocolManagerOption)*ProtocolManager{
+	mylog.Info("NewProtocolManager instance:")
+	protocolManager := new (ProtocolManager)
+	protocolManager.Option = option
+	return protocolManager
 }
-func (prototolManager *PrototolManager)Start(outCtx context.Context){
+func (protocolManager *ProtocolManager)Start(outCtx context.Context){
 	//开始HTTP 监听 模块
-	go prototolManager.startHttpServer()
+	go protocolManager.startHttpServer()
 	//tcp server
-	myTcpServer :=  TcpServerNew(outCtx)
-	prototolManager.TcpServer = myTcpServer
+	myTcpServer :=  NewTcpServer(outCtx,protocolManager.Option.Ip,protocolManager.Option.TcpPort)
+	protocolManager.TcpServer = myTcpServer
 	go myTcpServer.Start()
 }
 
 //启动HTTP 服务
-func (prototolManager *PrototolManager)startHttpServer( ){
-	mynetWay.Option.Mylog.Info("ws Startup : ",mynetWay.Option.ListenIp+":"+mynetWay.Option.WsPort,mynetWay.Option.WsUri)
+func (protocolManager *ProtocolManager)startHttpServer( ){
+	dns := protocolManager.Option.Ip + ":" + protocolManager.Option.HttpPort
+	mylog.Alert("startWsHttpServer:",dns)
 
-	dns := mynetWay.Option.ListenIp + ":" + mynetWay.Option.WsPort
-	var addr = flag.String("server addr", dns, "server address")
-
-	logger := log.New(os.Stdout,"h_s_err",log.Ldate)
+	logger := log.New(os.Stdout,"http.server_err",log.Ldate)
 	httpServer := & http.Server{
-		Addr:*addr,
+		Addr:dns,
 		ErrorLog: logger,
 	}
 	//监听WS请求
-	http.HandleFunc(mynetWay.Option.WsUri,mynetWay.wsHandler)
+	http.HandleFunc(protocolManager.Option.WsUri,protocolManager.wsHandler)
 	//监听普通HTTP请求
-	http.HandleFunc("/www/", wwwHandler)
+	//http.HandleFunc(myhttpd.RootPath, myhttpd.wwwHandler)
 
-	mynetWay.httpServer = httpServer
+	protocolManager.httpServer = httpServer
+	//这里开始阻塞，直到接收到停止信号
 	err := httpServer.ListenAndServe()
 	if err != nil {
-		mynetWay.Option.Mylog.Error(" ListenAndServe err:", err)
+		mylog.Error(" ListenAndServe err:", err)
 	}
 }
 
-func (prototolManager *PrototolManager)Quit( startupCtx context.Context){
-	//ctx, _ := context.WithCancel(mynetWay.Option.Cxt)
-	//if mynetWay.Option.Protocol == PROTOCOL_WEBSOCKET{
-		mynetWay.httpServer.Shutdown(startupCtx)
-		mylog.Alert(CTX_DONE_PRE + " httpServer")
-	//}else if mynetWay.Option.Protocol == PROTOCOL_TCP{
-		prototolManager.TcpServer.Shutdown()
-	//}
+func(protocolManager *ProtocolManager)wsHandler( resp http.ResponseWriter, req *http.Request) {
+	mylog.Info("wsHandler: have a new client http request")
+	//http 升级 ws
+	wsConnFD, err := httpUpGrader.Upgrade(resp, req, nil)
+	mylog.Info("Upgrade this http req to websocket")
+	if err != nil {
+		mylog.Error("Upgrade websocket failed: ", err.Error())
+		return
+	}
+	imp := WebsocketConnImpNew(wsConnFD)
+	protocolManager.Option.OpenNewConnBack(imp)
+}
+
+func(protocolManager *ProtocolManager)tcpHandler(tcpConn *TcpConn){
+	imp := TcpConnImpNew(tcpConn)
+	protocolManager.Option.OpenNewConnBack(imp)
+}
+
+func(protocolManager *ProtocolManager)udpHandler(){
+
+}
+func (protocolManager *ProtocolManager)Quit( startupCtx context.Context){
+	mylog.Alert(CTX_DONE_PRE + " httpServer")
+	protocolManager.httpServer.Shutdown(startupCtx)
+	protocolManager.TcpServer.Shutdown()
+}
+
+//=======================================
+//协议层的解包已经结束，这个时候需要将content内容进行转换成MSG结构
+func  (protocolManager *ProtocolManager)parserContentMsg(msg myproto.Msg ,out interface{},playerId int32)error{
+	content := msg.Content
+	var err error
+	//protocolCtrlInfo := myPlayerManager.GetPlayerCtrlInfoById(playerId)
+	//contentType := protocolCtrlInfo.ContentType
+	if msg.ContentType == CONTENT_TYPE_JSON {
+		unTrunVarJsonContent := zlib.CamelToSnake([]byte(content))
+		err = json.Unmarshal(unTrunVarJsonContent,out)
+	}else if  msg.ContentType == CONTENT_TYPE_PROTOBUF {
+		aaa := out.(proto.Message)
+		err = proto.Unmarshal([]byte(content),aaa)
+	}else{
+		mylog.Error("parserContent err")
+	}
+
+	if err != nil{
+		mylog.Error("parserMsgContent:",err.Error())
+		return err
+	}
+
+	mylog.Debug("protocolManager parserMsgContent:",out)
+
+	return nil
+}
+//解析C端发送的数据，这一层，对于用户层的content数据不做处理
+//前2个字节控制流，3-6为协议号，7-38为sessionId
+func  (protocolManager *ProtocolManager)parserContentProtocol(content string)(message myproto.Msg,err error){
+	protocolSum := 6
+	if len(content)<protocolSum{
+		return message,errors.New("content < "+ strconv.Itoa(protocolSum))
+	}
+	if len(content)==protocolSum{
+		errMsg := "content = "+strconv.Itoa(protocolSum)+" ,body is empty"
+		return message,errors.New(errMsg)
+	}
+	ctrlStream := content[0:2]
+	ctrlInfo := protocolManager.parserProtocolCtrlInfo([]byte(ctrlStream))
+	actionIdStr := content[2:6]
+	actionId,_ := strconv.Atoi(actionIdStr)
+	actionName,empty := myProtocolActions.GetActionName(int32(actionId),"client")
+	if empty{
+		errMsg := "actionId ProtocolActions.GetActionName empty!!!"
+		mylog.Error(errMsg,actionId)
+		return message,errors.New("actionId ProtocolActions.GetActionName empty!!!")
+	}
+
+	mylog.Info("parserContent actionid:",actionId, ",actionName:",actionName.Action)
+
+	sessionId := ""
+	userData := ""
+	if actionName.Action != "login"{
+		sessionId = content[6:38]
+		userData = content[38:]
+	}else{
+		userData = content[6:]
+	}
+
+	msg := myproto.Msg{
+		Action: actionName.Action,
+		Content:userData,
+		ContentType : ctrlInfo.ContentType,
+		ProtocolType: ctrlInfo.ProtocolType,
+		SessionId: sessionId,
+	}
+	mylog.Debug("msg:",msg)
+	return msg,nil
 }
 
 
-//=================================
-type FDAdapter interface {
-	SetCloseHandler(h func(code int, text string) error)
-	WriteMessage(messageType int, data []byte) error
-	ReadMessage()(messageType int, p []byte, err error)
-	Close()error
+type ProtocolCtrlInfo struct {
+	ContentType int32
+	ProtocolType int32
 }
-//===========================
-type WebsocketConnImp struct {
-	FD	*websocket.Conn
-}
-func WebsocketConnImpNew(FD *websocket.Conn)*WebsocketConnImp{
-	websocketConnImp := new (WebsocketConnImp)
-	websocketConnImp.FD = FD
-	return websocketConnImp
-}
-
-func (websocketConnImp *WebsocketConnImp)SetCloseHandler(h func(code int, text string)error){
-	websocketConnImp.FD.SetCloseHandler(h)
+func (protocolManager *ProtocolManager)parserProtocolCtrlInfo(stream []byte)ProtocolCtrlInfo{
+	//firstByte := stream[0:1][0]
+	//mylog.Debug("firstByte:",firstByte)
+	//firstByteHighThreeBit := (firstByte >> 5 ) & 7
+	//firstByteLowThreeBit := ((firstByte << 5 ) >> 5 )  & 7
+	firstByteHighThreeBit , _:= strconv.Atoi(string(stream[0:1]))
+	firstByteLowThreeBit , _:= strconv.Atoi(string(stream[1:2]))
+	protocolCtrlInfo := ProtocolCtrlInfo{
+		ContentType : int32(firstByteHighThreeBit),
+		ProtocolType : int32(firstByteLowThreeBit),
+	}
+	mylog.Info("parserProtocolCtrlInfo ContentType:",protocolCtrlInfo.ContentType,",ProtocolType:",protocolCtrlInfo.ProtocolType)
+	return protocolCtrlInfo
 }
 
-func (websocketConnImp *WebsocketConnImp)WriteMessage(messageType int, data []byte) error{
-	return websocketConnImp.FD.WriteMessage(messageType,data)
+//将 结构体 压缩成 字符串
+func  (protocolManager *ProtocolManager)CompressContent(contentStruct interface{},playerId int32)(content []byte  ,err error){
+	protocolCtrlInfo := myPlayerManager.GetPlayerCtrlInfoById(playerId)
+	contentType := protocolCtrlInfo.ContentType
+
+	mylog.Debug("CompressContent contentType:",contentType)
+	if contentType == CONTENT_TYPE_JSON {
+		//这里有个问题：纯JSON格式与PROTOBUF格式在PB文件上 不兼容
+		//严格来说是GO语言与protobuf不兼容，即：PB文件的  结构体中的 JSON-TAG
+		//PROTOBUF如果想使用驼峰式变量名，即：成员变量名区分出大小写，那必须得用<下划线>分隔，编译后，下划线转换成大写字母
+		//编译完成后，虽然支持了驼峰变量名，但json-tag 并不是驼峰式，却是<下划线>式
+		//那么，在不想改PB文件的前提下，就得在程序中做兼容
+
+		//所以，先将content 字符串 由下划线转成 驼峰式
+		content, err = json.Marshal(JsonCamelCase{contentStruct})
+		//mylog.Info("CompressContent json:",string(content),err )
+	}else if  contentType == CONTENT_TYPE_PROTOBUF {
+		contentStruct := contentStruct.(proto.Message)
+		content, err = proto.Marshal(contentStruct)
+	}else{
+		err = errors.New(" switch err")
+	}
+	if err != nil{
+		mylog.Error("CompressContent err :",err.Error())
+	}
+	return content,err
 }
 
-func (websocketConnImp *WebsocketConnImp)Close()error{
-	return websocketConnImp.FD.Close()
+type JsonCamelCase struct {
+	Value interface{}
+}
+//下划线 转 驼峰命
+func Case2Camel(name string) string {
+	//将 下划线 转 空格
+	name = strings.Replace(name, "_", " ", -1)
+	//将 字符串的 每个 单词 的首字母转大写
+	name = strings.Title(name)
+	//最后再将空格删掉
+	return strings.Replace(name, " ", "", -1)
 }
 
-func (websocketConnImp *WebsocketConnImp)ReadMessage()(messageType int, p []byte, err error){
-	return websocketConnImp.FD.ReadMessage()
-}
-
-//=========================
-type TcpConnImp struct {
-	FD	*TcpConn
-}
-func TcpConnImpNew(FD *TcpConn)*TcpConnImp{
-	tcpConnImp := new (TcpConnImp)
-	tcpConnImp.FD = FD
-	return tcpConnImp
-}
-
-func (tcpConnImp *TcpConnImp)SetCloseHandler(h func(code int, text string)error){
-	tcpConnImp.FD.SetCloseHandler(h)
-}
-
-func (tcpConnImp *TcpConnImp)WriteMessage(messageType int, data []byte) error{
-	return tcpConnImp.FD.WriteMessage(messageType,data)
-}
-
-func (tcpConnImp *TcpConnImp)Close()error{
-	return tcpConnImp.FD.Close()
-}
-
-func (tcpConnImp *TcpConnImp)ReadMessage()(messageType int, p []byte, err error){
-	return tcpConnImp.FD.ReadMessage()
+func (c JsonCamelCase) MarshalJSON() ([]byte, error) {
+	var keyMatchRegex = regexp.MustCompile(`\"(\w+)\":`)
+	marshalled, err := json.Marshal(c.Value)
+	converted := keyMatchRegex.ReplaceAllFunc(
+		marshalled,
+		func(match []byte) []byte {
+			matchStr := string(match)
+			key := matchStr[1 : len(matchStr)-2]
+			resKey := zlib.Lcfirst(Case2Camel(key))
+			return []byte(`"` + resKey + `":`)
+		},
+	)
+	return converted, err
 }

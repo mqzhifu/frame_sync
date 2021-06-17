@@ -68,11 +68,11 @@ func  (udpServer *UdpServer)Start(){
 	}
 }
 func  (udpServer *UdpServer)processOneMsg(data string,addr *net.UDPAddr){
-	msg ,err := mynetWay.parserContentProtocol( data)
+	msg ,err := myProtocolManager.parserContentProtocol( data)
 	if err != nil{
 		mylog.Error("parserContentProtocol err",err)
 	}
-	playerId ,ok := mynetWay.PlayerManager.SidMapPid[msg.SessionId]
+	playerId ,ok := myPlayerManager.SidMapPid[msg.SessionId]
 	if !ok{
 		mylog.Error("mynetWay.PlayerManager.SidMapPid is empty")
 		return
@@ -94,7 +94,7 @@ func  (udpServer *UdpServer)processOneMsg(data string,addr *net.UDPAddr){
 
 	wsConn,_ := connManager.getConnPoolById(playerId)
 	wsConn.UdpConn = true
-	mynetWay.Router(msg,wsConn)
+	myNetWay.Router(msg,wsConn)
 }
 
 func  (udpServer *UdpServer)StartClient(){
@@ -135,90 +135,3 @@ func   (udpServer *UdpServer)Shutdown( ctx context.Context){
 	//	mylog.Error("tcpServer.listener.Close err :",err)
 	//}
 }
-
-//====================================================================
-//type TcpConn struct {
-//	conn net.UDPConn
-//	MsgQueue [][]byte
-//	callbackCloseHandle func(code int, text string)error
-//}
-//
-//func TcpConnNew(conn net.Conn)*TcpConn{
-//	mylog.Info("TcpConnNew")
-//	tcpConn := new (TcpConn)
-//	tcpConn.conn = conn
-//	tcpConn.callbackCloseHandle = nil
-//	return tcpConn
-//}
-//
-//func  (tcpConn *TcpConn)start(){
-//	mylog.Info("TcpConnNew.start")
-//	go tcpConn.readLoop();
-//	time.Sleep(time.Millisecond * 500)
-//	mynetWay.tcpHandler(tcpConn)
-//}
-//
-//func  (tcpConn *TcpConn)SetCloseHandler(h func(code int, text string)error) {
-//	tcpConn.callbackCloseHandle = h
-//}
-//
-//func  (tcpConn *TcpConn)Close()error{
-//	//myTcpServer.pool[]
-//	tcpConn.realClose(1)
-//	return nil
-//}
-//
-//func  (tcpConn *TcpConn)realClose(source int){
-//	if tcpConn.callbackCloseHandle != nil{
-//		tcpConn.callbackCloseHandle(555,"close")
-//	}
-//	mylog.Warning("realClose :",source)
-//	err := tcpConn.conn.Close()
-//	mylog.Error("tcpConn.conn.Close:",err)
-//}
-//
-//func  (tcpConn *TcpConn)readLoop(){
-//	mylog.Info("new readLoop:")
-//	//创建消息缓冲区
-//	buffer := make([]byte, 1024)
-//	isBreak := 0
-//	for {
-//		if isBreak == 1{
-//			break
-//		}
-//		//读取客户端发来的消息放入缓冲区
-//		n,err := tcpConn.conn.Read(buffer)
-//		if err != nil{
-//			mylog.Error("conn.read buffer:",err.Error())
-//			if err == io.EOF{
-//				tcpConn.realClose(2)
-//				return
-//			}
-//			continue
-//		}
-//		if n == 0{
-//			continue
-//		}
-//		//转化为字符串输出
-//		clientMsg := buffer[0:n]
-//		mylog.Info("read msg :",n,string(clientMsg))
-//		//fmt.Printf("收到消息",conn.RemoteAddr(),clientMsg)
-//		tcpConn.MsgQueue = append(tcpConn.MsgQueue,clientMsg)
-//		tcpConn.conn.Write([]byte("im server"))
-//	}
-//}
-//
-//func  (tcpConn *TcpConn)ReadMessage()(messageType int, p []byte, err error){
-//	if len(tcpConn.MsgQueue) == 0 {
-//		str := ""
-//		return messageType,[]byte(str),nil
-//	}
-//	data := tcpConn.MsgQueue[0]
-//	tcpConn.MsgQueue = tcpConn.MsgQueue[1:]
-//	return messageType,data,nil
-//}
-//
-//func  (tcpConn *TcpConn)WriteMessage(messageType int, data []byte) error{
-//	tcpConn.conn.Write(data)
-//	return nil
-//}

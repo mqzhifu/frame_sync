@@ -13,25 +13,31 @@ import (
 type PlayerManager struct {
 	Pool  map[int32]*myproto.Player //玩家 状态池
 	SidMapPid map[string]int32	//sessionId 映射 playerId
+	Store int32
+	DefaultContentType int32
+	DefaultProtocol		int32
 }
 
-func PlayerManagerNew()*PlayerManager {
-	mylog.Info("new Players instance")
+func NewPlayerManager(store int32,ContentType int32,Protocol int32 )*PlayerManager {
+	mylog.Info("NewPlayerManager instance")
 	playerManager := new(PlayerManager)
 	playerManager.Pool = make(map[int32]*myproto.Player)
 	playerManager.SidMapPid = make(map[string]int32)
 	playerManager.initPool()
+	playerManager.Store = store
+	playerManager.DefaultContentType = ContentType
+	playerManager.DefaultProtocol = Protocol
 	return playerManager
 }
 
 func (playerManager *PlayerManager)initPool(){
-	if mynetWay.Option.Store == 1{
+	if playerManager.Store == 1{
 
 	}
 }
 //这个函数暂时还不以用，会有：concurrent map iteration and map write
 func (playerManager *PlayerManager)checkOfflineTimeout(ctx context.Context){
-	mylog.Info("recviceMatchSuccess start:")
+	//mylog.Info("checkOfflineTimeout start:")
 //	for{
 //		select {
 //			case   <-ctx.Done():
@@ -103,14 +109,14 @@ func (playerManager *PlayerManager)GetPlayerCtrlInfoById(playerId int32)Protocol
 	var contentType  int32
 	var protocolType int32
 	if playerId == 0{
-		contentType = mynetWay.Option.ContentType
-		protocolType = mynetWay.Option.Protocol
+		contentType = playerManager.DefaultContentType
+		protocolType = playerManager.DefaultProtocol
 	}else{
 		player ,empty := playerManager.GetById(playerId)
 		mylog.Debug("GetContentTypeById player",player)
 		if empty{
-			contentType = mynetWay.Option.ContentType
-			protocolType = mynetWay.Option.Protocol
+			contentType = playerManager.DefaultContentType
+			protocolType = playerManager.DefaultProtocol
 		}else{
 			contentType = player.ContentType
 			protocolType = player.ProtocolType
@@ -144,7 +150,7 @@ func  (playerManager *PlayerManager)GetRoomIdByPlayerId(playerId int32)string{
 func  (playerManager *PlayerManager)delById(playerId int32){
 	mylog.Warning("playerManager delById :",playerId)
 	delete(playerManager.Pool,playerId)
-	if mynetWay.Option.Store == 1{
+	if playerManager.Store == 1{
 
 	}
 }
@@ -166,7 +172,7 @@ func   (playerManager *PlayerManager)UpPlayerRoomId(playerId int32,roomId string
 	player.RoomId = roomId
 	player.UpTime = int32 (zlib.GetNowTimeSecondToInt())
 
-	if mynetWay.Option.Store == 1{
+	if playerManager.Store == 1{
 
 	}
 

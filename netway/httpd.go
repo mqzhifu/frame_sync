@@ -1,12 +1,14 @@
 package netway
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"frame_sync/myproto"
 	myprotocol "frame_sync/myprotocol"
 	"github.com/golang/protobuf/proto"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -27,45 +29,89 @@ type MyServer struct {
 	FPS 			int32
 }
 
-//type ApiList struct {
-//	ActionMap		map[string]map[int]myprotocol.ActionMap `json:"actionMap"`
-	//JsonFormat 		map[int]string							`json:"jsonFormat"`
-//}
 type MyMetrics struct {
-	Rooms	int `json:"room"`
-	Players	int `json:"players"`
-	Conns 	int `json:"conns"`
-	InputNum int `json:"inputNum"`
-	InputSize int `json:"inputSize"`
-	OutputNum int `json:"outputNum"`
-	OutputSize int `json:"outputSize"`
+	Rooms		int `json:"room"`
+	Players		int `json:"players"`
+	Conns 		int `json:"conns"`
+	InputNum 	int `json:"inputNum"`
+	InputSize 	int `json:"inputSize"`
+	OutputNum 	int `json:"outputNum"`
+	OutputSize 	int `json:"outputSize"`
 	InputErrNum int `json:"inputErrNum"`
 }
-var RoomList	map[string]Room
-func uriTurnPath (uri string)string{
-	n := strings.Index(uri,"?")
-	if  n ==  - 1{
-		return uri
-	}
-	uriByte := []byte(uri)
-	path := uriByte[0:n]
-	return string(path)
+
+type Httpd struct{
+	Log 			*zlib.Log 		`json:"-"`
+	httpServer		*http.Server	`json:"-"`
+	Option HttpdOption
 }
-func  wwwHandler(w http.ResponseWriter, r *http.Request){
-	//parameter := r.URL.Query()//GET 方式URL 中的参数 转 结构体
+
+type HttpdOption struct{
+	RootPath 		string	//监听的相对路径
+	BaseRootPath 	string	//监听的物理路径 = 当前项目物理路径 + 监听的相对路径
+	Ip 				string
+	Port 			string
+	WsUri 			string
+	ParentCtx  		context.Context `json:"-"`
+	LogOption 		zlib.LogOption
+}
+
+var RoomList	map[string]Room
+
+func NewHttpd(option HttpdOption)*Httpd{
+	mylog.Info("NewHttpd instance")
+	//实例化一个log类，单独给httpd使用
+	option.LogOption.OutFileFileName = "httpd"
+	option.LogOption.ModuleId = 2
+	newLog,errs  := zlib.NewLog(option.LogOption)
+	if errs != nil{
+		zlib.ExitPrint("new log err",errs.Error())
+	}
+
+	httpd := new(Httpd)
+	httpd.Log = newLog
+	httpd.Option = option
+	//httpd.RootPath = option.RootPath
+	baseDir, _ := os.Getwd()
+	httpd.Option.BaseRootPath = baseDir + option.RootPath
+
+	return httpd
+}
+
+func  (httpd *Httpd)start(){
+	dns := httpd.Option.Ip + ":" + httpd.Option.Port
+	mylog.Alert("httpd start:",dns)
+	logger := log.New(httpd.Log.Option.OutFileFileFd ,"h_s_err",log.Ldate)
+	httpd.httpServer = & http.Server{
+		Addr:dns,
+		ErrorLog: logger,
+	}
+	http.HandleFunc(httpd.Option.RootPath, myhttpd.wwwHandler)
+	//这里开始阻塞，直到接收到停止信号
+	err := httpd.httpServer.ListenAndServe()
+	if err != nil {
+		mylog.Error(" ListenAndServe err:", err)
+	}
+}
+func  (httpd *Httpd) shutdown(){
+	httpd.httpServer.Shutdown(httpd.Option.ParentCtx)
+}
+//所有HTTP 请求的入口
+func  (httpd *Httpd)wwwHandler(w http.ResponseWriter, r *http.Request){
 	uri := r.URL.RequestURI()
-	mylog.Info("uri:",uri)
+	httpd.Log.Info("uri:",uri)
 	if uri == "" || uri == "/" {
-		ResponseStatusCode(w,500,"RequestURI is null or uir is :  '/'")
+		httpd.ResponseStatusCode(w,500,"RequestURI is null or uir is :  '/'")
 		return
 	}
 	//zlib.MyPrint(r.Header)
-	uri = uriTurnPath(uri)
-	query := r.URL.Query()
+	uri = zlib.UriTurnPath(uri)
+	httpd.Log.Info("base uri:",uri)
+	query := r.URL.Query()//GET 方式URL 中的参数 转 结构体
+	httpd.Log.Info("query:",query)
 	var jsonStr []byte
-	//var err error
 	if uri == "/www/getServer"{
-		options := mynetWay.Option
+		options := myNetWay.Option
 		//options.Host = "39.106.65.76"
 
 		format := query.Get("format")
@@ -100,7 +146,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 
 	}else if uri == "/www/apilist"{
 		format := query.Get("format")
-		info := mynetWay.ProtocolActions.GetActionMap()
+		info := myProtocolActions.GetActionMap()
 		if format == ""{
 			jsonStr,_ = json.Marshal(&info)
 		}else if format == "proto"{
@@ -189,7 +235,7 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 				ATime:int32(zlib.GetNowMillisecond()),
 				AppId:2,
 			}
-			token := zlib.CreateJwtToken(mynetWay.Option.LoginAuthSecretKey,payload)
+			token := zlib.CreateJwtToken(myNetWay.Option.LoginAuthSecretKey,payload)
 			type CreateJwtNewToken struct {
 				Uid 	int32
 				Token 	string
@@ -208,14 +254,15 @@ func  wwwHandler(w http.ResponseWriter, r *http.Request){
 		filePath := "/myproto/api.proto"
 		fileContent, err := getStaticFileContent(filePath)
 		if err != nil{
-			mylog.Error("/www/getProtoFile:",err.Error())
+			httpd.Log.Error("/www/getProtoFile:",err.Error())
 		}
 		jsonStr = []byte(fileContent)
 	}else{
-		err := routeStatic(w,r,uri)
+		err := httpd.routeStatic(w,r,uri)
 		if err != nil{
-			return
+			mylog.Error("httpd.routeStatic err:",err.Error())
 		}
+		return
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")             //允许访问所有域
@@ -239,45 +286,66 @@ func  getStaticFileContent(fileSuffix string)(content string ,err error){
 	return string(b),err
 }
 
-func  routeStatic(w http.ResponseWriter,r *http.Request,uri string)error{
-	//uriSplit := strings.Split(uri,"?")
-	//if uriSplit[0] == "/apireq.html" {
-	//	uri = uriSplit[0]
-	//}
-	if  uri == "/www/ws.html" ||
-		uri == "/www/sync_frame_client_server.jpg" ||
-		uri == "/www/jquery.min.js"||
-		uri == "/www/sync.js"||
-		uri == "/www/api_web_pb.js"||
-		uri == "/www/roomlist.html"||
-		uri == "/www/metrics.html"||
-		uri == "/www/serverUpVersionMemo.html"||
-		uri == "/www/sync_frame_client_server.jpg" ||
-		uri == "/www/rsync_frame_lock_step.jpg" ||
-		uri == "/www/index.html" ||
-		uri == "/www/config.html" ||
-		uri == "/www/roomDetail.html" ||
-		uri == "/www/apilist.html"{ //静态文件
-
-		fileContent, err := getStaticFileContent(uri)
-		if err != nil {
-			ResponseStatusCode(w, 404, err.Error())
-			return errors.New("routeStatic 404")
-		}
-		//踦域处理
-		w.Header().Set("Access-Control-Allow-Origin","*")
-		w.Header().Add("Access-Control-Allow-Headers","Content-Type")
-		//w.Header().Set("content-type","text/plain")
-
-		w.Header().Set("Content-Length", strconv.Itoa(len(fileContent)))
-		w.Write([]byte(fileContent))
+func  (httpd *Httpd) routeStatic(w http.ResponseWriter,r *http.Request,uri string)error{
+	fileList := zlib.GetFileListByDir(httpd.Option.BaseRootPath)
+	if len(fileList) <=0 {
+		httpd.Log.Error("GetFileListByDir is empty")
+		return nil
 	}
+
+	for _,fileName := range fileList{
+		tmpFileName := httpd.Option.RootPath + fileName
+		if uri == tmpFileName{
+			fileContent, err := getStaticFileContent(uri)
+			if err != nil {
+				httpd.ResponseStatusCode(w, 404, err.Error())
+				return errors.New("routeStatic 404")
+			}
+			//踦域处理
+			w.Header().Set("Access-Control-Allow-Origin","*")
+			w.Header().Add("Access-Control-Allow-Headers","Content-Type")
+			//w.Header().Set("content-type","text/plain")
+
+			w.Header().Set("Content-Length", strconv.Itoa(len(fileContent)))
+			w.Write([]byte(fileContent))
+			return nil
+		}
+	}
+	httpd.Log.Error("routeStatic no match :",uri)
+	//if  uri == "/www/ws.html" ||
+	//	uri == "/www/sync_frame_client_server.jpg" ||
+	//	uri == "/www/jquery.min.js"||
+	//	uri == "/www/sync.js"||
+	//	uri == "/www/api_web_pb.js"||
+	//	uri == "/www/roomlist.html"||
+	//	uri == "/www/metrics.html"||
+	//	uri == "/www/serverUpVersionMemo.html"||
+	//	uri == "/www/sync_frame_client_server.jpg" ||
+	//	uri == "/www/rsync_frame_lock_step.jpg" ||
+	//	uri == "/www/index.html" ||
+	//	uri == "/www/config.html" ||
+	//	uri == "/www/roomDetail.html" ||
+	//	uri == "/www/apilist.html"{ //静态文件
+	//
+	//	fileContent, err := getStaticFileContent(uri)
+	//	if err != nil {
+	//		httpd.ResponseStatusCode(w, 404, err.Error())
+	//		return errors.New("routeStatic 404")
+	//	}
+	//	//踦域处理
+	//	w.Header().Set("Access-Control-Allow-Origin","*")
+	//	w.Header().Add("Access-Control-Allow-Headers","Content-Type")
+	//	//w.Header().Set("content-type","text/plain")
+	//
+	//	w.Header().Set("Content-Length", strconv.Itoa(len(fileContent)))
+	//	w.Write([]byte(fileContent))
+	//}
 	return nil
 }
 
 //http 响应状态码
-func  ResponseStatusCode(w http.ResponseWriter,code int ,responseInfo string){
-	mylog.Info("ResponseStatusCode",code,responseInfo)
+func    (httpd *Httpd)ResponseStatusCode(w http.ResponseWriter,code int ,responseInfo string){
+	httpd.Log.Info("ResponseStatusCode",code,responseInfo)
 
 	w.Header().Set("Content-Length",strconv.Itoa( len(responseInfo) ) )
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")

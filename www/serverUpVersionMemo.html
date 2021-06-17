@@ -6,6 +6,26 @@
 </head>
 <body>
 
+2021-06-14
+<table>
+    <p>
+        log库增加hash类型：月 天 小时<br/>
+        log库增加内容类型：字符串、json<br/>
+        增加filebeat收集日志、优化filebeat日志格式<br/>
+        增加ES日志索引、增加kibana查看ES索引<br/>
+        把HTTPD文件封装成Httpd类，静态文件支持动态路由映射<br/>
+        将原HTTPD日志在一个文件中，分拆成单独的一个专门记录http请求的日志文件中<br/>
+        mynetway的成员变量：ProtocolActions PlayerManager 删除掉，拿到最外层，注册为全局变量，避免 mynetway 藕合<br/>
+        删除mynetway 成员变量：MyCtxCancel<br/>
+        优化LOG类：1、成员变量名优化，2、增加LEVEL_TRACE，3、增加成员变量：全路径+文件名<br/>
+        netway 增加成员变量：httpPort<br/>
+        原http server ：即监听普通HTTP请求又监听ws长连接，现将其拆分开<Br/>
+        router文件里的：内容拆/封包函数、发送消息函数，移到protocolManager类中<br/>
+        protocolManagerAdapter 接口 和实现类，移到新文件中<br/>
+    </p>
+
+</table>
+
 2021-06-8
 <table>
     <p>
