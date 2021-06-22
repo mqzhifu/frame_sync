@@ -481,7 +481,7 @@ func  (sync *Sync)roomEnd(roomId string,sendCloseChan int){
 	if sync.Option.Store == 1{
 
 	}
-
+	//给 房间FPS 协程 发送停止死循环信号
 	if sendCloseChan == 1{
 		room.CloseChan <- 1
 	}
@@ -530,28 +530,30 @@ func (sync *Sync)roomOnlinePlayers(room *Room)[]int32{
 	return playerOnLine
 }
 //玩家断开连接后
-func (sync *Sync)Close(conn *Conn){
+func (sync *Sync)CloseOne(conn *Conn){
 	mylog.Warning("sync.close one")
+	//根据连接中的playerId，在用户缓存池中，查找该连接是否有未结束的游戏房间ID
 	roomId := myPlayerManager.GetRoomIdByPlayerId(conn.PlayerId)
 	if roomId == ""{
 		//这里会先执行roomEnd，然后清空了player roomId 所有获取不到
 		mylog.Warning("roomid = empty ",conn.PlayerId)
 		return
 	}
-	//判断下所有玩家是否均下线了
+	//根据roomId 查找房间信息
 	room, empty := sync.getPoolElementById(roomId)
 	if empty{
 		mylog.Warning("room == empty , ",roomId)
 		return
 	}
+	mylog.Info("room.Status:",room.Status)
 	if room.Status == ROOM_STATUS_EXECING || room.Status == ROOM_STATUS_PAUSE {
+		//判断下所有玩家是否均下线了
 		playerOnLine := sync.roomOnlinePlayers(room)
 		//mylog.Debug("playerOnLine:",playerOnLine, "len :",len(playerOnLine))
 		playerOnLineCount := len(playerOnLine)
 		//playerOnLineCount-- //这里因为，已有一个玩家关闭中，但是还未处理
-		mylog.Info("ROOM_STATUS_EXECING ,has check roomEnd , playerOnLineCount : ", playerOnLineCount)
-		if playerOnLineCount <= 0 {
-			//
+		mylog.Info("has check roomEnd , playerOnLineCount : ", playerOnLineCount)
+		if playerOnLineCount <= 1 {//这里这个判断有点不好处理，按说应该是<=0，也就是netway.close 应该先关闭了在线状态，但是如果全关了，后面可能要发消息就不行了
 			sync.roomEnd(roomId,1)
 		}else{
 			if room.Status == ROOM_STATUS_EXECING {
@@ -561,6 +563,20 @@ func (sync *Sync)Close(conn *Conn){
 				}
 				sync.boardCastInRoom(roomId,"otherPlayerOffline",&responseOtherPlayerOffline)
 			}
+		}
+	}else {
+		//能走到这个条件，肯定是发生过异常
+		if room.Status == ROOM_STATUS_INIT{
+			//本该room进入ready状态，但异常了
+			sync.roomEnd(roomId,0)
+		}else if room.Status == ROOM_STATUS_END{
+			//roomEnd 结算方法没有执行完毕，没有清空player的room id
+			for _,v:= range room.PlayerList{
+				myPlayerManager.UpPlayerRoomId(v.Id,"")
+			}
+		}else if room.Status == ROOM_STATUS_READY{
+			//<房间准备超时>守护协程  发生异常，未捕获到此房间已超时
+			sync.roomEnd(room.Id,0)
 		}
 	}
 }

@@ -144,6 +144,18 @@ func NewNetWay(option NetWayOption)*NetWay {
 }
 //启动 - 入口
 func (netWay *NetWay)Startup(){
+	//fd io timeout
+	//fd connect timeout
+	//room timeout
+	//conn timeout
+	//player timeout
+	//RoomReadyTimeout
+	//rtt timeout
+
+	//connTimeout demon ->netWayClose ->sync.close
+	//connFDClose
+	//connFDException
+
 	mylog.Alert("netWay Startup:")
 	//启动时间
 	startTime := zlib.GetNowMillisecond()
@@ -254,7 +266,7 @@ func (netWay *NetWay)CloseOneConn(conn *Conn,source int){
 		return
 	}
 	//通知同步服务，先做构造处理
-	mySync.Close(conn)//这里可能还要再发消息
+	mySync.CloseOne(conn)//这里可能还要再发消息
 
 	//状态更新为已关闭，防止重复关闭
 	conn.Status = CONN_STATUS_CLOSE

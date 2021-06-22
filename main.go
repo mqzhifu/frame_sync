@@ -63,6 +63,7 @@ func enter(cmsArg map[string]string){
 		OutTarget 		: zlib.OUT_TARGET_ALL,
 		OutContentType	: zlib.CONTENT_TYPE_JSON,
 		OutFileHashType	: zlib.FILE_HASH_DAY,
+		OutFileFileExtName : "log",
 	}
 	newlog,errs  := zlib.NewLog(logOption)
 	if errs != nil{
