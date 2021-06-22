@@ -12,27 +12,13 @@ import (
 	"zlib"
 )
 
-func test(){
-
-}
-
-type CmdArgs struct {
-	Env 			string	`seq:"1" err:"env=local"`
-	Ip 				string	`seq:"2" err:"ip=127.0.0.1"`
-	HttpPort 		string	`seq:"3" err:"HttpPort=2222"`
-	WsPort 			string	`seq:"4" err:"WsPort=2223"`
-	TcpPort 		string	`seq:"5" err:"TcpPort=2224"`
-	LogBasePath 	string	`seq:"6" err:"log_base_path=/data/www/golang/src/logs cs=server"`
-	ClientServer 	string 	`seq:"7" err:"cs=serve"`
-}
 //全局LOG类，快捷调用
 var mainlog *zlib.Log
 var mainOutPrefix = "main root :"
 func main(){
 	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
 
-	test()
-	cmdArgsStruct := CmdArgs{}
+	cmdArgsStruct := netway.CmdArgs{}
 	cmsArg ,err := zlib.CmsArgs(cmdArgsStruct)
 	if err != nil{
 		zlib.PanicPrint(mainOutPrefix + " err " +err.Error())
@@ -95,7 +81,7 @@ func enter(cmsArg map[string]string){
 		WsPort				:cmsArg["WsPort"],
 		TcpPort				:cmsArg["TcpPort"],
 		UdpPort				:"9999",
-		ContentType		:netway.CONTENT_TYPE_JSON,
+		ContentType			:netway.CONTENT_TYPE_JSON,
 		//ContentType			:netway.CONTENT_TYPE_PROTOBUF,
 		LoginAuthType		:"jwt",
 		LoginAuthSecretKey	:"chukong",
@@ -114,11 +100,9 @@ func enter(cmsArg map[string]string){
 		FPS					:10,
 		Store				:0,
 		HttpdRootPath		:"/www/",
-		LogOption: logOption,
-		OutCancelFunc : rootCancelFunc,
+		LogOption			:logOption,
+		OutCancelFunc 		:rootCancelFunc,
 	}
-	//测试使用，开始TCP/UDP client端
-	testSwitchClientServer(cmsArg["ClientServer"],newNetWayOption)
 	//创建网关，并启动
 	newNetWay := netway.NewNetWay(newNetWayOption)
 	go newNetWay.Startup()
@@ -167,25 +151,3 @@ func   mySleepSecond(second time.Duration , msg string){
 	time.Sleep(second * time.Second)
 }
 
-//测试使用，开始TCP/UDP client端
-func testSwitchClientServer(clientServer string,newNetWayOption netway.NetWayOption ){
-	switch clientServer {
-	case "client":
-		netway.StartTcpClient(newNetWayOption,mainlog)
-		cc := make(chan int)
-		<- cc
-		zlib.PanicPrint(1111111111)
-	case "udpClient":
-		udpServer :=  netway.UdpServerNew(newNetWayOption,mainlog)
-		udpServer.StartClient()
-		cc := make(chan int)
-		<- cc
-		zlib.PanicPrint(22222)
-	case "udpServer":
-		udpServer :=  netway.UdpServerNew(newNetWayOption,mainlog)
-		udpServer.Start()
-		cc := make(chan int)
-		<- cc
-		zlib.PanicPrint(33333)
-	}
-}

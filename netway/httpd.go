@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"zlib"
@@ -183,17 +184,19 @@ func  (httpd *Httpd)wwwHandler(w http.ResponseWriter, r *http.Request){
 				LoginAuthType		:options.LoginAuthType,
 				LoginAuthSecretKey	:options.LoginAuthSecretKey,
 				IOTimeout			:options.IOTimeout,
-				ConnTimeout			: options.ConnTimeout,
-				Protocol			: options.Protocol,
-				WsUri				: options.WsUri,
+				ConnTimeout			:options.ConnTimeout,
+				Protocol			:options.Protocol,
+				WsUri				:options.WsUri,
 				MaxClientConnNum	:options.MaxClientConnNum,
 				RoomPeople			:options.RoomPeople,
 				RoomReadyTimeout 	:options.RoomReadyTimeout,
 				OffLineWaitTime		:options.OffLineWaitTime,//玩家掉线后，等待多久
 				MapSize				:options.MapSize,
-				LockMode			: options.LockMode,
+				LockMode			:options.LockMode,
 				FPS					:options.FPS,
-				Store				: options.Store,
+				Store				:options.Store,
+				HttpdRootPath		:options.HttpdRootPath,
+				HttpPort			:options.HttpPort,
 			}
 			jsonStr,_ = proto.Marshal(&cfgServer)
 		}
@@ -235,6 +238,19 @@ func  (httpd *Httpd)wwwHandler(w http.ResponseWriter, r *http.Request){
 		jsonStr,_ = json.Marshal(&pool)
 		zlib.MyPrint(string(jsonStr))
 	}else if uri == "/www/getFD"{
+
+	}else if uri == "/www/startUpDesc"{
+		cmdArgs := CmdArgs{}
+		typeOfCmsArgs := reflect.TypeOf(cmdArgs)
+		cmsArgAfter := make(map[string]string)
+		for i:=0;i<typeOfCmsArgs.NumField();i++{
+			memVar := typeOfCmsArgs.Field(i)
+			desc := memVar.Tag.Get("desc")
+			cmsArgAfter[memVar.Name] = desc
+		}
+
+		jsonStr,_ = json.Marshal(cmsArgAfter)
+
 	}else if uri == "/www/getRoomList"{
 		type RoomList struct {
 			Rooms map[string]Room              `json:"rooms"`

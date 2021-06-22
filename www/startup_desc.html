@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>startup</title>
+</head>
+<body>
+
+<div>所有配置参数，分为两个3部分，1帧同步 2日志 3指令行.(其中1和2均可在main.go文件中修改)</div>
+<div>1.帧同步配置请<a href="/www/config.html" target="_blank">点击</a></div>
+<div>2.日志</div>
+<div>
+
+    <table border="1">
+        <tr><td>OutFileFileName</td><td>文件名</td></tr>
+        <tr><td>Level</td><td>级别，如：DEBUG ALL</td> </tr>
+        <tr><td>OutTarget</td><td>屏幕 文件 网络</td></tr>
+        <tr><td>OutContentType</td><td>normal json</td></tr>
+        <tr><td>OutFileHashType</td><td>文件存储方式，如：年 月 日 小时</td></tr>
+    </table>
+    具体参数有点多，可参考 ：  zlib.log
+</div>
+<div>3.指令行</div>
+<div id="cmsArg"></div>
+<div>启动指令：go run main.go local 127.0.0.1 2222 2223 2224 /data/www/golang/src/logs</div>
+</body>
+
+<script src="jquery.min.js" type="text/javascript"></script>
+<script>
+    var serverHostUri = "/www/startUpDesc";
+    $.ajax({
+        type: "GET",
+        url:serverHostUri,
+        success: function(data){
+            init(data);
+        }
+    });
+
+    function init(data){
+        var html = "<table border='1'><tr><td>key</td><td>描述</td></tr>";
+        for(let key  in data){
+            html += "<tr><td>"+key +"</td><td>"+data[key]+"</td>"+"</tr>";
+        }
+        html += "</table>";
+        $("#cmsArg").html(html)
+    }
+</script>
+
+</html>
