@@ -9,6 +9,7 @@ import (
 )
 
 type ProtocolActions struct {
+	//并发安全的，因为无写操作
 	ActionMaps map[string]map[int32]ActionMap
 	Log *zlib.Log
 }

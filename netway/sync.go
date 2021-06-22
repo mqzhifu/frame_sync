@@ -135,14 +135,18 @@ func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,conn 
 		mylog.Error("playerReady getPoolElementById empty",roomId)
 		return
 	}
+	room.PlayersReadyListRWLock.Lock()
 	room.PlayersReadyList[requestPlayerReady.PlayerId] = 1
+	room.PlayersReadyListRWLock.Unlock()
 	playerReadyCnt := 0
 	mylog.Info("room.PlayersReadyList:",room.PlayersReadyList)
+	room.PlayersReadyListRWLock.RLock()
 	for _,v := range room.PlayersReadyList{
 		if v == 1{
 			playerReadyCnt++
 		}
 	}
+	room.PlayersReadyListRWLock.RUnlock()
 
 	if playerReadyCnt < len(room.PlayersReadyList)  {
 		mylog.Error("now ready cnt :",playerReadyCnt," ,so please wait other players...")
@@ -321,18 +325,18 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 
 	if sync.Option.LockMode == LOCK_MODE_PESSIMISTIC {
 		ack := 0
+		room.PlayersAckListRWLock.RLock()
 		for _, v := range room.PlayersAckList {
 			if v == 1 {
 				ack++
 			}
 		}
-
+		room.PlayersAckListRWLock.RUnlock()
 		if ack < len(room.PlayersAckList) {
 			mylog.Error("还有玩家未发送操作记录,当前确认人数:",ack)
 			return fpsTime
 		}
 	}
-
 
 	room.SequenceNumber++
 
@@ -344,12 +348,10 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 	var operations []*myproto.Operation
 	i := 0
 	element := queue.Front()
-
 	for {
 		if i >= end {
 			break
 		}
-		//mylog.Debug("len:",queue.Len()," element:",element , " i:",i)
 		operationsValueInterface := element.Value
 		operationsValue := operationsValueInterface.(string)
 		var elementOperations []myproto.Operation
@@ -368,7 +370,7 @@ func  (sync *Sync)logicFrameLoopReal(room *Room,fpsTime int32)int32{
 
 		tmpElement := element.Next()
 		queue.Remove(element)
-		//mylog.Debug("tmpElement:",tmpElement , " len:",queue.Len())
+		mylog.Debug("tmpElement:",tmpElement , " len:",queue.Len(),"i:",i)
 		element = tmpElement
 
 		i++
@@ -402,9 +404,9 @@ func  (sync *Sync)ReceivePlayerOperation(logicFrame myproto.RequestPlayerOperati
 
 	logicFrameStr ,_ := json.Marshal(logicFrame.Operations)
 	room.PlayersOperationQueue.PushBack(string(logicFrameStr))
-	room.PlayersAckListLock.Lock()
+	room.PlayersAckListRWLock.Lock()
 	room.PlayersAckList[conn.PlayerId] = 1
-	room.PlayersAckListLock.Unlock()
+	room.PlayersAckListRWLock.Unlock()
 }
 //检测玩家发送的操作是否合规
 func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPlayerOperations,conn *Conn)error{
@@ -422,6 +424,8 @@ func  (sync *Sync)checkReceiveOperation(room *Room,logicFrame myproto.RequestPla
 			mylog.Warning("logicFrame.SequenceNumber  == room.SequenceNumber")
 			//只有掉线的玩家，最后这一帧的数据没有发出来，才会到这个条件里
 			//但，其它正常玩家如果还是一直不停的在发 这一帧，QUEUE 就爆了
+			room.PlayersAckListRWLock.RLock()
+			defer room.PlayersAckListRWLock.Unlock()
 			if room.PlayersAckList[conn.PlayerId] == 1{
 				msg := "(offline) last frame Players has ack ,don'send... "
 				mylog.Error(msg)
@@ -565,6 +569,7 @@ func (sync *Sync)CloseOne(conn *Conn){
 			}
 		}
 	}else {
+		mylog.Error("room.Status exception~~~")
 		//能走到这个条件，肯定是发生过异常
 		if room.Status == ROOM_STATUS_INIT{
 			//本该room进入ready状态，但异常了

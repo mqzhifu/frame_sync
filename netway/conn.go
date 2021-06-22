@@ -6,6 +6,7 @@ import (
 	"frame_sync/myproto"
 	"github.com/gorilla/websocket"
 	"strconv"
+	"sync"
 	"time"
 	"zlib"
 )
@@ -13,6 +14,7 @@ import (
 
 type ConnManager struct {
 	Pool map[int32]*Conn //ws 连接池
+	PoolRWLock *sync.RWMutex
 	Close chan int
 	MaxClientConnNum int32
 	ConnTimeout		int32
@@ -40,10 +42,14 @@ func NewConnManager(maxClientConnNum int32,connTimeout int32)*ConnManager {
 	connManager.MaxClientConnNum = maxClientConnNum
 	connManager.ConnTimeout = connTimeout
 	connManager.Close = make(chan int)
+	connManager.PoolRWLock = &sync.RWMutex{}
 	return connManager
 }
 //创建一个新的连接结构体
 func (connManager *ConnManager)CreateOneConn(connFd FDAdapter)(myConn *Conn,err error ){
+	connManager.PoolRWLock.RLock()
+	defer connManager.PoolRWLock.RUnlock()
+
 	mylog.Info("Create one Conn  client struct")
 	if int32(len(connManager.Pool))   > connManager.MaxClientConnNum{
 		mylog.Error("more MaxClientConnNum")
@@ -67,6 +73,9 @@ func (connManager *ConnManager)CreateOneConn(connFd FDAdapter)(myConn *Conn,err 
 }
 
 func (connManager *ConnManager)getConnPoolById(id int32)(*Conn,bool){
+	connManager.PoolRWLock.RLock()
+	defer connManager.PoolRWLock.RUnlock()
+
 	conn,ok := connManager.Pool[id]
 	return conn,ok
 }
@@ -85,12 +94,17 @@ func  (connManager *ConnManager)addConnPool( NewConn *Conn)error{
 		//return err
 	}
 	mylog.Info("addConnPool : ",NewConn.PlayerId)
+	connManager.PoolRWLock.Lock()
+	defer connManager.PoolRWLock.Unlock()
 	connManager.Pool[NewConn.PlayerId] = NewConn
 	return nil
 }
 
 func  (connManager *ConnManager)delConnPool(uid int32  ){
 	mylog.Warning("delConnPool uid :",uid)
+	connManager.PoolRWLock.Lock()
+	defer connManager.PoolRWLock.Unlock()
+
 	delete(connManager.Pool,uid)
 }
 
@@ -245,9 +259,20 @@ func (connManager *ConnManager)Shutdown(){
 	if len(connManager.Pool) <= 0{
 		return
 	}
-	for _,conn :=range connManager.Pool{
+	pool := connManager.getPoolAll( )
+	for _,conn :=range pool{
 		myNetWay.CloseOneConn(conn,CLOSE_SOURCE_CONN_SHUTDOWN)
 	}
+}
+func (connManager *ConnManager)getPoolAll()map[int32]*Conn{
+	connManager.PoolRWLock.RLock()
+	defer connManager.PoolRWLock.RUnlock()
+
+	pool := make(map[int32]*Conn)
+	for k,v := range connManager.Pool{
+		pool[k] = v
+	}
+	return pool
 }
 func (connManager *ConnManager)Start(ctx context.Context){
 	defer func(ctx context.Context ) {
@@ -262,7 +287,8 @@ func (connManager *ConnManager)Start(ctx context.Context){
 			case   <-connManager.Close:
 				goto end
 			default:
-				for _,v := range connManager.Pool{
+				pool := connManager.getPoolAll()
+				for _,v := range pool{
 					now := int32 (zlib.GetNowTimeSecondToInt())
 					x := v.UpTime + connManager.ConnTimeout
 					if now  > x {

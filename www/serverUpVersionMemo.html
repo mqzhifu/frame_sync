@@ -10,12 +10,24 @@
 <table>
     <p>
         RTT 吃性能<br/>
+        queue element.value 会报 指针错误，要么找到问题，要么加panic<Br/>
+        游戏开始后，因囚徒模式，某玩家卡住后，会一直提示：等待某玩家确认，这里最好加个超时机制<Br/>
+
         服务器布置-filebeat<br/>
         整体测试一遍<br/>
         重新做一遍性能评估<br/>
         重新评估一下metrics的使用<br/>
         测试单元<br/>
-        压力测试<br/>
+
+        压力测试：多局游戏一起开<br/>
+    </p>
+</table>
+
+2021-06-23
+<table>
+    <p>
+        所有map增加 读写 锁<br/>
+        playerManager 保存的用户信息缓存，得有个守护协程，检查超时<br/>
     </p>
 </table>
 

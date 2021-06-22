@@ -6,16 +6,20 @@ import (
 	"frame_sync/myproto"
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 	"zlib"
 )
 
 type PlayerManager struct {
-	Pool  map[int32]*myproto.Player //玩家 状态池
-	SidMapPid map[string]int32	//sessionId 映射 playerId
-	Store int32
-	DefaultContentType int32
+	Pool  				map[int32]*myproto.Player //玩家 状态池
+	PoolRDLock 			*sync.RWMutex
+	SidMapPid 			map[string]int32	//sessionId 映射 playerId
+	SidMapPidRWLock 	*sync.RWMutex
+	Store 				int32
+	DefaultContentType 	int32
 	DefaultProtocol		int32
+	CloseChan 			chan int
 }
 type PlayerManagerOption struct{
 	store int32
@@ -33,6 +37,9 @@ func NewPlayerManager(option PlayerManagerOption)*PlayerManager {
 	playerManager.Store = option.store
 	playerManager.DefaultContentType = option.ContentType
 	playerManager.DefaultProtocol = option.Protocol
+	playerManager.PoolRDLock = &sync.RWMutex{}
+	playerManager.CloseChan = make(chan int)
+	playerManager.SidMapPidRWLock = &sync.RWMutex{}
 	return playerManager
 }
 
@@ -41,34 +48,59 @@ func (playerManager *PlayerManager)initPool(){
 
 	}
 }
-//这个函数暂时还不以用，会有：concurrent map iteration and map write
+func (playerManager *PlayerManager)getAll()map[int32]*myproto.Player{
+	playerManager.PoolRDLock.RLock()
+	defer playerManager.PoolRDLock.RUnlock()
+	playerPool := make(map[int32]*myproto.Player)
+	for k,player:= range  playerManager.Pool{
+		playerPool[k] = player
+	}
+
+	return playerPool
+
+}
+func (playerManager *PlayerManager) Start(ctx context.Context){
+	playerManager.checkOfflineTimeout(ctx)
+}
+func (playerManager *PlayerManager)Shutdown(){
+	mylog.Alert("Shutdown PlayerManager")
+	playerManager.CloseChan <- 1
+}
+//注意，会有：concurrent map iteration and map write
 func (playerManager *PlayerManager)checkOfflineTimeout(ctx context.Context){
-	//mylog.Info("checkOfflineTimeout start:")
-//	for{
-//		select {
-//			case   <-ctx.Done():
-//				goto end
-//			default:
-//				if len(playerManager.Pool) <= 0{
-//					time.Sleep(time.Second * 2)
-//				}else{
-//					for _,player:= range  playerManager.Pool{
-//						if player.Status != PLAYER_STATUS_OFFLINE{
-//							continue
-//						}
-//
-//						now := zlib.GetNowTimeSecondToInt()
-//						timeout :=  int(player.AddTime )  + 3600
-//						if now > timeout{
-//							playerManager.delById(player.Id)
-//						}
-//					}
-//				}
-//		}
-//	}
-//
-//end:
-//	mylog.Warning("checkOfflineTimeout close")
+	defer func(ctx context.Context ) {
+		if err := recover(); err != nil {
+			myNetWay.RecoverGoRoutine(playerManager.checkOfflineTimeout,ctx,err)
+		}
+	}(ctx)
+
+	mylog.Info("checkOfflineTimeout start:")
+	for{
+		select {
+			case   <-playerManager.CloseChan:
+				goto end
+			default:
+				if len(playerManager.Pool) <= 0{
+					time.Sleep(time.Second * 10)
+				}else{
+					players := playerManager.getAll()
+					for _,player:= range players{
+						if player.Status != PLAYER_STATUS_OFFLINE{
+							continue
+						}
+
+						now := zlib.GetNowTimeSecondToInt()
+						timeout :=  int(player.AddTime )  + 3600
+						if now > timeout{
+							playerManager.delById(player.Id)
+						}
+					}
+				}
+		}
+	}
+
+end:
+	mylog.Warning("checkOfflineTimeout close")
 }
 
 func  (playerManager *PlayerManager)addPlayer(id int32,firstMsg myproto.Msg)(existPlayer myproto.Player,err error){
@@ -98,8 +130,13 @@ func  (playerManager *PlayerManager)addPlayer(id int32,firstMsg myproto.Msg)(exi
 			ContentType: int32(firstMsg.ContentType),
 			ProtocolType: int32(firstMsg.ProtocolType),
 		}
+		playerManager.PoolRDLock.Lock()
+		defer playerManager.PoolRDLock.Unlock()
+
 		playerManager.Pool[id] = &player
+		playerManager.SidMapPidRWLock.Lock()
 		playerManager.SidMapPid[player.SessionId] = id
+		playerManager.SidMapPidRWLock.Unlock()
 		return player,nil
 	}
 	return existPlayer,nil
@@ -136,6 +173,8 @@ func (playerManager *PlayerManager)GetPlayerCtrlInfoById(playerId int32)Protocol
 	return protocolCtrlInfo
 }
 func  (playerManager *PlayerManager)GetById(playerId int32)(player *myproto.Player,empty bool){
+	playerManager.PoolRDLock.RLock()
+	defer playerManager.PoolRDLock.RUnlock()
 	myPlayer ,ok := playerManager.Pool[playerId]
 	if ok {
 		return myPlayer ,false
@@ -154,6 +193,8 @@ func  (playerManager *PlayerManager)GetRoomIdByPlayerId(playerId int32)string{
 }
 
 func  (playerManager *PlayerManager)delById(playerId int32){
+	playerManager.PoolRDLock.Lock()
+	defer playerManager.PoolRDLock.Unlock()
 	mylog.Warning("playerManager delById :",playerId)
 	delete(playerManager.Pool,playerId)
 	if playerManager.Store == 1{
@@ -166,6 +207,10 @@ func   (playerManager *PlayerManager)upPlayerStatus(id int32,status int32){
 
 	mylog.Info("upPlayerStatus" , " old : ",player.Status," new:",status)
 
+
+	playerManager.PoolRDLock.Lock()
+	defer playerManager.PoolRDLock.Unlock()
+
 	player.Status = status
 	player.UpTime = int32(zlib.GetNowTimeSecondToInt())
 }
@@ -174,6 +219,9 @@ func   (playerManager *PlayerManager)UpPlayerRoomId(playerId int32,roomId string
 	player := playerManager.Pool[playerId]
 
 	mylog.Info("upPlayerRoomId" , " old : ",player.RoomId," new:",roomId)
+
+	playerManager.PoolRDLock.Lock()
+	defer playerManager.PoolRDLock.Unlock()
 
 	player.RoomId = roomId
 	player.UpTime = int32 (zlib.GetNowTimeSecondToInt())

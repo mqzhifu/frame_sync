@@ -23,7 +23,8 @@ type Room struct {
 	RandSeek			int32                           `json:"randSeek"`			//随机数种子
 	PlayersAckList		map[int32]int32               	`json:"playersAckList"`		//玩家确认列表
 	PlayersAckStatus	int                             `json:"playersAckStatus"`	//玩家确认列表的状态
-	PlayersAckListLock  sync.Mutex						`json:"-"`					//玩家一帧内的确认操作，需要加锁
+	PlayersAckListRWLock  	*sync.RWMutex						`json:"-"`					//玩家一帧内的确认操作，需要加锁
+	PlayersReadyListRWLock  *sync.RWMutex						`json:"-"`
 	//接收玩家操作指令-集合
 	PlayersOperationQueue 		*list.List             	`json:"-"`//用于存储玩家一个逻辑帧内推送的：玩家操作指令
 	CloseChan 			chan int                       	`json:"-"`//关闭信号管道
@@ -43,10 +44,12 @@ func NewRoom()*Room {
 	room.ReadyTimeout = 0
 	room.SequenceNumber = 0
 	room.PlayersAckList =  make(map[int32]int32)
+	room.PlayersAckListRWLock = &sync.RWMutex{}
 	room.PlayersAckStatus = PLAYERS_ACK_STATUS_INIT
 	room.RandSeek = int32(zlib.GetRandIntNum(100))
 	room.PlayersOperationQueue = list.New()
 	room.PlayersReadyList =  make(map[int32]int32)
+	room.PlayersReadyListRWLock = &sync.RWMutex{}
 
 	myMetrics.fastLog("total.RoomNum",2,0)
 

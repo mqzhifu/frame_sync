@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 	"runtime"
 	"strconv"
+	"sync"
 	"zlib"
 )
 
@@ -72,7 +73,7 @@ var connManager *ConnManager
 var mylog		*zlib.Log
 
 var RecoverGoRoutineRetryTimes  = make(map[string]int)
-
+var RecoverGoRoutineRetryTimesRWLock = &sync.RWMutex{}
 
 func NewNetWay(option NetWayOption)*NetWay {
 	option.Mylog.Info("New NetWay instance :")
@@ -172,7 +173,7 @@ func (netWay *NetWay)Startup(){
 	//统计模块，消息监听开启
 	go myMetrics.start(netWay.MyCancelCtx)
 	//玩家缓存状态，下线后，超时清理
-	//go netWay.PlayerManager.checkOfflineTimeout(startupCtx)
+	go myPlayerManager.Start(netWay.MyCancelCtx)
 	myProtocolManager.Start(netWay.MyCancelCtx)
 
 	netWay.CloseChan = make(chan int32)
@@ -280,7 +281,6 @@ func (netWay *NetWay)CloseOneConn(conn *Conn,source int){
 		netWay.Option.Mylog.Error("Conn.Conn.Close err:",err)
 	}
 
-
 	connManager.delConnPool(conn.PlayerId)
 	//处理掉-已报名的玩家
 	myMatch.realDelOnePlayer(conn.PlayerId)
@@ -301,6 +301,7 @@ func  (netWay *NetWay)Quit() {
 	myHttpd.shutdown()
 	myMatch.Shutdown()
 	mySync.Shutdown()
+	myPlayerManager.Shutdown()
 	connManager.Shutdown()
 	myProtocolManager.Shutdown()
 	myMetrics.Shutdown()
@@ -316,19 +317,25 @@ func  (netWay *NetWay)RecoverGoRoutine(back func(ctx context.Context),ctx contex
 	}
 	funcName := runtime.FuncForPC(pc).Name()
 	mylog.Info(" RecoverGoRoutine  panic in defer  :"+ funcName + " "+file + " "+ strconv.Itoa(lineNo))
+	RecoverGoRoutineRetryTimesRWLock.RLock()
 	retryTimes , ok := RecoverGoRoutineRetryTimes[funcName]
+	RecoverGoRoutineRetryTimesRWLock.RUnlock()
 	if ok{
 		if retryTimes > 3{
 			mylog.Error("retry than max times")
 			panic(err)
 			return
 		}else{
+			RecoverGoRoutineRetryTimesRWLock.Lock()
 			RecoverGoRoutineRetryTimes[funcName]++
+			RecoverGoRoutineRetryTimesRWLock.Unlock()
 			mylog.Info("RecoverGoRoutineRetryTimes = ",RecoverGoRoutineRetryTimes[funcName])
 		}
 	}else{
 		mylog.Info("RecoverGoRoutineRetryTimes = 1")
+		RecoverGoRoutineRetryTimesRWLock.Lock()
 		RecoverGoRoutineRetryTimes[funcName] = 1
+		RecoverGoRoutineRetryTimesRWLock.Unlock()
 	}
 	go back(ctx)
 }
