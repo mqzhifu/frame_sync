@@ -3,6 +3,7 @@ package netway
 import (
 	"encoding/json"
 	"errors"
+	"context"
 	"frame_sync/myproto"
 	"strconv"
 	"time"
@@ -11,6 +12,7 @@ import (
 
 type Sync struct {
 	Option SyncOption
+	CloseChan chan int
 }
 
 type SyncOption struct {
@@ -33,7 +35,6 @@ var operationDefaultId int32
 var RoomSyncMetricsPool map[string]RoomSyncMetrics
 
 func NewSync(Option SyncOption)*Sync {
-	mylog = Option.Log
 	mylog.Info("NewSync instance")
 	MySyncRoomPool = make(map[string]*Room)
 	//mySyncPlayerRoom = make(map[int32]string)
@@ -46,13 +47,33 @@ func NewSync(Option SyncOption)*Sync {
 	//统计
 	RoomSyncMetricsPool = make(map[string]RoomSyncMetrics)
 
+	if sync.Option.FPS > 1000 {
+		zlib.PanicPrint("fps > 1000 ms")
+	}
+
 	sync.initPool()
+	sync.CloseChan = make(chan int)
 	return sync
 }
 
 func (sync *Sync)initPool(){
 	if sync.Option.Store == 1{
 
+	}
+}
+func (sync *Sync)Shutdown(){
+	mylog.Alert("shutdown mySync")
+	sync.CloseChan <- 1
+	if len(MySyncRoomPool) <= 0{
+		return
+	}
+	//这里只做信号关闭，即：死循环的协程，而真实的关闭由netWay.Close解决
+	for _,room := range MySyncRoomPool{
+		if room.Status == ROOM_STATUS_READY{
+			room.ReadyCloseChan <- 1
+		}else if room.Status == ROOM_STATUS_EXECING{
+			room.CloseChan <- 1
+		}
 	}
 }
 //给集合添加一个新的 游戏副本
@@ -68,16 +89,42 @@ func (sync *Sync) AddPoolElement(room 	*Room)error{
 	MySyncRoomPool[room.Id] = room
 	return nil
 }
-func (sync *Sync) delPoolElement(roomId string){
-	//mylog.Info("addPoolElement")
-	//room ,exist := MySyncRoomPool[roomId]
-	//if !exist{
-	//	mylog.Error("delPoolElement not exist : ",roomId)
-	//	return
-	//}
-	//for _,player := range room.PlayerList{
-	//
-	//}
+func (sync *Sync) Start(ctx context.Context){
+	go sync.receiveMatchSuccess(ctx)
+}
+func (sync *Sync) receiveMatchSuccess(ctx context.Context){
+	defer func(ctx context.Context ) {
+		if err := recover(); err != nil {
+			myNetWay.RecoverGoRoutine(sync.receiveMatchSuccess,ctx,err)
+		}
+	}(ctx)
+
+	mylog.Alert("receiveMatchSuccess start:")
+	isBreak := 0
+	for{
+		select {
+		case newRoom :=  <- myNetWay.MatchSuccessChan:
+			err := mySync.AddPoolElement(newRoom)
+			if err !=nil{
+				//responsePlayerMatchingFailed := myproto.ResponsePlayerMatchingFailed{
+				//	RoomId: newRoom.Id,
+				//	Msg: err.Error(),
+				//}
+				//mynetWay.SendMsgCompressByUid()
+			}else{
+				mySync.StartOne(newRoom.Id)
+			}
+		case   <-sync.CloseChan:
+			isBreak = 1
+			//default:
+			//	time.Sleep(time.Second * 1)
+			//mySleepSecond(1,"checkConnPoolTimeout")
+		}
+		if isBreak == 1{
+			break
+		}
+	}
+	mylog.Alert(CTX_DONE_PRE+"receiveMatchSuccessOne close")
 }
 //进入战后，场景渲染完后，进入准确状态
 func (sync *Sync)PlayerReady(requestPlayerReady myproto.RequestPlayerReady,conn *Conn) {
@@ -187,7 +234,7 @@ end:
 }
 
 //一局新游戏（副本）创建成功，告知玩家进入战场，等待 所有玩家准备确认
-func  (sync *Sync)Start(roomId string){
+func  (sync *Sync)StartOne(roomId string){
 	mylog.Warning("start a new game:")
 
 	room,_ := sync.getPoolElementById(roomId)
@@ -242,10 +289,6 @@ func (sync *Sync) getPoolElementById(roomId string)(SyncRoomPoolElement *Room,em
 }
 //同步 玩家 操作 定时器
 func  (sync *Sync)logicFrameLoop(room *Room){
-	if sync.Option.FPS > 1000 {
-		zlib.ExitPrint("fps > 1000 ms")
-	}
-
 	fpsTime :=  1000 /  sync.Option.FPS
 	i := 0
 	for{
@@ -488,7 +531,7 @@ func (sync *Sync)roomOnlinePlayers(room *Room)[]int32{
 }
 //玩家断开连接后
 func (sync *Sync)Close(conn *Conn){
-	mylog.Warning("sync.close")
+	mylog.Warning("sync.close one")
 	roomId := myPlayerManager.GetRoomIdByPlayerId(conn.PlayerId)
 	if roomId == ""{
 		//这里会先执行roomEnd，然后清空了player roomId 所有获取不到

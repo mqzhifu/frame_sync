@@ -6,9 +6,7 @@ import (
 	"errors"
 	"frame_sync/myproto"
 	"github.com/golang/protobuf/proto"
-	"log"
-	"net/http"
-	"os"
+	"github.com/gorilla/websocket"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,65 +15,64 @@ import (
 
 type ProtocolManager struct {
 	TcpServer *TcpServer
-	httpServer      	*http.Server
+	WsHttpServer      	*Httpd
 	Option ProtocolManagerOption
+	Close 	chan int
 }
+
 type ProtocolManagerOption struct {
 	Ip 				string
 	HttpPort 		string
 	TcpPort 		string
 	WsUri 			string
-	OpenNewConnBack	func ( wsConnFD FDAdapter)
+	OpenNewConnBack	func ( connFD FDAdapter)
 }
 //
 func NewProtocolManager(option ProtocolManagerOption)*ProtocolManager{
 	mylog.Info("NewProtocolManager instance:")
 	protocolManager := new (ProtocolManager)
 	protocolManager.Option = option
+	protocolManager.Close = make(chan int)
+	go protocolManager.l()
 	return protocolManager
 }
+func  (protocolManager *ProtocolManager)Shutdown(){
+	mylog.Alert("shutdown protocolManager")
+	protocolManager.Close <- 1
+}
+
+func  (protocolManager *ProtocolManager)l(){
+	<- protocolManager.Close
+	protocolManager.TcpServer.Shutdown()
+	protocolManager.WsHttpServer.shutdown()
+}
+
 func (protocolManager *ProtocolManager)Start(outCtx context.Context){
 	//开始HTTP 监听 模块
-	go protocolManager.startHttpServer()
+	//go protocolManager.startHttpServer()
+	//上面先注释掉了，WS的守护在HTTPD开启了
+	httpdOption := HttpdOption {
+		LogOption 	: myNetWay.Option.LogOption,
+		RootPath 	: myNetWay.Option.HttpdRootPath,
+		Ip			: myNetWay.Option.ListenIp,
+		Port		: myNetWay.Option.WsPort,
+		ParentCtx 	: myNetWay.Option.OutCxt,
+		WsUri		: myNetWay.Option.WsUri,
+		WsNewFDBack	: myProtocolManager.websocketHandler,
+	}
+	httpd := NewHttpd(httpdOption)
+	protocolManager.WsHttpServer = httpd
+	go httpd.startWs(myNetWay.Option.OutCxt)
+
+
 	//tcp server
 	myTcpServer :=  NewTcpServer(outCtx,protocolManager.Option.Ip,protocolManager.Option.TcpPort)
 	protocolManager.TcpServer = myTcpServer
 	go myTcpServer.Start()
 }
-
-//启动HTTP 服务
-func (protocolManager *ProtocolManager)startHttpServer( ){
-	dns := protocolManager.Option.Ip + ":" + protocolManager.Option.HttpPort
-	mylog.Alert("startWsHttpServer:",dns)
-
-	logger := log.New(os.Stdout,"http.server_err",log.Ldate)
-	httpServer := & http.Server{
-		Addr:dns,
-		ErrorLog: logger,
-	}
-	//监听WS请求
-	http.HandleFunc(protocolManager.Option.WsUri,protocolManager.wsHandler)
-	//监听普通HTTP请求
-	//http.HandleFunc(myhttpd.RootPath, myhttpd.wwwHandler)
-
-	protocolManager.httpServer = httpServer
-	//这里开始阻塞，直到接收到停止信号
-	err := httpServer.ListenAndServe()
-	if err != nil {
-		mylog.Error(" ListenAndServe err:", err)
-	}
-}
-
-func(protocolManager *ProtocolManager)wsHandler( resp http.ResponseWriter, req *http.Request) {
-	mylog.Info("wsHandler: have a new client http request")
-	//http 升级 ws
-	wsConnFD, err := httpUpGrader.Upgrade(resp, req, nil)
-	mylog.Info("Upgrade this http req to websocket")
-	if err != nil {
-		mylog.Error("Upgrade websocket failed: ", err.Error())
-		return
-	}
-	imp := WebsocketConnImpNew(wsConnFD)
+func(protocolManager *ProtocolManager)websocketHandler( connFD *websocket.Conn) {
+	mylog.Info("websocketHandler: have a new client")
+	imp := WebsocketConnImpNew(connFD)
 	protocolManager.Option.OpenNewConnBack(imp)
 }
 
@@ -87,12 +84,6 @@ func(protocolManager *ProtocolManager)tcpHandler(tcpConn *TcpConn){
 func(protocolManager *ProtocolManager)udpHandler(){
 
 }
-func (protocolManager *ProtocolManager)Quit( startupCtx context.Context){
-	mylog.Alert(CTX_DONE_PRE + " httpServer")
-	protocolManager.httpServer.Shutdown(startupCtx)
-	protocolManager.TcpServer.Shutdown()
-}
-
 //=======================================
 //协议层的解包已经结束，这个时候需要将content内容进行转换成MSG结构
 func  (protocolManager *ProtocolManager)parserContentMsg(msg myproto.Msg ,out interface{},playerId int32)error{
@@ -141,7 +132,7 @@ func  (protocolManager *ProtocolManager)parserContentProtocol(content string)(me
 		return message,errors.New("actionId ProtocolActions.GetActionName empty!!!")
 	}
 
-	mylog.Info("parserContent actionid:",actionId, ",actionName:",actionName.Action)
+	//mylog.Info("parserContent actionid:",actionId, ",actionName:",actionName.Action)
 
 	sessionId := ""
 	userData := ""
@@ -159,7 +150,7 @@ func  (protocolManager *ProtocolManager)parserContentProtocol(content string)(me
 		ProtocolType: ctrlInfo.ProtocolType,
 		SessionId: sessionId,
 	}
-	mylog.Debug("msg:",msg)
+	//mylog.Debug("parserContentProtocol msg:",msg)
 	return msg,nil
 }
 
@@ -179,7 +170,7 @@ func (protocolManager *ProtocolManager)parserProtocolCtrlInfo(stream []byte)Prot
 		ContentType : int32(firstByteHighThreeBit),
 		ProtocolType : int32(firstByteLowThreeBit),
 	}
-	mylog.Info("parserProtocolCtrlInfo ContentType:",protocolCtrlInfo.ContentType,",ProtocolType:",protocolCtrlInfo.ProtocolType)
+	//mylog.Debug("parserProtocolCtrlInfo ContentType:",protocolCtrlInfo.ContentType,",ProtocolType:",protocolCtrlInfo.ProtocolType)
 	return protocolCtrlInfo
 }
 
@@ -188,7 +179,7 @@ func  (protocolManager *ProtocolManager)CompressContent(contentStruct interface{
 	protocolCtrlInfo := myPlayerManager.GetPlayerCtrlInfoById(playerId)
 	contentType := protocolCtrlInfo.ContentType
 
-	mylog.Debug("CompressContent contentType:",contentType)
+	//mylog.Debug("CompressContent contentType:",contentType)
 	if contentType == CONTENT_TYPE_JSON {
 		//这里有个问题：纯JSON格式与PROTOBUF格式在PB文件上 不兼容
 		//严格来说是GO语言与protobuf不兼容，即：PB文件的  结构体中的 JSON-TAG

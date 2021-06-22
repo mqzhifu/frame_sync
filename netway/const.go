@@ -8,11 +8,13 @@ const (
 	CLOSE_SOURCE_FD_PARSE_CONTENT 	= 23//客户端首次连接，登陆动作,解析内容时出错
 	CLOSE_SOURCE_FIRST_NO_LOGIN 	= 24//客户端首次连接，登陆动作,内容解出来了，但是action!=login
 	CLOSE_SOURCE_CREATE 			= 3	//初始化 连接类失败，可能是连接数过大
+	CLOSE_SOURCE_OPEN_PANIC			= 31//初始化 新连接创建成功后，上层要再重新做一次连接，结果未知panic
 	CLOSE_SOURCE_OVERRIDE 			= 4	//创建新连接时，发现，该用户还有一个未关闭的连接,kickoff模式下，这条就没意义了
 	CLOSE_SOURCE_TIMEOUT 			= 5	//最后更新时间 ，超时.后台守护协程触发
 	CLOSE_SOURCE_SIGNAL_QUIT 		= 6 //接收到关闭信号，netWay.Quit触发
 	CLOSE_SOURCE_CLIENT_WS_FD_GONE 	= 7	//S端读取连接消息时，异常了~可能是：客户端关闭了连接
 	CLOSE_SOURCE_SEND_MESSAGE 		= 8 //S端给某个连接发消息，结果失败了，这里概率是连接已经断了
+	CLOSE_SOURCE_CONN_SHUTDOWN 		= 11
 
 	CLOSE_SOURCE_RTT_TIMEOUT 		= 91//S端已收到了RTT的响应，但已超时
 	CLOSE_SOURCE_RTT_TIMER_OUT 		= 92//RTT超时，定时器触发
@@ -54,5 +56,8 @@ const (
 	METRICS_OPT_LESS 	= 3		//3累减
 	METRICS_OPT_DIM 	= 4		//4减减
 
+	NETWAY_STATUS_INT = 1
+	NETWAY_STATUS_START = 2
+	NETWAY_STATUS_CLOSE = 3
 )
 

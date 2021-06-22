@@ -38,7 +38,6 @@ func  (netWay *NetWay)serverPingRtt(second time.Duration ,conn *Conn,times int )
 
 func(netWay *NetWay) ClientPong(requestClientPong myproto.RequestClientPong,conn *Conn){
 	RTT := requestClientPong.ClientReceiveTime -  requestClientPong.AddTime
-	//wsConn.RTT = RTT
 	now := zlib.GetNowMillisecond()
 	mylog.Info("client RTT:",RTT," ms")
 	if now >= requestClientPong.RttTimeout{//证明已超过规定的返回时间了

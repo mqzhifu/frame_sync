@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 	"time"
+	"zlib"
 )
 type TcpServer struct {
 	listener net.Listener
@@ -20,8 +21,14 @@ func NewTcpServer(outCtx context.Context,ip string,port string)*TcpServer{
 	tcpServer.Ip = ip
 	tcpServer.Port = port
 	//tcpServer.pool = []*TcpConn{}
+	//go tcpServer.ListeningClose()
 	return tcpServer
 }
+
+//func (tcpServer *TcpServer)ListeningClose(){
+	//<- tcpServer.OutCxt.Done()
+	//tcpServer.Shutdown()
+//}
 //outCtx:这里没用上，因为accept是阻塞的模式，只能用另外的方式close
 func  (tcpServer *TcpServer)Start(){
 	ipPort := tcpServer.Ip + ":" + tcpServer.Port
@@ -29,8 +36,8 @@ func  (tcpServer *TcpServer)Start(){
 
 	listener,err :=net.Listen("tcp",ipPort)
 	if err !=nil{
-		mylog.Error("net.Listen tcp err")
-		return
+		mylog.Error("net.Listen tcp err:",err.Error())
+		zlib.PanicPrint("tcp net.Listen tcp err:"+err.Error())
 	}
 	mylog.Info("startTcpServer:")
 	tcpServer.listener = listener
@@ -39,24 +46,26 @@ func  (tcpServer *TcpServer)Start(){
 }
 
 func   (tcpServer *TcpServer)Shutdown( ){
-	<- tcpServer.OutCxt.Done()
+	mylog.Alert("Shutdown tcpServer ")
 	err := tcpServer.listener.Close()
 	if err != nil{
 		mylog.Error("tcpServer.listener.Close err :",err)
 	}
-	mylog.Alert(CTX_DONE_PRE+" tcpServer Shutdown")
 }
 
 func (tcpServer *TcpServer)Accept( ){
 	for {
 		//循环接入所有客户端得到专线连接
 		conn,err := tcpServer.listener.Accept()
-		mylog.Info("listener.Accept new conn:")
-		if err != nil{
+		if err == nil{
+			mylog.Info("listener.Accept new conn:")
+		}else{
 			mylog.Error("listener.Accept err :",err.Error())
 			if strings.Contains(err.Error(), "use of closed network connection") {
 				mylog.Warning("TcpAccept end.")
 				break
+			}else{
+
 			}
 			continue
 		}
@@ -83,7 +92,8 @@ func NewTcpConn(conn net.Conn)*TcpConn{
 
 func  (tcpConn *TcpConn)start(){
 	mylog.Info("TcpConn.start")
-	go tcpConn.readLoop()
+	ctx := context.TODO()
+	go tcpConn.readLoop(ctx)
 	time.Sleep(time.Millisecond * 500)
 	myProtocolManager.tcpHandler(tcpConn)
 }
@@ -107,7 +117,13 @@ func  (tcpConn *TcpConn)realClose(source int){
 	mylog.Error("tcpConn.conn.Close:",err)
 }
 
-func  (tcpConn *TcpConn)readLoop(){
+func  (tcpConn *TcpConn)readLoop(ctx context.Context ){
+	defer func(ctx context.Context ) {
+		if err := recover(); err != nil {
+			myNetWay.RecoverGoRoutine(tcpConn.readLoop,ctx,err)
+		}
+	}(ctx)
+
 	mylog.Info("new readLoop:")
 	//创建消息缓冲区
 	buffer := make([]byte, 1024)

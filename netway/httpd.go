@@ -7,6 +7,7 @@ import (
 	"frame_sync/myproto"
 	myprotocol "frame_sync/myprotocol"
 	"github.com/golang/protobuf/proto"
+	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -27,6 +28,15 @@ type MyServer struct {
 	ContentType		int32
 	LoginAuthType	string
 	FPS 			int32
+}
+
+var httpUpGrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	// 允许所有的CORS 跨域请求，正式环境可以关闭
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 type MyMetrics struct {
@@ -54,6 +64,7 @@ type HttpdOption struct{
 	WsUri 			string
 	ParentCtx  		context.Context `json:"-"`
 	LogOption 		zlib.LogOption
+	WsNewFDBack		func(*websocket.Conn)
 }
 
 var RoomList	map[string]Room
@@ -65,7 +76,7 @@ func NewHttpd(option HttpdOption)*Httpd{
 	option.LogOption.ModuleId = 2
 	newLog,errs  := zlib.NewLog(option.LogOption)
 	if errs != nil{
-		zlib.ExitPrint("new log err",errs.Error())
+		zlib.PanicPrint("new log err",errs.Error())
 	}
 
 	httpd := new(Httpd)
@@ -78,7 +89,7 @@ func NewHttpd(option HttpdOption)*Httpd{
 	return httpd
 }
 
-func  (httpd *Httpd)start(){
+func  (httpd *Httpd)start(outCtx context.Context){
 	dns := httpd.Option.Ip + ":" + httpd.Option.Port
 	mylog.Alert("httpd start:",dns)
 	logger := log.New(httpd.Log.Option.OutFileFileFd ,"h_s_err",log.Ldate)
@@ -86,18 +97,61 @@ func  (httpd *Httpd)start(){
 		Addr:dns,
 		ErrorLog: logger,
 	}
-	http.HandleFunc(httpd.Option.RootPath, myhttpd.wwwHandler)
+	http.HandleFunc(httpd.Option.RootPath, myHttpd.wwwHandler)
 	//这里开始阻塞，直到接收到停止信号
 	err := httpd.httpServer.ListenAndServe()
 	if err != nil {
-		mylog.Error(" ListenAndServe err:", err)
+		if strings.Index(err.Error(),"Server closed") == -1{
+			zlib.PanicPrint("httpd:"+err.Error())
+		}
+		mylog.Error(" httpd ListenAndServe err:", err.Error())
 	}
 }
+//临时方法
+func  (httpd *Httpd)startWs(outCtx context.Context){
+	dns := httpd.Option.Ip + ":" + httpd.Option.Port
+	mylog.Alert("httpd start:",dns)
+	logger := log.New(httpd.Log.Option.OutFileFileFd ,"h_s_err",log.Ldate)
+	httpd.httpServer = & http.Server{
+		Addr:dns,
+		ErrorLog: logger,
+	}
+	http.HandleFunc(httpd.Option.WsUri ,httpd.wsHandler)
+	//这里开始阻塞，直到接收到停止信号
+	err := httpd.httpServer.ListenAndServe()
+	if err != nil {
+		if strings.Index(err.Error(),"Server closed") == -1{
+			zlib.PanicPrint("httpd:"+err.Error())
+		}
+		mylog.Error(" httpd ListenAndServe err:", err.Error())
+	}
+}
+
+
 func  (httpd *Httpd) shutdown(){
+	mylog.Alert(" shutdown httpd")
 	httpd.httpServer.Shutdown(httpd.Option.ParentCtx)
+
+	httpd.Log.CloseChan <- 1
+}
+func  (httpd *Httpd)wsHandler(w http.ResponseWriter, r *http.Request){
+	mylog.Info("wsHandler: have a new client http request")
+	//http 升级 ws
+	wsConnFD, err := httpUpGrader.Upgrade(w, r, nil)
+	mylog.Info("Upgrade this http req to websocket")
+	if err != nil {
+		mylog.Error("Upgrade websocket failed: ", err.Error())
+		return
+	}
+	httpd.Option.WsNewFDBack(wsConnFD)
 }
 //所有HTTP 请求的入口
 func  (httpd *Httpd)wwwHandler(w http.ResponseWriter, r *http.Request){
+	defer func() {
+		if err := recover(); err != nil {
+			httpd.Log.Panic("wwwHandler:",err)
+		}
+	}()
 	uri := r.URL.RequestURI()
 	httpd.Log.Info("uri:",uri)
 	if uri == "" || uri == "/" {
@@ -222,7 +276,6 @@ func  (httpd *Httpd)wwwHandler(w http.ResponseWriter, r *http.Request){
 		//roonOne.HistoryList = history
 		//zlib.MyPrint(roonOne)
 		jsonStr,_ = json.Marshal(&room)
-		//zlib.ExitPrint(jsonStr)
 	} else if uri == "/www/createJwtToken"{
 		randUid := query.Get("id")
 		randUid = strings.Trim(randUid," ")

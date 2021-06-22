@@ -8,7 +8,7 @@
 <script src="jquery.min.js" type="text/javascript"></script>
 <script>
     var msg = {"appId":4,"moduleId":1,"leaveId":2,"content":"fffff"};
-    var data = {"outIp":"127.0.0.1","port":"2225","wsUri":"logslave"}
+    var data = {"outIp":"127.0.0.1","port":"2225","wsUri":"log_slave"}
 
 
     function ws(){
@@ -25,18 +25,19 @@
         //设置 连接建立成功回调
         wsObj.onopen = function(){
             console.log("wsObj.onopen")
+            sendMsg(msg);
         };
         wsObj.onerror = function(ev){
             alert("wsObj.onerror");
             console.log("error:"+ev);
         };
 
-        function receiveMessage(){
-
+        function receiveMessage(data){
+            console.log("receiveMessage:",data);
         }
 
         function sendMsg(data){
-            wsObj.send(data)
+            wsObj.send(JSON.stringify(data));
         }
     }
 

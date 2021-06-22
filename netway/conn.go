@@ -13,6 +13,7 @@ import (
 
 type ConnManager struct {
 	Pool map[int32]*Conn //ws 连接池
+	Close chan int
 	MaxClientConnNum int32
 	ConnTimeout		int32
 }
@@ -38,11 +39,12 @@ func NewConnManager(maxClientConnNum int32,connTimeout int32)*ConnManager {
 	connManager.Pool = make(map[int32]*Conn)
 	connManager.MaxClientConnNum = maxClientConnNum
 	connManager.ConnTimeout = connTimeout
+	connManager.Close = make(chan int)
 	return connManager
 }
 //创建一个新的连接结构体
 func (connManager *ConnManager)CreateOneConn(connFd FDAdapter)(myConn *Conn,err error ){
-	mylog.Info("Create one conn  client struct")
+	mylog.Info("Create one Conn  client struct")
 	if int32(len(connManager.Pool))   > connManager.MaxClientConnNum{
 		mylog.Error("more MaxClientConnNum")
 		return myConn,errors.New("more MaxClientConnNum")
@@ -52,14 +54,14 @@ func (connManager *ConnManager)CreateOneConn(connFd FDAdapter)(myConn *Conn,err 
 	myConn = new (Conn)
 	myConn.Conn 		= connFd	//*websocket.Conn
 	myConn.PlayerId 	= 0
-	myConn.AddTime 	= now
-	myConn.UpTime 	= now
-	myConn.Status  	= CONN_STATUS_INIT
-	myConn.MsgInChan  = make(chan myproto.Msg,5000)
+	myConn.AddTime 		= now
+	myConn.UpTime 		= now
+	myConn.Status  		= CONN_STATUS_INIT
+	myConn.MsgInChan  	= make(chan myproto.Msg,5000)
+	myConn.UdpConn    	= false
 	myConn.RTTCancelChan = make(chan int)
-	myConn.UdpConn    = false
 
-	mylog.Info("reg conn callback CloseHandler")
+	//mylog.Info("reg conn callback CloseHandler")
 
 	return myConn,nil
 }
@@ -127,7 +129,8 @@ func   (conn *Conn)ReadBinary()(content []byte,err error){
 func   (conn *Conn)Read()(content string,err error){
 	// 设置消息的最大长度 - 暂无
 	//conn.Conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(mynetWay.Option.IOTimeout)))
-	messageType , dataByte  , err  := conn.Conn.ReadMessage()
+	//messageType , dataByte  , err  := conn.Conn.ReadMessage()
+	_ , dataByte  , err  := conn.Conn.ReadMessage()
 	if err != nil{
 		myMetrics.fastLog("total.input.err.num",METRICS_OPT_INC,0)
 		mylog.Error("conn.Conn.ReadMessage err: ",err.Error())
@@ -140,9 +143,7 @@ func   (conn *Conn)Read()(content string,err error){
 	myMetrics.fastLog("player.fd.num."+pid,METRICS_OPT_INC,0)
 	myMetrics.fastLog("player.fd.size."+pid,METRICS_OPT_PLUS,len(content))
 
-
-
-	mylog.Debug("conn.ReadMessage messageType:",messageType , " len :",len(dataByte) , " data:" ,string(dataByte))
+	//mylog.Debug("conn.ReadMessage messageType:",messageType , " len :",len(dataByte) , " data:" ,string(dataByte))
 	content = string(dataByte)
 	return content,nil
 }
@@ -159,7 +160,17 @@ func  (conn *Conn)IOLoop(){
 	mylog.Warning("IOLoop receive chan quit~~~")
 	cancel()
 }
+func  (conn *Conn) RecoverReadLoop(ctx context.Context){
+	mylog.Warning("recover ReadLoop:")
+	go conn.ReadLoop(ctx)
+}
 func  (conn *Conn)ReadLoop(ctx context.Context){
+	defer func(ctx context.Context) {
+		if err := recover(); err != nil {
+			mylog.Panic("conn.ReadLoop panic defer :",err)
+			conn.RecoverReadLoop(ctx)
+		}
+	}(ctx)
 	for{
 		select{
 		case <-ctx.Done():
@@ -195,8 +206,18 @@ func  (conn *Conn)ReadLoop(ctx context.Context){
 end :
 	mylog.Warning("connReadLoop receive signal: done.")
 }
-
+func  (conn *Conn) RecoverProcessMsgLoop(ctx context.Context){
+	mylog.Warning("recover ReadLoop:")
+	go conn.ProcessMsgLoop(ctx)
+}
 func  (conn *Conn)ProcessMsgLoop(ctx context.Context){
+	defer func(ctx context.Context) {
+		if err := recover(); err != nil {
+			mylog.Panic("conn.ProcessMsgLoop panic defer :",err)
+			conn.RecoverProcessMsgLoop(ctx)
+		}
+	}(ctx)
+
 	for{
 		ctxHasDone := 0
 		select{
@@ -218,12 +239,27 @@ func  (conn *Conn)CloseHandler(code int, text string) error{
 	myNetWay.CloseOneConn(conn, CLOSE_SOURCE_CLIENT)
 	return nil
 }
+func (connManager *ConnManager)Shutdown(){
+	mylog.Alert("shutdown connManager")
+	connManager.Close <- 1
+	if len(connManager.Pool) <= 0{
+		return
+	}
+	for _,conn :=range connManager.Pool{
+		myNetWay.CloseOneConn(conn,CLOSE_SOURCE_CONN_SHUTDOWN)
+	}
+}
+func (connManager *ConnManager)Start(ctx context.Context){
+	defer func(ctx context.Context ) {
+		if err := recover(); err != nil {
+			myNetWay.RecoverGoRoutine(connManager.Start,ctx,err)
+		}
+	}(ctx)
 
-func (connManager *ConnManager)checkConnPoolTimeout(ctx context.Context){
 	mylog.Alert("checkConnPoolTimeout start:")
 	for{
 		select {
-			case   <-ctx.Done():
+			case   <-connManager.Close:
 				goto end
 			default:
 				for _,v := range connManager.Pool{

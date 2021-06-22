@@ -17,16 +17,22 @@ type PlayerManager struct {
 	DefaultContentType int32
 	DefaultProtocol		int32
 }
+type PlayerManagerOption struct{
+	store int32
+	ContentType int32
+	Protocol int32
+	Log *zlib.Log
+}
 
-func NewPlayerManager(store int32,ContentType int32,Protocol int32 )*PlayerManager {
+func NewPlayerManager(option PlayerManagerOption)*PlayerManager {
 	mylog.Info("NewPlayerManager instance")
 	playerManager := new(PlayerManager)
 	playerManager.Pool = make(map[int32]*myproto.Player)
 	playerManager.SidMapPid = make(map[string]int32)
 	playerManager.initPool()
-	playerManager.Store = store
-	playerManager.DefaultContentType = ContentType
-	playerManager.DefaultProtocol = Protocol
+	playerManager.Store = option.store
+	playerManager.DefaultContentType = option.ContentType
+	playerManager.DefaultProtocol = option.Protocol
 	return playerManager
 }
 
@@ -113,7 +119,7 @@ func (playerManager *PlayerManager)GetPlayerCtrlInfoById(playerId int32)Protocol
 		protocolType = playerManager.DefaultProtocol
 	}else{
 		player ,empty := playerManager.GetById(playerId)
-		mylog.Debug("GetContentTypeById player",player)
+		//mylog.Debug("GetContentTypeById player",player)
 		if empty{
 			contentType = playerManager.DefaultContentType
 			protocolType = playerManager.DefaultProtocol

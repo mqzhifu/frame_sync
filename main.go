@@ -12,10 +12,14 @@ import (
 	"zlib"
 )
 
+func test(){
+
+}
+
 type CmdArgs struct {
 	Env 			string	`seq:"1" err:"env=local"`
 	Ip 				string	`seq:"2" err:"ip=127.0.0.1"`
-	HttpPort 		string	`seq:"3" err:"WsPort=2222"`
+	HttpPort 		string	`seq:"3" err:"HttpPort=2222"`
 	WsPort 			string	`seq:"4" err:"WsPort=2223"`
 	TcpPort 		string	`seq:"5" err:"TcpPort=2224"`
 	LogBasePath 	string	`seq:"6" err:"log_base_path=/data/www/golang/src/logs cs=server"`
@@ -27,10 +31,11 @@ var mainOutPrefix = "main root :"
 func main(){
 	zlib.LogLevelFlag = zlib.LOG_LEVEL_DEBUG
 
+	test()
 	cmdArgsStruct := CmdArgs{}
 	cmsArg ,err := zlib.CmsArgs(cmdArgsStruct)
 	if err != nil{
-		zlib.ExitPrint(mainOutPrefix + " err " +err.Error())
+		zlib.PanicPrint(mainOutPrefix + " err " +err.Error())
 	}
 	zlib.MyPrint(mainOutPrefix + " argc  ")
 	for k,v := range cmsArg{
@@ -41,7 +46,7 @@ func main(){
 
 	if !zlib.CheckEnvExist(cmsArg["Env"]){
 		list := zlib.GetEnvList()
-		zlib.ExitPrint(mainOutPrefix + "env is err , list:",list)
+		zlib.PanicPrint(mainOutPrefix + "env is err , list:",list)
 	}
 
 	enter(cmsArg)
@@ -52,12 +57,12 @@ func enter(cmsArg map[string]string){
 	appM  := zlib.NewAppManager()
 	app,empty := appM.GetById(appId)
 	if empty{
-		zlib.ExitPrint(mainOutPrefix + " err " + ": appId is empty "+ strconv.Itoa(appId))
+		zlib.PanicPrint(mainOutPrefix + " err " + ": appId is empty "+ strconv.Itoa(appId))
 	}
 	zlib.MyPrint(mainOutPrefix + " appInfo  ")
 	zlib.PrintStruct(app," : ")
 
-	//创建一个根-空 ctx
+	//创建一个空(根) ctx
 	rootBackgroundCtx := context.Background()
 	//继承上面的根CTX，合建一个 cancel ctx ，后续所有的协程均要从此CTX继承
 	rootCancelCtx,rootCancelFunc  := context.WithCancel(rootBackgroundCtx)
@@ -75,8 +80,11 @@ func enter(cmsArg map[string]string){
 	}
 	newlog,errs  := zlib.NewLog(logOption)
 	if errs != nil{
-		zlib.ExitPrint(mainOutPrefix + "new log err",errs.Error())
+		zlib.PanicPrint(mainOutPrefix + "new log err",errs.Error())
 	}
+	defer func(){
+		mainlog.CloseChan <- 1
+	}()
 	mainlog = newlog
 	newNetWayOption := netway.NetWayOption{
 		Mylog 				:mainlog,
@@ -87,8 +95,8 @@ func enter(cmsArg map[string]string){
 		WsPort				:cmsArg["WsPort"],
 		TcpPort				:cmsArg["TcpPort"],
 		UdpPort				:"9999",
-		//ContentType		:netway.CONTENT_TYPE_JSON,
-		ContentType			:netway.CONTENT_TYPE_PROTOBUF,
+		ContentType		:netway.CONTENT_TYPE_JSON,
+		//ContentType			:netway.CONTENT_TYPE_PROTOBUF,
 		LoginAuthType		:"jwt",
 		LoginAuthSecretKey	:"chukong",
 		IOTimeout			:3,
@@ -105,7 +113,9 @@ func enter(cmsArg map[string]string){
 		LockMode			:netway.LOCK_MODE_PESSIMISTIC,
 		FPS					:10,
 		Store				:0,
+		HttpdRootPath		:"/www/",
 		LogOption: logOption,
+		OutCancelFunc : rootCancelFunc,
 	}
 	//测试使用，开始TCP/UDP client端
 	testSwitchClientServer(cmsArg["ClientServer"],newNetWayOption)
@@ -119,9 +129,6 @@ func enter(cmsArg map[string]string){
 	//阻塞main主线程，停止的话，只有一种可能：接收到了信号
 	<-rootCancelCtx.Done()
 	//这里做个容错，可能会遗漏掉的协程未结束 或 结束程序有点慢
-	time.Sleep(1 * time.Second)
-
-	mainlog.CloseChan <- 1
 	time.Sleep(500 * time.Millisecond)
 	mainlog.Warning("main end...")
 }
@@ -150,8 +157,8 @@ func  DemonSignal(newNetWay *netway.NetWay,mainCancelFuc context.CancelFunc){
 		mySleepSecond(1,prefix)
 	}
 end :
-	mainlog.Alert(netway.CTX_DONE_PRE + " DemonSignal end ,exec mainCancelFuc()")
-	mainCancelFuc()
+	mainlog.Alert(netway.CTX_DONE_PRE + " DemonSignal end...")
+	newNetWay.CloseChan <- 1
 }
 
 //睡眠 - 协程
@@ -167,18 +174,18 @@ func testSwitchClientServer(clientServer string,newNetWayOption netway.NetWayOpt
 		netway.StartTcpClient(newNetWayOption,mainlog)
 		cc := make(chan int)
 		<- cc
-		zlib.ExitPrint(1111111111)
+		zlib.PanicPrint(1111111111)
 	case "udpClient":
 		udpServer :=  netway.UdpServerNew(newNetWayOption,mainlog)
 		udpServer.StartClient()
 		cc := make(chan int)
 		<- cc
-		zlib.ExitPrint(22222)
+		zlib.PanicPrint(22222)
 	case "udpServer":
 		udpServer :=  netway.UdpServerNew(newNetWayOption,mainlog)
 		udpServer.Start()
 		cc := make(chan int)
 		<- cc
-		zlib.ExitPrint(33333)
+		zlib.PanicPrint(33333)
 	}
 }

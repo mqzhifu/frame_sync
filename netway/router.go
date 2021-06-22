@@ -33,9 +33,6 @@ func(netWay *NetWay) Router(msg myproto.Msg,conn *Conn)(data interface{},err err
 			err = myProtocolManager.parserContentMsg(msg,&requestPlayerResumeGame,conn.PlayerId)
 		case "playerOperations"://玩家推送操作指令
 			err = myProtocolManager.parserContentMsg(msg,&requestPlayerOperations,conn.PlayerId)
-		//case "playerLogicFrameAck":
-			//err = parserMsgContent(msg.Content,&logicFrame)
-			//mySync.playerLogicFrameAck(logicFrame,wsConn)
 		case "playerMatchSignCancel"://玩家取消报名等待
 			err = myProtocolManager.parserContentMsg(msg,&requestPlayerMatchSignCancel,conn.PlayerId)
 		case "gameOver"://游戏结束
@@ -75,21 +72,21 @@ func(netWay *NetWay) Router(msg myproto.Msg,conn *Conn)(data interface{},err err
 		case "clientPing"://
 			netWay.clientPing(requestClientPing,conn)
 		case "playerResumeGame"://恢复未结束的游戏
-			netWay.mySync.PlayerResumeGame(requestPlayerResumeGame,conn )
+			mySync.PlayerResumeGame(requestPlayerResumeGame,conn )
 		case "playerOperations"://玩家推送操作指令
-			netWay.mySync.ReceivePlayerOperation(requestPlayerOperations,conn,msg.Content)
+			mySync.ReceivePlayerOperation(requestPlayerOperations,conn,msg.Content)
 		case "playerMatchSignCancel"://玩家取消报名等待
 			myMatch.delOnePlayer(requestPlayerMatchSignCancel,conn)
 		case "gameOver"://游戏结束
-			netWay.mySync.GameOver(requestGameOver,conn)
+			mySync.GameOver(requestGameOver,conn)
 		case "playerReady"://玩家进入状态状态
-			netWay.mySync.PlayerReady(requestPlayerReady,conn)
+			mySync.PlayerReady(requestPlayerReady,conn)
 		case "roomHistory"://一局副本的，所有历史操作记录
-			netWay.mySync.RoomHistory(requestRoomHistory,conn)
+			mySync.RoomHistory(requestRoomHistory,conn)
 		case "getRoom":
-			netWay.mySync.GetRoom(requestGetRoom,conn)
+			mySync.GetRoom(requestGetRoom,conn)
 		case "playerOver":
-			netWay.mySync.PlayerOver(requestPlayerOver,conn)
+			mySync.PlayerOver(requestPlayerOver,conn)
 		default:
 			mylog.Error("Router err:",msg)
 	}
@@ -111,12 +108,12 @@ func(netWay *NetWay)SendMsgCompressByUid(playerId int32,action string , contentS
 }
 //发送一条消息给一个玩家FD，
 func(netWay *NetWay)SendMsgByUid(playerId int32,action string , content []byte){
-	wsConn,ok := connManager.getConnPoolById(playerId)
+	conn,ok := connManager.getConnPoolById(playerId)
 	if !ok {
-		mylog.Error("wsConn not in pool,maybe del.")
+		mylog.Error("conn not in pool,maybe del.")
 		return
 	}
-	netWay.SendMsg(wsConn,action,content)
+	netWay.SendMsg(conn,action,content)
 }
 
 func(netWay *NetWay)SendMsg(conn *Conn,action string,content []byte){
@@ -138,7 +135,7 @@ func(netWay *NetWay)SendMsg(conn *Conn,action string,content []byte){
 	//合并 协议号 + 消息内容体
 	content = zlib.BytesCombine([]byte(strId),content)
 	if conn.Status == CONN_STATUS_CLOSE {
-		mylog.Error("wsConn status =CONN_STATUS_CLOSE.")
+		mylog.Error("Conn status =CONN_STATUS_CLOSE.")
 		return
 	}
 
@@ -166,9 +163,9 @@ func(netWay *NetWay)SendMsg(conn *Conn,action string,content []byte){
 	mylog.Debug("final sendmsg content:",content)
 	if contentType == CONTENT_TYPE_PROTOBUF {
 		conn.Write(content,websocket.BinaryMessage)
-		//netWay.myWriteMessage(wsConn,websocket.BinaryMessage,content)
+		//netWay.myWriteMessage(Conn,websocket.BinaryMessage,content)
 	}else{
 		conn.Write(content,websocket.TextMessage)
-		//netWay.myWriteMessage(wsConn,websocket.TextMessage,content)
+		//netWay.myWriteMessage(Conn,websocket.TextMessage,content)
 	}
 }

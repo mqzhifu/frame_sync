@@ -43,7 +43,7 @@ func  (protocolActions *ProtocolActions)loadingActionMapConfigFile(fileName stri
 	client,err := zlib.ReadLine(dir +"/"+fileName)
 	if err != nil{
 		protocolActions.Log.Error("initActionMap ReadLine err :",err.Error())
-		zlib.ExitPrint("initActionMap ReadLine err :",err.Error())
+		zlib.PanicPrint("initActionMap ReadLine err :",err.Error())
 	}
 	am := make(map[int32]ActionMap)
 	for _,v:= range client{
@@ -63,7 +63,7 @@ func  (protocolActions *ProtocolActions)loadingActionMapConfigFile(fileName stri
 	}
 	if len(am) <= 0{
 		protocolActions.Log.Error("protocolActions len(am) <= 0")
-		zlib.ExitPrint("protocolActions len(am) <= 0")
+		zlib.PanicPrint("protocolActions len(am) <= 0")
 	}
 	return am
 }

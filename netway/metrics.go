@@ -9,6 +9,7 @@ type Metrics struct {
 	totalMetrics 	TotalMetrics
 	roomSyncMetrics map[string]RoomSyncMetrics
 	Pool 	map[string]int
+	Close chan int
 }
 
 
@@ -42,6 +43,7 @@ func NewMetrics()*Metrics{
 	metrics.totalMetrics = TotalMetrics{}
 	metrics.roomSyncMetrics = make(map[string]RoomSyncMetrics)
 	metrics.Pool = make(map[string]int)
+	metrics.Close = make(chan int)
 	return metrics
 	//myMetrics = zlib.NewMetrics()
 }
@@ -53,14 +55,25 @@ func  (metrics *Metrics)fastLog(key string,opt int ,value int ){
 	}
 	metrics.input <- metricsChanMsg
 }
+func (metrics *Metrics)Shutdown(){
+	mylog.Alert("shutdown metrics")
+	metrics.Close <- 1
+}
+
 func  (metrics *Metrics)start(ctx context.Context){
+	defer func(ctx context.Context ) {
+		if err := recover(); err != nil {
+			myNetWay.RecoverGoRoutine(metrics.start,ctx,err)
+		}
+	}(ctx)
+
 	mylog.Alert("metrics start:")
 	ctxHasDone := 0
 	for{
 		select {
 			case metricsChanMsg := <- metrics.input:
 				metrics.processMsg(metricsChanMsg)
-			case <- ctx.Done():
+			case <- metrics.Close:
 				ctxHasDone = 1
 		}
 		if ctxHasDone == 1{

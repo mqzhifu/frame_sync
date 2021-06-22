@@ -92,9 +92,9 @@ func  (udpServer *UdpServer)processOneMsg(data string,addr *net.UDPAddr){
 		myUdpSessionPlayerConn.Port= addr.Port
 	}
 
-	wsConn,_ := connManager.getConnPoolById(playerId)
-	wsConn.UdpConn = true
-	myNetWay.Router(msg,wsConn)
+	conn,_ := connManager.getConnPoolById(playerId)
+	conn.UdpConn = true
+	myNetWay.Router(msg,conn)
 }
 
 func  (udpServer *UdpServer)StartClient(){
